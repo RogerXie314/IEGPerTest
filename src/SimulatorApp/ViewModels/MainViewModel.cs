@@ -24,6 +24,11 @@ namespace SimulatorApp.ViewModels
         private int _regCount = 5;
         private int _hbInterval = 1000;
         private string _statusLog = string.Empty;
+        private int _hbTotal;
+        private int _hbTcpOk;
+        private int _hbTcpFail;
+        private int _hbUdpOk;
+        private int _hbUdpFail;
 
         private CancellationTokenSource? _hbCts;
 
@@ -37,6 +42,12 @@ namespace SimulatorApp.ViewModels
         public int HbInterval { get => _hbInterval; set { _hbInterval = value; OnProp(); } }
 
         public string StatusLog { get => _statusLog; set { _statusLog = value; OnProp(); } }
+
+        public int HbTotal { get => _hbTotal; set { _hbTotal = value; OnProp(); } }
+        public int HbTcpOk { get => _hbTcpOk; set { _hbTcpOk = value; OnProp(); } }
+        public int HbTcpFail { get => _hbTcpFail; set { _hbTcpFail = value; OnProp(); } }
+        public int HbUdpOk { get => _hbUdpOk; set { _hbUdpOk = value; OnProp(); } }
+        public int HbUdpFail { get => _hbUdpFail; set { _hbUdpFail = value; OnProp(); } }
 
         public ICommand RegisterCommand { get; }
         public ICommand StartHeartbeatCommand { get; }
@@ -139,8 +150,12 @@ namespace SimulatorApp.ViewModels
                 {
                     var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
                     {
+                        HbTotal = s.Total;
+                        HbTcpOk = s.SuccessTcp;
+                        HbTcpFail = s.FailTcp;
+                        HbUdpOk = s.SuccessUdp;
+                        HbUdpFail = s.FailUdp;
                         AppendStatus($"心跳汇总: Total={s.Total} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
-                        OnProp(nameof(StatusLog));
                     });
                     await hb.StartAsync(HbInterval, useLogServer: true, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 6, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
                 });
