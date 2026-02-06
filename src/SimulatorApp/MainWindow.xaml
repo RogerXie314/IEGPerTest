@@ -36,14 +36,14 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Width="80">前缀：</TextBlock>
-                                <TextBox x:Name="TxtRegPrefix" Width="160" />
+                                <TextBox Text="{Binding RegPrefix, Mode=TwoWay}" Width="160" />
                                 <TextBlock Width="60" Margin="8,0,0,0">起始：</TextBlock>
-                                <TextBox x:Name="TxtRegStart" Width="80" />
+                                <TextBox Text="{Binding RegStart, Mode=TwoWay}" Width="80" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                 <TextBlock Width="80">数量：</TextBlock>
-                                <TextBox x:Name="TxtRegCount" Width="80" />
-                                <Button x:Name="BtnRegister" Width="120" Height="28" Margin="12,0,0,0" Click="BtnRegister_Click">并发注册</Button>
+                                <TextBox Text="{Binding RegCount, Mode=TwoWay}" Width="80" />
+                                <Button Width="120" Height="28" Margin="12,0,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
@@ -52,9 +52,9 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Width="80">间隔(ms)：</TextBlock>
-                                <TextBox x:Name="TxtHbInterval" Width="80" />
-                                <Button x:Name="BtnStartHb" Width="120" Height="28" Margin="12,0,0,0" Click="BtnStartHb_Click">开始心跳</Button>
-                                <Button x:Name="BtnStopHb" Width="120" Height="28" Margin="8,0,0,0" Click="BtnStopHb_Click" IsEnabled="False">停止心跳</Button>
+                                <TextBox Text="{Binding HbInterval, Mode=TwoWay}" Width="80" />
+                                <Button Width="120" Height="28" Margin="12,0,0,0" Command="{Binding StartHeartbeatCommand}">开始心跳</Button>
+                                <Button Width="120" Height="28" Margin="8,0,0,0" Command="{Binding StopHeartbeatCommand}">停止心跳</Button>
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
@@ -62,7 +62,7 @@
 
                 <StackPanel Grid.Column="1">
                     <TextBlock FontWeight="Bold">任务与状态</TextBlock>
-                    <TextBox x:Name="TxtStatus" Margin="0,8,0,0" Height="300" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap"/>
+                    <TextBox Text="{Binding StatusLog, Mode=OneWay}" Margin="0,8,0,0" Height="300" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"/>
                 </StackPanel>
             </Grid>
         </StackPanel>

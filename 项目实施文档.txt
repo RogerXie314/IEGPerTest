@@ -158,6 +158,39 @@ UDP心跳代码文件：WLServerCommunicateThread.cpp
 
 ---
 
+**实施进度（清晰版）**
+
+- **已完成（开发环境与基础架构）**
+   - 初始需求文档迁移并形成实施文档。
+   - 确定技术选型：C# (.NET 7) + WPF 前端 + 核心类库。
+   - 项目骨架：`src/SimulatorApp`（WPF）、`src/SimulatorLib`（核心库）、`src/SimulatorRunner`（演示运行器）、`src/DevTools`（DevRunner）。
+   - Git 仓库初始化并完成首次提交；添加 `.gitignore`、`README.md`。
+   - 自动化：`scripts/build_and_run.ps1`、`scripts/publish_devrunner.ps1`、`.github/workflows/ci.yml`。
+
+- **已实现的功能（最小可运行原型）**
+   - `RegistrationWorker`：并发注册、重试、超时，并把注册结果持久化到 `Clients.log`。
+   - `HeartbeatWorker`：从 `Clients.log` 读取客户端并发送 TCP/UDP 心跳，支持并发控制。
+   - 简易网络层：`TcpSender`、`UdpSender` 接口实现。
+   - 演示运行器 `SimulatorRunner`：演示注册与心跳流程。
+   - 无终端运行工具 `DevRunner`：已发布为自包含 exe（`artifacts/DevRunner`），并提供创建桌面快捷方式脚本。
+
+- **UI 与工具**
+   - 初始 WPF UI：注册/心跳基本控制已集成（按钮、状态输出）。
+   - 按优先级完成：界面分组、服务器/注册/心跳输入、端口测试按钮、配置持久化（`config.json`）。
+   - MVVM 重构：新增 `MainViewModel` 与 `RelayCommand`，界面已绑定到 ViewModel（命令与属性）。
+
+- **当前状态（进行中 / 待办）**
+   - Heartbeat 功能：基本实现已完成，需补充统计面板（在线/失败计数、时序图）。
+   - UI：转向 MVVM 已完成，接下来需完善 ViewModel 单元测试与 View 的显示表格（Clients 列表）。
+   - 测试：需要编写单元/集成测试并在 CI 中加入测试步骤。
+
+- **下一步（短期优先级）**
+   1. 在 UI 中显示 `Clients.log` 中的客户端表格（支持导入/导出/清理）。
+   2. 增加心跳统计视图（活动客户端数、失败数、每秒发送量）。
+   3. 编写 ViewModel 单元测试并增强 CI（运行测试、报告）。
+
+（已迁移条目和实现以实际代码为准；下次提交将同步进度并在此文档追加变更记录。）
+
 九、项目结构与分类（建议）
 
 为保持实现过程清晰、职责单一并方便维护，建议遵循以下项目结构与分类规范：
