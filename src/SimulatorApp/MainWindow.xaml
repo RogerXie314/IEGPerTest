@@ -62,7 +62,22 @@
 
                 <StackPanel Grid.Column="1">
                     <TextBlock FontWeight="Bold">任务与状态</TextBlock>
-                    <TextBox Text="{Binding StatusLog, Mode=OneWay}" Margin="0,8,0,0" Height="300" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,6">
+                        <Button Width="100" Command="{Binding RefreshClientsCommand}">刷新 Clients</Button>
+                        <Button Width="100" Margin="8,0,0,0" Command="{Binding ExportClientsCommand}">导出 Clients</Button>
+                        <Button Width="100" Margin="8,0,0,0" Command="{Binding ImportClientsCommand}">导入 Clients</Button>
+                        <Button Width="100" Margin="8,0,0,0" Command="{Binding ClearClientsCommand}">清理 Clients</Button>
+                    </StackPanel>
+
+                    <DataGrid ItemsSource="{Binding Clients}" AutoGenerateColumns="False" Margin="0,4,0,0" Height="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ClientId" Binding="{Binding ClientId}" Width="*" />
+                            <DataGridTextColumn Header="IP" Binding="{Binding IP}" Width="120" />
+                            <DataGridTextColumn Header="RegisteredAt" Binding="{Binding RegisteredAt}" Width="200" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
                 </StackPanel>
             </Grid>
         </StackPanel>
