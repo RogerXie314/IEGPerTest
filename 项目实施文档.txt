@@ -174,7 +174,9 @@ UDP心跳代码文件：WLServerCommunicateThread.cpp
    - 演示运行器 `SimulatorRunner`：演示注册与心跳流程。
    - 无终端运行工具 `DevRunner`：已发布为自包含 exe（`artifacts/DevRunner`），并提供创建桌面快捷方式脚本。
 
-- **UI 与工具**
+   - 说明：`Clients.log` 仅作为已注册客户端的持久化存储，不会在 UI 中显示或提供导入/导出/清理等操作；所有任务（心跳、白名单上传、日志发送等）应基于 `Clients.log` 内容读取目标客户端。
+
+-- **UI 与工具**
    - 初始 WPF UI：注册/心跳基本控制已集成（按钮、状态输出）。
    - 按优先级完成：界面分组、服务器/注册/心跳输入、端口测试按钮、配置持久化（`config.json`）。
    - MVVM 重构：新增 `MainViewModel` 与 `RelayCommand`，界面已绑定到 ViewModel（命令与属性）。

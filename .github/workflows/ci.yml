@@ -15,5 +15,9 @@ jobs:
           dotnet-version: '7.0.x'
       - name: Restore and Build
         run: dotnet build --configuration Release
+      - name: Run tests
+        run: |
+          dotnet test --no-restore --verbosity minimal
+
       - name: Run SimulatorRunner (sanity)
         run: dotnet run --project src/SimulatorRunner --configuration Release --no-restore --verbosity minimal

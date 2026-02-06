@@ -24,7 +24,13 @@ class Program
 
         using var cts = new CancellationTokenSource();
         Console.WriteLine("开始心跳任务演示（每秒一次，10 并发，演示 5 次）...");
-        var hbTask = hb.StartAsync(1000, useLogServer: true, platformHost: "localhost", platformPort: 8441, logHost: "localhost", logPort: 4565, concurrency: 10, ct: cts.Token);
+        var progress = new Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
+        {
+            Console.WriteLine($"[汇总] 总数={s.Total} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
+        });
+
+        // 使用 127.0.0.1 避免本机 IPv6/IPv4 解析差异导致连接失败
+        var hbTask = hb.StartAsync(1000, useLogServer: true, platformHost: "127.0.0.1", platformPort: 8441, logHost: "127.0.0.1", logPort: 4565, concurrency: 10, ct: cts.Token, progress: progress);
 
         await Task.Delay(5500);
         cts.Cancel();

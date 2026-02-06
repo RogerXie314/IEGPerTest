@@ -7,9 +7,7 @@ using System.Windows.Input;
 using SimulatorLib.Network;
 using SimulatorLib.Workers;
 using SimulatorLib.Persistence;
-using System.Collections.ObjectModel;
-using SimulatorLib.Persistence;
-using System.IO;
+using System.Threading.Tasks;
 
 namespace SimulatorApp.ViewModels
 {
@@ -44,12 +42,6 @@ namespace SimulatorApp.ViewModels
         public ICommand StartHeartbeatCommand { get; }
         public ICommand StopHeartbeatCommand { get; }
         public ICommand PortTestCommand { get; }
-        public ICommand RefreshClientsCommand { get; }
-        public ICommand ExportClientsCommand { get; }
-        public ICommand ImportClientsCommand { get; }
-        public ICommand ClearClientsCommand { get; }
-
-        public ObservableCollection<SimulatorLib.Persistence.ClientRecord> Clients { get; } = new();
 
         public MainViewModel()
         {
@@ -57,10 +49,6 @@ namespace SimulatorApp.ViewModels
             StartHeartbeatCommand = new RelayCommand(async _ => await StartHeartbeatAsync());
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
-            RefreshClientsCommand = new RelayCommand(async _ => await RefreshClientsAsync());
-            ExportClientsCommand = new RelayCommand(async _ => await ExportClientsAsync());
-            ImportClientsCommand = new RelayCommand(async _ => await ImportClientsAsync());
-            ClearClientsCommand = new RelayCommand(async _ => await ClearClientsAsync());
             _ = LoadConfigAsync();
         }
 
@@ -165,90 +153,7 @@ namespace SimulatorApp.ViewModels
             OnProp(nameof(StatusLog));
         }
 
-        private async Task RefreshClientsAsync()
-        {
-            try
-            {
-                var list = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    Clients.Clear();
-                    foreach (var c in list) Clients.Add(c);
-                });
-                AppendStatus($"已刷新 {Clients.Count} 条 Clients");
-                OnProp(nameof(StatusLog));
-                OnProp(nameof(Clients));
-            }
-            catch (Exception ex)
-            {
-                AppendStatus("刷新 Clients 失败: " + ex.Message);
-            }
-        }
-
-        private async Task ExportClientsAsync()
-        {
-            try
-            {
-                var list = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                var dir = Path.Combine(AppContext.BaseDirectory, "artifacts");
-                Directory.CreateDirectory(dir);
-                var path = Path.Combine(dir, "ClientsExport.json");
-                var json = System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
-                AppendStatus("已导出 Clients 到: " + path);
-            }
-            catch (Exception ex)
-            {
-                AppendStatus("导出 Clients 失败: " + ex.Message);
-            }
-            OnProp(nameof(StatusLog));
-        }
-
-        private async Task ImportClientsAsync()
-        {
-            try
-            {
-                var dir = Path.Combine(AppContext.BaseDirectory, "artifacts");
-                var path = Path.Combine(dir, "ClientsImport.json");
-                if (!File.Exists(path))
-                {
-                    AppendStatus("未找到 import 文件: " + path);
-                    OnProp(nameof(StatusLog));
-                    return;
-                }
-                var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
-                var list = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ClientRecord>>(json);
-                if (list != null)
-                {
-                    foreach (var c in list)
-                    {
-                        await ClientsPersistence.AppendAsync(c).ConfigureAwait(false);
-                    }
-                    AppendStatus($"已导入 {list.Count} 条 Clients 到 Clients.log");
-                    await RefreshClientsAsync().ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendStatus("导入 Clients 失败: " + ex.Message);
-            }
-        }
-
-        private async Task ClearClientsAsync()
-        {
-            try
-            {
-                ClientsPersistence.Delete();
-                Clients.Clear();
-                AppendStatus("已删除 Clients.log 并清空 Clients 列表");
-                OnProp(nameof(StatusLog));
-                OnProp(nameof(Clients));
-            }
-            catch (Exception ex)
-            {
-                AppendStatus("清理 Clients 失败: " + ex.Message);
-            }
-        }
+        
 
         private async Task<bool> TestTcpAsync(string host, int port, int timeoutMs)
         {
