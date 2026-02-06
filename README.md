@@ -17,11 +17,20 @@ dotnet run
 
 下一步：实现 UI 控件、`RegistrationWorker` / `HeartbeatWorker`、网络抽象层与测试用例。
 
-自动化与 CI
+- 自动化与 CI
 ----------------
 本仓库已添加本地自动化脚本和 GitHub Actions CI：
 
 - 本地脚本：`scripts/build_and_run.ps1`，用于构建并运行演示程序；可传入 `-RunBackground` 参数后台运行。
+- 快捷方式创建：`scripts/create_shortcut.ps1`，用于在当前用户桌面创建指向 `artifacts/DevRunner/DevRunner.exe` 的快捷方式；可选在仓库 `tools/` 目录生成一份复制。示例：
+
+```powershell
+# 在桌面创建快捷方式（默认目标 artifacts/DevRunner/DevRunner.exe）
+.\scripts\create_shortcut.ps1
+
+# 同时在仓库 tools/ 目录也创建快捷方式
+.\scripts\create_shortcut.ps1 -CreateInRepoTools
+```
 - CI：`.github/workflows/ci.yml`，在 `push`/`pull_request` 时于 `windows-latest` 上构建并运行一次 `SimulatorRunner` 做快速校验。
 
 说明：如果需要自动化 `git push`，请在使用脚本的机器上配置凭据（SSH key 或 PAT）。
