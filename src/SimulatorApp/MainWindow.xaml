@@ -5,7 +5,15 @@
     <Grid Margin="10">
         <StackPanel>
             <TextBlock FontSize="16" FontWeight="Bold">模拟工具（原型）</TextBlock>
-            <TextBlock Margin="0,8,0,0">当前为项目模板，后续将实现注册、心跳与日志任务界面。</TextBlock>
+            <TextBlock Margin="0,8,0,0">基础控制：可在此触发注册与心跳（演示）。</TextBlock>
+
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left" Spacing="8">
+                <Button x:Name="BtnRegister" Width="120" Height="30" Click="BtnRegister_Click">并发注册 (5)</Button>
+                <Button x:Name="BtnStartHb" Width="120" Height="30" Click="BtnStartHb_Click">开始心跳</Button>
+                <Button x:Name="BtnStopHb" Width="120" Height="30" Click="BtnStopHb_Click" IsEnabled="False">停止心跳</Button>
+            </StackPanel>
+
+            <TextBox x:Name="TxtStatus" Margin="0,12,0,0" Height="200" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap"/>
         </StackPanel>
     </Grid>
 </Window>
