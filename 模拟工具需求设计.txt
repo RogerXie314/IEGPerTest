@@ -1,0 +1,153 @@
+界面设计：
+1. 服务器地址输入框， 注册端口输入框（默认值8441）， 心跳端口输入框（默认值4575），日志服务器IP地址输入框，日志服务器端口输入框（默认4565）   端口测试按钮。
+2  注册设置：客户端ID前缀，  客户端ID起始编号， 注册首个客户端IP地址， 注册客户端个数设置，    已注册客户端总数：（实时显示）
+   开始注册按钮（勾选框：是否并发注册）
+   
+3. 心跳状态显示框：
+列字段：序号，开始时间，客户端数量，时间间隔（毫秒），持续时间（分钟），心跳活跃客户端计数，任务状态，结束时间，发送心跳失败客户端计数。
+心跳设置：客户端个数， 心跳间隔（毫秒），持续时长（分钟）， 开始心跳按钮（TCP）
+
+
+任务状态显示框：
+列字段：序号，开始时间，客户端数量，时间间隔（毫秒），持续时间（秒）， 消息日志活跃客户端计数，文件日志活跃客户端计数，任务状态。
+工作逻辑：点击任一个“添加任务”按钮，则添加所在的任务到显示框，并直接开始任务，实时显示任务状态。
+
+日志分类（勾选框）：
+客户端操作， 漏洞防护，进程控制，操作系统，非法外联，威胁检测，非白名单，白名单防篡改，文件保护，强制访问控制，进程审计，病毒告警。
+日志发送设置：客户端个数（下拉选择）， 每客户端总条数（下拉选择），每客户端每秒条数（下拉选择）， 添加任务按钮，结束任务按钮。
+
+程序白名单上传设置：
+上传程序白名单（勾选框），文件选择框(选择白名单文件按钮)，，并发上传白名单客户端数量（输入框）， 添加任务按钮，结束任务按钮。
+说明：勾选“上传程序白名单”后，可选择白名单文件，输入客户端数量，点击添加任务；则同时开始对指定数量的客户端上传白名单。
+
+
+日志和心跳逻辑：
+未勾选日志服务器：
+威胁检测和心跳默认是TCP协议发送到平台IP；
+其他日志是HTTPS协议发送到平台IP。
+
+勾选日志服务器后：
+威胁检测和心跳仍然是TCP协议发送到平台IP；但同时向日志服务器发送UDP心跳；
+其他日志变成用UDP协议发送到日志服务器IP。
+
+参考原项目：
+原项目代码路径：D:\Development\IEG_Code\code\;
+心跳代码文件：D:\Development\IEG_Code\code\WLMainControl\WLHeartBeat.cpp
+UDP心跳代码文件：WLServerCommunicateThread.cpp
+封装协议文件：WLNetCommApi.cpp
+
+要求：
+给出项目设计实现方案，并把方案进度反馈在文件中。
+要求用git实现版本控制，可以上传到github;
+
+如果你需要项目有关更多信息提供，请告诉我。
+
+=== 设计方案落实版（由 Copilot 起草，按用户选择 B：先细化模块接口） ===
+
+一、已确认的总体技术选型
+- 首选：C# (.NET 7+) + WPF（Windows 桌面原生 GUI），支持高并发、良好与 Windows 集成、方便调用原项目 C++ 代码。
+- 备选：Python（PyQt/Tkinter + asyncio）——实现较快但在高并发、Windows 原生集成与打包上劣于 C#。
+
+二、C# vs Python 对比（简要）
+- GUI 开发：C# + WPF 原生、开发效率高、与 Windows UX 更一致；Python 需使用 PyQt 等跨平台库，开发和部署复杂度较高。
+- 并发/网络：C# 的 TPL 与 socket 支持稳定，高并发性能优；Python 的 asyncio 与多线程可用，但在 CPU/高并发 I/O 场景下需要更谨慎的调优。
+- 与原项目互操作：原项目为 C++，C# 可通过 P/Invoke、C++/CLI 或封装网络库快速复用；Python 则需额外绑定层或通过子进程通信。
+- 部署与维护：C# 在 Windows 环境的安装包、自动更新与权限控制更方便；Python 需要打包工具（PyInstaller）且依赖管理更麻烦。
+
+结论：综合考虑功能需求（Windows 桌面、高并发网络、与原项目互操作、长期维护），推荐使用 C#。用户已接受 C#，因此后续实现以 C#/.NET + WPF 为主。
+
+三、模块细化与接口定义（草案）
+1) 总体模块
+   - UI 层（WPF）：配置区、任务区、状态区（心跳/任务表格）、日志分类与白名单上传控件。
+   - Core 服务：TaskManager、Worker（RegistrationWorker / HeartbeatWorker / LogWorker / FileUploadWorker）、Network 层。
+   - Network 抽象层：ITcpSender, IUdpSender, IHttpSender
+
+2) 数据模型（C# POCO）
+   - class TaskModel {
+         Guid Id;
+         string Type; // "register"|"heartbeat"|"log"|"upload"
+         DateTime StartTime;
+         int ClientCount;
+         int IntervalMs;
+         int DurationMinutes;
+         TaskStatus Status; // Running|Completed|Failed|Stopped
+         int ActiveClientsCount;
+         int FailedCount;
+      }
+
+   - class ClientModel {
+         string ClientId;
+         IPAddress Ip;
+         ClientState State; // Registered|Unregistered|Error
+      }
+
+3) 接口草案
+   - interface ITaskWorker {
+         Task StartAsync(TaskModel task, CancellationToken ct);
+         Task StopAsync();
+         event EventHandler<TaskProgressEventArgs> ProgressUpdated;
+   }
+
+   - interface INetworkSender {
+         Task SendTcpAsync(string host, int port, byte[] payload, CancellationToken ct);
+         Task SendUdpAsync(string host, int port, byte[] payload, CancellationToken ct);
+         Task<HttpResponseMessage> SendHttpAsync(HttpRequestMessage req, CancellationToken ct);
+   }
+
+4) 关键 worker 行为说明
+   - RegistrationWorker
+      - 并发控制：支持并发数配置（SemaphoreSlim），逐个或并发发送注册请求到目标服务器（TCP/HTTP，按协议）
+      - 进度上报：每注册成功/失败更新 `TaskModel.ActiveClientsCount` 和 `FailedCount`，触发 UI 更新事件
+
+   - HeartbeatWorker
+      - 定时发送：根据 IntervalMs 周期给每个活跃客户端发送心跳（TCP 到平台 IP），若勾选日志服务器同时发送 UDP 心跳到日志服务器
+      - 结束条件：达到持续时长或收到停止请求
+      - 性能：使用连接复用与批量发送（当可能时）以降低资源消耗
+
+   - LogWorker
+      - 根据日志分类与协议规则选择发送路径（HTTPS 到平台或 UDP 到日志服务器）
+      - 支持速率控制（每客户端每秒条数）和批量化发送
+
+   - FileUploadWorker
+      - 并发上传白名单文件给指定数量客户端（可用 HTTP multipart 或自定义 TCP 协议），报告成功/失败统计
+
+四、协议/逻辑实现要点
+- 未勾选日志服务器：心跳与威胁检测走 TCP → 平台 IP；其他日志走 HTTPS → 平台 IP。
+- 勾选日志服务器：心跳与威胁检测仍走 TCP→平台；同时向日志服务器发送 UDP 心跳；其他日志走 UDP→日志服务器。
+- 端口测试工具：实现对 TCP/UDP/HTTP 的连通性探测并返回结果（成功/失败/耗时）
+
+五、项目进度文档（嵌入本文件，实时更新）
+- 进度表（里程碑与当前状态）
+   1) 里程碑 1：项目骨架 + GUI 基本布局 + 配置保存与端口测试 — 状态：未开始
+   2) 里程碑 2：实现 RegistrationWorker 与 TaskManager，支持并发注册并在 UI 展示 — 状态：未开始
+   3) 里程碑 3：实现 HeartbeatWorker（TCP/UDP 切换）并完成心跳状态显示 — 状态：未开始
+   4) 里程碑 4：实现 LogWorker（HTTPS/UDP），支持日志分类任务与速率控制 — 状态：未开始
+   5) 里程碑 5：实现文件白名单上传、错误统计、完善 UI 交互与导出配置 — 状态：未开始
+   6) 里程碑 6：自动化测试、README、首次推送至 GitHub — 状态：未开始
+
+- 当前任务列表（来自 TODO）：
+   - 读取并分析需求文档：已完成
+   - 撰写总体设计方案草案：已完成
+   - 细化功能模块与接口定义：进行中
+   - 确定技术选型与环境需求：未开始
+   - 制定实现计划与里程碑：未开始
+
+六、下一步（短期 2 天）
+- 细化每个 Worker 的方法签名、事件与错误码定义；生成 C# 项目模版（sln + WPF 项目 + class library）；并在仓库初始化时提交到本地 Git 并准备推送到 GitHub。
+
+七、版本控制与交付物
+- 初始化仓库建议结构：
+   /src/SimulatorApp (WPF)
+   /src/SimulatorLib (核心逻辑与网络层实现)
+   /docs
+   /tests
+   README.md, .gitignore, .github/workflows/ci.yml
+
+此文档后续会随着实现进度实时更新（我会在每次变更时同步更新此文件并在 TODO 中反映状态）。
+
+=== 结束 ===
+
+
+
+
+

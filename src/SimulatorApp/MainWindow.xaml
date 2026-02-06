@@ -1,0 +1,11 @@
+<Window x:Class="SimulatorApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SimulatorApp" Height="350" Width="600">
+    <Grid Margin="10">
+        <StackPanel>
+            <TextBlock FontSize="16" FontWeight="Bold">模拟工具（原型）</TextBlock>
+            <TextBlock Margin="0,8,0,0">当前为项目模板，后续将实现注册、心跳与日志任务界面。</TextBlock>
+        </StackPanel>
+    </Grid>
+</Window>
