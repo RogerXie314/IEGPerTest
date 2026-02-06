@@ -95,6 +95,14 @@ namespace SimulatorApp.ViewModels
         {
             try
             {
+                var (ok, reason) = ValidateInputs();
+                if (!ok)
+                {
+                    AppendStatus("输入校验失败: " + reason);
+                    OnProp(nameof(StatusLog));
+                    return;
+                }
+
                 await SaveConfigAsync().ConfigureAwait(false);
                 var sender = new TcpSender();
                 var reg = new RegistrationWorker(sender);
@@ -113,6 +121,14 @@ namespace SimulatorApp.ViewModels
         {
             try
             {
+                var (ok, reason) = ValidateInputs();
+                if (!ok)
+                {
+                    AppendStatus("输入校验失败: " + reason);
+                    OnProp(nameof(StatusLog));
+                    return;
+                }
+
                 await SaveConfigAsync().ConfigureAwait(false);
                 _hbCts = new CancellationTokenSource();
                 var tcp = new TcpSender();
@@ -121,7 +137,12 @@ namespace SimulatorApp.ViewModels
                 AppendStatus("开始心跳任务...");
                 _ = Task.Run(async () =>
                 {
-                    await hb.StartAsync(HbInterval, useLogServer: true, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 6, ct: _hbCts.Token).ConfigureAwait(false);
+                    var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
+                    {
+                        AppendStatus($"心跳汇总: Total={s.Total} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
+                        OnProp(nameof(StatusLog));
+                    });
+                    await hb.StartAsync(HbInterval, useLogServer: true, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 6, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
                 });
             }
             catch (Exception ex)
@@ -146,11 +167,26 @@ namespace SimulatorApp.ViewModels
             AppendStatus("开始端口连通测试...");
             bool tcpOk = await TestTcpAsync(PlatformHost, PlatformPort, 1500);
             AppendStatus($"TCP {PlatformHost}:{PlatformPort} -> {(tcpOk ? "OK" : "FAIL")}");
-            bool udpOk = await TestUdpAsync(PlatformHost, PlatformPort, 1000);
-            AppendStatus($"UDP {PlatformHost}:{PlatformPort} -> {(udpOk ? "OK" : "WARN/NO-ACK")}");
+
+            bool logTcpOk = await TestTcpAsync(LogHost, LogPort, 1500);
+            AppendStatus($"TCP {LogHost}:{LogPort} -> {(logTcpOk ? "OK" : "FAIL")}");
+
+            bool udpOk = await TestUdpAsync(LogHost, LogPort, 1000);
+            AppendStatus($"UDP {LogHost}:{LogPort} -> {(udpOk ? "OK" : "WARN/NO-ACK")}");
+
             bool httpOk = await TestHttpAsync(PlatformHost, PlatformPort, 2000);
             AppendStatus($"HTTP http://{PlatformHost}:{PlatformPort}/ -> {(httpOk ? "OK" : "FAIL")}");
             OnProp(nameof(StatusLog));
+        }
+
+        private (bool ok, string reason) ValidateInputs()
+        {
+            if (string.IsNullOrWhiteSpace(PlatformHost)) return (false, "PlatformHost 为空");
+            if (string.IsNullOrWhiteSpace(LogHost)) return (false, "LogHost 为空");
+            if (PlatformPort <= 0 || PlatformPort > 65535) return (false, "PlatformPort 不在有效范围");
+            if (LogPort <= 0 || LogPort > 65535) return (false, "LogPort 不在有效范围");
+            if (RegCount <= 0) return (false, "RegCount 必须大于 0");
+            return (true, string.Empty);
         }
 
         
