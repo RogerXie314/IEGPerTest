@@ -1,70 +1,107 @@
 <Window x:Class="SimulatorApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SimulatorApp" Height="350" Width="600">
-    <Grid Margin="10">
-        <StackPanel>
-            <TextBlock FontSize="16" FontWeight="Bold">模拟工具（原型）</TextBlock>
-            <TextBlock Margin="0,8,0,0">基础控制：可在此触发注册与心跳（演示）。</TextBlock>
+        Title="SimulatorApp" Height="520" Width="900" MinWidth="800" MinHeight="480">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <Grid Margin="0,12,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="3*" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                    <GroupBox Header="服务器设置" Padding="8" Margin="0,0,0,8">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Width="80">平台 Host：</TextBlock>
-                                <TextBox x:Name="TxtPlatformHost" Width="160" />
-                                <TextBlock Width="60" Margin="8,0,0,0">Port：</TextBlock>
-                                <TextBox x:Name="TxtPlatformPort" Width="80" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Width="80">日志 Host：</TextBlock>
-                                <TextBox x:Name="TxtLogHost" Width="160" />
-                                <TextBlock Width="60" Margin="8,0,0,0">Port：</TextBlock>
-                                <TextBox x:Name="TxtLogPort" Width="80" />
-                            </StackPanel>
-                            <Button x:Name="BtnPortTest" Width="120" Height="28" Margin="0,8,0,0" Click="BtnPortTest_Click">端口连通测试</Button>
-                        </StackPanel>
-                    </GroupBox>
-
-                    <GroupBox Header="注册设置" Padding="8" Margin="0,0,0,8">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Width="80">前缀：</TextBlock>
-                                <TextBox Text="{Binding RegPrefix, Mode=TwoWay}" Width="160" />
-                                <TextBlock Width="60" Margin="8,0,0,0">起始：</TextBlock>
-                                <TextBox Text="{Binding RegStart, Mode=TwoWay}" Width="80" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <TextBlock Width="80">数量：</TextBlock>
-                                <TextBox Text="{Binding RegCount, Mode=TwoWay}" Width="80" />
-                                <Button Width="120" Height="28" Margin="12,0,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </GroupBox>
-
-                    <GroupBox Header="心跳设置" Padding="8">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Width="80">间隔(ms)：</TextBlock>
-                                <TextBox Text="{Binding HbInterval, Mode=TwoWay}" Width="80" />
-                                <Button Width="120" Height="28" Margin="12,0,0,0" Command="{Binding StartHeartbeatCommand}">开始心跳</Button>
-                                <Button Width="120" Height="28" Margin="8,0,0,0" Command="{Binding StopHeartbeatCommand}">停止心跳</Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </GroupBox>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1">
-                    <TextBlock FontWeight="Bold">任务与状态</TextBlock>
-                    <TextBox Text="{Binding StatusLog, Mode=OneWay}" Margin="0,8,0,0" Height="380" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"/>
-                </StackPanel>
-            </Grid>
+        <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+            <TextBlock FontSize="18" FontWeight="Bold">模拟工具（原型）</TextBlock>
+            <TextBlock Margin="12,4,0,0" Foreground="Gray">— 注册 / 心跳 / 日志 模拟</TextBlock>
         </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">服务器设置</TextBlock>
+                        <Grid Margin="6,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="90" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">平台 Host：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding PlatformHost, Mode=TwoWay}" Margin="6,2,6,2" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">Port：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding PlatformPort, Mode=TwoWay}" Width="80" Margin="6,2,0,2" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">日志 Host：</TextBlock>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LogHost, Mode=TwoWay}" Margin="6,2,6,2" />
+                            <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">Port：</TextBlock>
+                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding LogPort, Mode=TwoWay}" Width="80" Margin="6,2,0,2" />
+
+                            <Button Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Width="150" Height="30" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding PortTestCommand}">端口连通测试</Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,10,0,0" Background="#FAFAFA">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">注册设置</TextBlock>
+                        <Grid Margin="6,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="90" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center">前缀：</TextBlock>
+                            <TextBox Grid.Column="1" Text="{Binding RegPrefix, Mode=TwoWay}" Margin="6,2,6,2" />
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">起始：</TextBlock>
+                            <TextBox Grid.Column="3" Text="{Binding RegStart, Mode=TwoWay}" Width="80" Margin="6,2,0,2" />
+
+                            <StackPanel Orientation="Horizontal" Grid.ColumnSpan="4" Margin="0,8,0,0">
+                                <TextBlock Width="90" VerticalAlignment="Center">数量：</TextBlock>
+                                <TextBox Text="{Binding RegCount, Mode=TwoWay}" Width="80" />
+                                <Button Width="120" Height="30" Margin="12,0,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,10,0,0" Background="#FAFAFA">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">心跳设置</TextBlock>
+                        <Grid Margin="6,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center">间隔 (ms)：</TextBlock>
+                            <TextBox Grid.Column="1" Text="{Binding HbInterval, Mode=TwoWay}" Width="80" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Width="120" Height="30" Command="{Binding StartHeartbeatCommand}">开始心跳</Button>
+                                <Button Width="120" Height="30" Margin="8,0,0,0" Command="{Binding StopHeartbeatCommand}">停止心跳</Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <TextBlock FontWeight="SemiBold" FontSize="14">任务与状态</TextBlock>
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,8,0,0" Background="White">
+                    <TextBox Text="{Binding StatusLog, Mode=OneWay}" MinHeight="360" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True" Background="Transparent" BorderThickness="0"/>
+                </Border>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
