@@ -29,6 +29,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="90" />
@@ -47,7 +48,11 @@
                             <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">Port：</TextBlock>
                             <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding LogPort, Mode=TwoWay}" Width="80" Margin="6,2,0,2" />
 
-                            <Button Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Width="150" Height="30" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding PortTestCommand}">端口连通测试</Button>
+                            <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,6,0,0" IsChecked="{Binding UseLogServer, Mode=TwoWay}">
+                                使用日志服务器（心跳 UDP / 其他日志 UDP）
+                            </CheckBox>
+
+                            <Button Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Width="150" Height="30" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding PortTestCommand}">端口连通测试</Button>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -94,6 +99,94 @@
                         </Grid>
                     </StackPanel>
                 </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,10,0,0" Background="#FAFAFA">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">日志发送设置</TextBlock>
+
+                        <Grid Margin="6,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">客户端个数：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LogClientCount, Mode=TwoWay}" Width="80" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center">每客户端总条数：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="80" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">每客户端每秒条数：</TextBlock>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="80" />
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Width="120" Height="30" Command="{Binding StartLogSendCommand}">添加任务</Button>
+                                <Button Width="120" Height="30" Margin="8,0,0,0" Command="{Binding StopLogSendCommand}">结束任务</Button>
+                                <TextBlock Margin="12,6,0,0" Foreground="Gray" Text="(按 Clients.log 前 N 个客户端)" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,8,0,0">
+                                <TextBlock FontWeight="SemiBold">日志分类（勾选）</TextBlock>
+                                <WrapPanel Margin="0,6,0,0">
+                                    <CheckBox IsChecked="{Binding CatClientOps, Mode=TwoWay}" Margin="0,0,12,6">客户端操作</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatVulnProtect, Mode=TwoWay}" Margin="0,0,12,6">漏洞防护</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatProcessControl, Mode=TwoWay}" Margin="0,0,12,6">进程控制</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatOs, Mode=TwoWay}" Margin="0,0,12,6">操作系统</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatOutbound, Mode=TwoWay}" Margin="0,0,12,6">非法外联</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatThreat, Mode=TwoWay}" Margin="0,0,12,6">威胁检测</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatNonWhitelist, Mode=TwoWay}" Margin="0,0,12,6">非白名单</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatWhitelistTamper, Mode=TwoWay}" Margin="0,0,12,6">白名单防篡改</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatFileProtect, Mode=TwoWay}" Margin="0,0,12,6">文件保护</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatMandatoryAccess, Mode=TwoWay}" Margin="0,0,12,6">强制访问控制</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatProcessAudit, Mode=TwoWay}" Margin="0,0,12,6">进程审计</CheckBox>
+                                    <CheckBox IsChecked="{Binding CatVirusAlert, Mode=TwoWay}" Margin="0,0,12,6">病毒告警</CheckBox>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,10,0,0" Background="#FAFAFA">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">程序白名单上传设置</TextBlock>
+
+                        <StackPanel Orientation="Horizontal" Margin="6,8,0,0">
+                            <TextBlock Width="120" VerticalAlignment="Center">文件：</TextBlock>
+                            <TextBox Text="{Binding WhitelistFilePath, Mode=TwoWay}" MinWidth="160" IsReadOnly="True" />
+                            <Button Width="90" Height="28" Margin="8,0,0,0" Command="{Binding BrowseWhitelistFileCommand}">选择文件</Button>
+                        </StackPanel>
+
+                        <Grid Margin="6,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">并发上传客户端数：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WhitelistClientCount, Mode=TwoWay}" Width="80" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center">并发度：</TextBlock>
+                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="80" />
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Width="120" Height="30" Command="{Binding StartWhitelistUploadCommand}">添加任务</Button>
+                                <Button Width="120" Height="30" Margin="8,0,0,0" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <StackPanel Grid.Column="2">
@@ -122,6 +215,30 @@
                                     <TextBlock Text="{Binding HbUdpOk}" Foreground="Green" />
                                     <TextBlock Text=" / " Margin="4,0" />
                                     <TextBlock Text="{Binding HbUdpFail}" Foreground="Red" />
+                                </StackPanel>
+
+                                <TextBlock FontWeight="Bold" Margin="0,14,0,0">日志发送统计</TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Width="100">总消息：</TextBlock>
+                                    <TextBlock Text="{Binding LogTotalMessages}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Width="100">成功/失败：</TextBlock>
+                                    <TextBlock Text="{Binding LogSuccess}" Foreground="Green" />
+                                    <TextBlock Text=" / " Margin="4,0" />
+                                    <TextBlock Text="{Binding LogFailed}" Foreground="Red" />
+                                </StackPanel>
+
+                                <TextBlock FontWeight="Bold" Margin="0,14,0,0">白名单上传统计</TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Width="100">目标客户端：</TextBlock>
+                                    <TextBlock Text="{Binding UploadTotal}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Width="100">成功/失败：</TextBlock>
+                                    <TextBlock Text="{Binding UploadSuccess}" Foreground="Green" />
+                                    <TextBlock Text=" / " Margin="4,0" />
+                                    <TextBlock Text="{Binding UploadFailed}" Foreground="Red" />
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="1">

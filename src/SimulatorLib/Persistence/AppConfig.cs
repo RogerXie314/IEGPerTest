@@ -12,11 +12,21 @@ namespace SimulatorLib.Persistence
         public string LogHost { get; set; } = "localhost";
         public int LogPort { get; set; } = 4565;
 
+        public bool UseLogServer { get; set; } = true;
+
         public string RegClientPrefix { get; set; } = "Client-";
         public int RegStartIndex { get; set; } = 1;
         public int RegCount { get; set; } = 5;
 
         public int HeartbeatIntervalMs { get; set; } = 1000;
+
+        public int LogClientCount { get; set; } = 5;
+        public int LogMessagesPerClient { get; set; } = 50;
+        public int LogMessagesPerSecondPerClient { get; set; } = 10;
+
+        public string WhitelistFilePath { get; set; } = string.Empty;
+        public int WhitelistClientCount { get; set; } = 5;
+        public int WhitelistConcurrency { get; set; } = 4;
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 
