@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace SimulatorLib.Persistence
 {
-    public record ClientRecord(string ClientId, string IP, DateTime RegisteredAt, string Status);
+    public record ClientRecord(string ClientId, string IP, DateTime RegisteredAt, string Status)
+    {
+        public uint DeviceId { get; init; } = 0;
+        public int TcpPort { get; init; } = 0;
+    }
 
     public static class ClientsPersistence
     {

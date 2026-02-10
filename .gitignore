@@ -8,3 +8,4 @@ artifacts/
 **/bin/
 **/obj/
 GUI.png
+external/

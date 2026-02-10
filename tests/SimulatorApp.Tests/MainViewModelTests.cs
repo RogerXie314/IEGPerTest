@@ -42,7 +42,8 @@ namespace SimulatorApp.Tests
         {
             CleanupConfig();
             var vm = new SimulatorApp.ViewModels.MainViewModel();
-            await Task.Delay(50);
+            // Wait for background LoadConfigAsync to complete to avoid races.
+            await Task.Delay(200);
             vm.PlatformPort = 70000; // invalid
 
             var mi = typeof(SimulatorApp.ViewModels.MainViewModel).GetMethod("ValidateInputs", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -59,7 +60,8 @@ namespace SimulatorApp.Tests
         {
             CleanupConfig();
             var vm = new SimulatorApp.ViewModels.MainViewModel();
-            await Task.Delay(50);
+            // Wait for background LoadConfigAsync to complete to avoid races.
+            await Task.Delay(200);
             var mi = typeof(SimulatorApp.ViewModels.MainViewModel).GetMethod("ValidateInputs", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             Assert.NotNull(mi);
             var res = mi.Invoke(vm, null);

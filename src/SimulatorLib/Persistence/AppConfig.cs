@@ -16,9 +16,10 @@ namespace SimulatorLib.Persistence
 
         public string RegClientPrefix { get; set; } = "Client-";
         public int RegStartIndex { get; set; } = 1;
+        public string RegStartIp { get; set; } = "192.168.0.1";
         public int RegCount { get; set; } = 5;
 
-        public int HeartbeatIntervalMs { get; set; } = 1000;
+        public int HeartbeatIntervalMs { get; set; } = 3000;
 
         public int LogClientCount { get; set; } = 5;
         public int LogMessagesPerClient { get; set; } = 50;

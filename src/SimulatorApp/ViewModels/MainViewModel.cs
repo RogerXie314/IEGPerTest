@@ -21,8 +21,10 @@ namespace SimulatorApp.ViewModels
         private bool _useLogServer = true;
         private string _regPrefix = "Client-";
         private int _regStart = 1;
+        private string _regStartIp = string.Empty;
         private int _regCount = 5;
         private int _hbInterval = 1000;
+        private string _projectType = "IEG";
 
         private int _logClientCount = 5;
         private int _logMessagesPerClient = 50;
@@ -40,9 +42,15 @@ namespace SimulatorApp.ViewModels
         private bool _catNonWhitelist;
         private bool _catWhitelistTamper;
         private bool _catFileProtect;
+        private bool _catRegProtect;
         private bool _catMandatoryAccess;
         private bool _catProcessAudit;
         private bool _catVirusAlert;
+        private bool _catUsb;
+        private bool _catUsbWarning;
+        private bool _catUDiskPlug;
+        private bool _catFirewall;
+        private bool _catSysGuard;
 
         private string _whitelistFilePath = string.Empty;
         private int _whitelistClientCount = 5;
@@ -56,6 +64,11 @@ namespace SimulatorApp.ViewModels
         private int _hbTcpFail;
         private int _hbUdpOk;
         private int _hbUdpFail;
+        private int _hbHttpsTotal;
+        private int _hbHttpsOk;
+        private int _hbHttpsFail;
+        private int _hbHttpsUdpOk;
+        private int _hbHttpsUdpFail;
 
         private CancellationTokenSource? _hbCts;
         private CancellationTokenSource? _logCts;
@@ -68,8 +81,10 @@ namespace SimulatorApp.ViewModels
         public string LogHost { get => _logHost; set { _logHost = value; OnProp(); } }
         public int LogPort { get => _logPort; set { _logPort = value; OnProp(); } }
         public bool UseLogServer { get => _useLogServer; set { _useLogServer = value; OnProp(); } }
+        public string ProjectType { get => _projectType; set { _projectType = value; OnProp(); } }
         public string RegPrefix { get => _regPrefix; set { _regPrefix = value; OnProp(); } }
         public int RegStart { get => _regStart; set { _regStart = value; OnProp(); } }
+        public string RegStartIp { get => _regStartIp; set { _regStartIp = value; OnProp(); } }
         public int RegCount { get => _regCount; set { _regCount = value; OnProp(); } }
         public int HbInterval { get => _hbInterval; set { _hbInterval = value; OnProp(); } }
 
@@ -89,9 +104,15 @@ namespace SimulatorApp.ViewModels
         public bool CatNonWhitelist { get => _catNonWhitelist; set { _catNonWhitelist = value; OnProp(); } }
         public bool CatWhitelistTamper { get => _catWhitelistTamper; set { _catWhitelistTamper = value; OnProp(); } }
         public bool CatFileProtect { get => _catFileProtect; set { _catFileProtect = value; OnProp(); } }
+        public bool CatRegProtect { get => _catRegProtect; set { _catRegProtect = value; OnProp(); } }
         public bool CatMandatoryAccess { get => _catMandatoryAccess; set { _catMandatoryAccess = value; OnProp(); } }
         public bool CatProcessAudit { get => _catProcessAudit; set { _catProcessAudit = value; OnProp(); } }
         public bool CatVirusAlert { get => _catVirusAlert; set { _catVirusAlert = value; OnProp(); } }
+        public bool CatUsb { get => _catUsb; set { _catUsb = value; OnProp(); } }
+        public bool CatUsbWarning { get => _catUsbWarning; set { _catUsbWarning = value; OnProp(); } }
+        public bool CatUDiskPlug { get => _catUDiskPlug; set { _catUDiskPlug = value; OnProp(); } }
+        public bool CatFirewall { get => _catFirewall; set { _catFirewall = value; OnProp(); } }
+        public bool CatSysGuard { get => _catSysGuard; set { _catSysGuard = value; OnProp(); } }
 
         public string WhitelistFilePath { get => _whitelistFilePath; set { _whitelistFilePath = value; OnProp(); } }
         public int WhitelistClientCount { get => _whitelistClientCount; set { _whitelistClientCount = value; OnProp(); } }
@@ -107,10 +128,17 @@ namespace SimulatorApp.ViewModels
         public int HbTcpFail { get => _hbTcpFail; set { _hbTcpFail = value; OnProp(); } }
         public int HbUdpOk { get => _hbUdpOk; set { _hbUdpOk = value; OnProp(); } }
         public int HbUdpFail { get => _hbUdpFail; set { _hbUdpFail = value; OnProp(); } }
+        public int HbHttpsTotal { get => _hbHttpsTotal; set { _hbHttpsTotal = value; OnProp(); } }
+        public int HbHttpsOk { get => _hbHttpsOk; set { _hbHttpsOk = value; OnProp(); } }
+        public int HbHttpsFail { get => _hbHttpsFail; set { _hbHttpsFail = value; OnProp(); } }
+        public int HbHttpsUdpOk { get => _hbHttpsUdpOk; set { _hbHttpsUdpOk = value; OnProp(); } }
+        public int HbHttpsUdpFail { get => _hbHttpsUdpFail; set { _hbHttpsUdpFail = value; OnProp(); } }
 
         public ICommand RegisterCommand { get; }
         public ICommand StartHeartbeatCommand { get; }
         public ICommand StopHeartbeatCommand { get; }
+        public ICommand StartHttpsHeartbeatCommand { get; }
+        public ICommand StopHttpsHeartbeatCommand { get; }
         public ICommand PortTestCommand { get; }
         public ICommand StartLogSendCommand { get; }
         public ICommand StopLogSendCommand { get; }
@@ -124,6 +152,8 @@ namespace SimulatorApp.ViewModels
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
             StartHeartbeatCommand = new RelayCommand(async _ => await StartHeartbeatAsync());
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
+            StartHttpsHeartbeatCommand = new RelayCommand(_ => AppendStatus("HTTPS心跳功能待实现"));
+            StopHttpsHeartbeatCommand = new RelayCommand(_ => AppendStatus("HTTPS心跳停止功能待实现"));
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
             StartLogSendCommand = new RelayCommand(async _ => await StartLogSendAsync());
             StopLogSendCommand = new RelayCommand(_ => StopLogSend());

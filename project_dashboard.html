@@ -1,0 +1,337 @@
+<!--
+project_dashboard.html
+自动生成自: docs/项目实施文档.md
+结构注释（便于后续局部替换）:
+  <!-- SECTION:OVERVIEW_START --> ... <!-- SECTION:OVERVIEW_END -->
+  <!-- SECTION:KANBAN_START --> ... <!-- SECTION:KANBAN_END -->
+  <!-- SECTION:TIMELINE_START --> ... <!-- SECTION:TIMELINE_END -->
+  <!-- SECTION:DETAILS_START --> ... <!-- SECTION:DETAILS_END -->
+使用说明（短）：要更新看板任务或近期突破，只需提供新的任务列表或替换对应 SECTION 块的 HTML 内容，告诉我“更新 SECTION:KANBAN 内容为 ...”。
+-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>项目进度看板 — IEGPerTest</title>
+  <style>
+    /* Reset */
+    :root{
+      --bg:#071226; --card:#081226; --muted:#98a8bf; --accent:#5b7bff; --glass:rgba(255,255,255,0.03);
+      --todo:#9ca3af; --inprogress:#ff9f43; --done:#22c55e; --blocked:#ff6b6b; --panel:#061426;
+      --max-width:1280px;
+      --font-sans: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    html,body{height:100%;margin:0;font-family:var(--font-sans);background:linear-gradient(180deg,#071022 0%, #071226 60%);color:#d7e2f1}
+    .container{max-width:var(--max-width);margin:20px auto;padding:18px}
+    header{display:flex;gap:16px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:0 6px 18px rgba(11,22,50,0.6)}
+    h1{margin:0;font-size:20px}
+    .sub{color:var(--muted);font-size:13px}
+
+    /* Layout */
+    .grid{display:grid;grid-template-columns:300px 1fr 360px;gap:18px;margin-top:18px}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(2,6,23,0.55);border:1px solid rgba(255,255,255,0.03)}
+
+    /* Overview */
+    .overview h2{margin-top:0}
+    .quick-commands pre{background:#071426;padding:12px;border-radius:6px;overflow:auto;color:#cde8ff;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace}
+
+    /* Kanban */
+    .kanban{display:flex;gap:14px;align-items:flex-start}
+    .col{flex:1;min-width:220px}
+    .col h3{margin:4px 0 10px 0;font-size:15px}
+    .col .drop{min-height:140px;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.01));border:1px dashed rgba(255,255,255,0.02)}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));padding:12px;margin-bottom:12px;border-radius:10px;border-left:6px solid rgba(255,255,255,0.02);cursor:grab;box-shadow:0 6px 18px rgba(2,6,23,0.45);transition:transform .14s ease, box-shadow .14s ease}
+    .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(2,6,23,0.6)}
+    .card .title{font-weight:700}
+    .card .meta{font-size:12px;color:var(--muted);margin-top:8px}
+    .card.todo{border-left-color:var(--todo);background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.01))}
+    .card.inprogress{border-left-color:var(--inprogress);background:linear-gradient(180deg, rgba(255,159,67,0.04), rgba(0,0,0,0.02))}
+    .card.done{border-left-color:var(--done);background:linear-gradient(180deg, rgba(34,197,94,0.04), rgba(0,0,0,0.02))}
+    .card.blocked{border-left-color:var(--blocked);background:linear-gradient(180deg, rgba(255,107,107,0.04), rgba(0,0,0,0.02))}
+
+    /* Timeline */
+    .timeline{display:flex;flex-direction:column;gap:10px}
+    .timeline-item{padding:8px;border-radius:8px;background:linear-gradient(90deg,#061227, #071226);border:1px solid rgba(255,255,255,0.03)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:var(--accent);color:white}
+
+    /* Details (full doc) */
+    .details{margin-top:10px}
+    .details h2{margin-top:0}
+    .md p{line-height:1.6;color:#cfe6ff}
+    .md pre{background:#071426;padding:12px;border-radius:6px;color:#cfe6ff;overflow:auto}
+    .md code{background:rgba(255,255,255,0.02);padding:2px 6px;border-radius:4px}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* Responsive */
+    @media (max-width:1000px){.grid{grid-template-columns:1fr;}.container{padding:12px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">IEG</div>
+      <div>
+        <h1>IEGPerTest — 项目进度看板</h1>
+        <div class="sub">快速恢复与可视化管理仪表盘 · 自动生成自 docs/项目实施文档.md</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- SECTION:OVERVIEW_START -->
+      <aside class="panel overview">
+        <h2>项目概览</h2>
+        <p class="sub">状态：<strong>Version 2.0 已发布</strong> - UI界面完善，达到完美布局状态；已发布自包含 <code>SimulatorApp.exe</code>（68.44MB单文件）。</p>
+        <h3 style="margin-bottom:6px">Version 2.0 核心成果</h3>
+        <ul style="color:#cfe6ff">
+          <li>✅ 全新UI增强（HTTPS心跳、项目类型、17个日志分类）</li>
+          <li>✅ 统一样式（Button模板、150px TextBox、8px边距）</li>
+          <li>✅ 单文件发布（68.44MB独立exe）</li>
+          <li>✅ 完善文档和版本管理</li>
+        </ul>
+
+        <h3 style="margin-top:12px">快速上手</h3>
+        <div class="quick-commands">
+          <pre><code>dotnet build
+dotnet test
+
+# 启动本地接收器（推荐用于调试）
+.\artifacts\TestReceiverPublish\TestReceiver.exe
+
+# 启动演示或 UI
+.\artifacts\SimulatorRunnerPublish\SimulatorRunner.exe
+dotnet run --project src/SimulatorApp</code></pre>
+        </div>
+
+        <h3 style="margin-top:12px">关键文件</h3>
+        <ul style="color:#cfe6ff">
+          <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code></li>
+          <li><code>src/SimulatorLib/Workers/LogWorker.cs</code></li>
+          <li><code>src/SimulatorLib/Models/LogCategory.cs</code></li>
+          <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code></li>
+          <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code></li>
+        </ul>
+
+      </aside>
+      <!-- SECTION:OVERVIEW_END -->
+
+      <!-- SECTION:KANBAN_START -->
+      <main>
+        <div class="panel">
+          <h2>任务看板</h2>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:8px">拖动卡片可在列间移动（本地浏览器持久化）。</div>
+          <div class="kanban" id="kanban">
+            <div class="col">
+              <h3>待办</h3>
+              <div class="drop" data-col="todo" id="col-todo">
+                <div class="card todo" draggable="true" data-id="task-2">
+                  <div class="title">确保 LogJsonBuilder 输出原始客户端字段</div>
+                  <div class="meta">严格大小写；保留样例文本字段以兼容平台显示</div>
+                </div>
+                <div class="card todo" draggable="true" data-id="task-3">
+                  <div class="title">编译并发布自包含版本以验证平台显示</div>
+                  <div class="meta">向平台发送验证样例并记录结果</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <h3>进行中</h3>
+              <div class="drop" data-col="inprogress" id="col-inprogress">
+                <div class="card inprogress" draggable="true" data-id="task-5">
+                  <div class="title">同步 project_dashboard.html</div>
+                  <div class="meta">将近期变更写回文档并在看板中更新状态（正在同步）</div>
+                </div>
+                <div class="card inprogress" draggable="true" data-id="task-6">
+                  <div class="title">更新 UI 样式与可视化</div>
+                  <div class="meta">改善看板配色、响应式与卡片视觉效果</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <h3>已完成</h3>
+              <div class="drop" data-col="done" id="col-done">
+                <!-- Completed items -->
+                <div class="card done" draggable="true" data-id="task-1">
+                  <div class="title">实现 Type/SubType 映射表</div>
+                  <div class="meta">已实现：src/SimulatorLib/Protocol/LogTypeMapper.cs</div>
+                </div>
+                <div class="card done" draggable="true" data-id="task-4">
+                  <div class="title">样例日志解析</div>
+                  <div class="meta">已写入 <code>docs/JSON/field_mapping.md</code></div>
+                </div>
+                <div class="card done" draggable="true" data-id="task-9">
+                  <div class="title">同步 project_dashboard.html（当前）</div>
+                  <div class="meta">已将看板与文档同步并优化界面显示</div>
+                </div>
+                <div class="card done" draggable="true" data-id="task-10">
+                  <div class="title">Version 2.0 UI完善与发布</div>
+                  <div class="meta">完成MainWindow.xaml重构、新增HTTPS心跳、统一样式、单文件发布</div>
+                </div>
+                <div class="card done" draggable="true" data-id="task-11">
+                  <div class="title">创建版本文档和标签</div>
+                  <div class="meta">docs/里程碑-Version2.0-UI完善.md + git tag v2.0</div>
+                </div>
+              </div>
+              <h3 style="margin-top:18px">更新时间线</h3>
+              <div class="timeline">
+                <!-- SECTION:TIMELINE_START -->
+                <div class="timeline-item">
+                  <div><span class="badge" style="background:#22c55e">2026-02-10</span></div>
+                  <div style="margin-top:6px"><strong>Version 2.0 发布 - UI界面完善</strong></div>
+                  <div class="meta">完成MainWindow.xaml全面重构（405行），新增HTTPS心跳、项目类型选择器、17个日志分类（IEG/EDR色彩编码），统一TextBox宽度150px，单文件发布68.44MB，窗口高度820px。标签：v2.0</div>
+                </div>
+                <div class="timeline-item">
+                  <div><span class="badge">2026-02-10</span></div>
+                  <div style="margin-top:6px"><strong>样例解析与字段确认</strong></div>
+                  <div class="meta">确定原始客户端 JSON 字段与来源，并定位 Type/SubType 映射需求。</div>
+                </div>
+                <div class="timeline-item">
+                  <div><span class="badge">2026-02-10</span></div>
+                  <div style="margin-top:6px"><strong>实现 Type/SubType 映射</strong></div>
+                  <div class="meta">已实现 <code>LogTypeMapper</code> 并通过本地构建。</div>
+                </div>
+                <div class="timeline-item">
+                  <div><span class="badge">2026-02-10</span></div>
+                  <div style="margin-top:6px"><strong>看板同步与 UI 优化</strong></div>
+                  <div class="meta">已同步看板状态并优化界面配色/排版（本文件）。</div>
+                </div>
+                <!-- SECTION:TIMELINE_END -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION:DETAILS_START -->
+        <div class="panel details" style="margin-top:12px">
+          <h2>完整实施文档（原始内容）</h2>
+          <div class="md">
+            <!-- Converted markdown content starts here -->
+
+            <h3>当前概览</h3>
+            <p>状态：核心功能可运行（注册、心跳、日志发送）；已发布自包含 <code>SimulatorApp.exe</code>（artifacts/SimulatorAppPublish）。</p>
+            <p>重点：优先完成 <code>HeartbeatWorker</code>、<code>Type/SubType</code> 映射与日志字段对齐（见 <code>docs/JSON/field_mapping.md</code>）。</p>
+
+            <h3>快速上手（最少命令）</h3>
+            <pre><code>dotnet build
+dotnet test
+
+.\artifacts\TestReceiverPublish\TestReceiver.exe
+
+.\artifacts\SimulatorRunnerPublish\SimulatorRunner.exe
+dotnet run --project src/SimulatorApp</code></pre>
+
+            <h3>关键文件（快速定位）</h3>
+            <ul>
+              <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code> — JSON 构建器（需严格对齐字段名）</li>
+              <li><code>src/SimulatorLib/Workers/LogWorker.cs</code> — 日志发送逻辑（PT/HTTPS/UDP 路径）</li>
+              <li><code>src/SimulatorLib/Models/LogCategory.cs</code> — 日志分类与映射辅助</li>
+              <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code> — <code>Clients.log</code> 读写</li>
+              <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code> — UI 入口</li>
+            </ul>
+
+            <h3>近期突破（关键确认）</h3>
+            <p><strong>2026-02-10：</strong>完成样例日志解析并写入 <code>docs/JSON/field_mapping.md</code>；确认原始客户端 JSON 字段与来源（<code>Time, HoldBack, IntegrityCheck, CertCheck, Type, FullPath, ParentProcess, CompanyName, ProductName, Version, UserName, Hash, IEGHash</code>），并发现需要实现 <code>Type/SubType</code> 精确数值映射以及同时兼容样例中的文本键（如 <code>hashvalue</code>/<code>ieghashvalue</code>）。</p>
+
+            <h3>待办（优先级）</h3>
+            <ol>
+              <li>实现 <code>Type/SubType</code> 映射表并优先对齐：白名单/文件保护/强制访问控制。</li>
+              <li>确保 <code>LogJsonBuilder</code> 输出原始客户端字段（严格大小写），并保留样例字段以兼容平台显示。</li>
+              <li>编译、发布自包含版本并向平台发送验证样例，记录结果到 <code>docs/JSON/field_mapping.md</code>。</li>
+            </ol>
+
+            <h3>调试与验证要点</h3>
+            <ul>
+              <li>时间字段：保留 <code>Time</code>（可读格式）并同时输出样例常用的 ISO8601 字段以便核对。</li>
+              <li>哈希字段：<code>Hash</code> 来源于内核审计（hex），<code>IEGHash/DefIntegrity</code> 为用户态 SHA1（大写 hex）。若样例仅含一项，模拟器应优先填充 <code>Hash</code> 并同时填 <code>IEGHash</code> 以保证展示一致性。</li>
+              <li>发送路径：威胁数据（TFWarning）走 PT/TCP（或 UDP/AES）；DP/SysGuard 必须通过 HTTPS（对齐 <code>AccessServer.cpp</code>）。</li>
+            </ul>
+
+            <h3>恢复步骤（最短）</h3>
+            <pre><code>git checkout pause/2026-02-06
+
+dotnet run --project src/TestReceiver
+
+dotnet run --project src/SimulatorRunner
+
+# 检查 Clients.log 与 logs/heartbeat-YYYYMMDD.log</code></pre>
+
+            <h3>下一次优先项</h3>
+            <p>在 UI 中集成 <code>WhitelistUploadWorker</code> 与 <code>LogWorker</code>（包含文件选择、进度、统计显示）。</p>
+
+            <h3>详细补充（保存的 TODO / 快速定位）</h3>
+            <ul>
+              <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code></li>
+              <li><code>src/SimulatorLib/Workers/RegistrationWorker.cs</code></li>
+              <li><code>src/SimulatorLib/Workers/HeartbeatWorker.cs</code></li>
+              <li><code>src/SimulatorLib/Network/INetworkSender.cs</code></li>
+              <li><code>src/SimulatorLib/Network/IUdpSender.cs</code></li>
+              <li><code>src/SimulatorLib/Network/TcpSender.cs</code></li>
+              <li><code>src/SimulatorLib/Network/UdpSender.cs</code></li>
+              <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code></li>
+              <li><code>src/SimulatorRunner/Program.cs</code></li>
+            </ul>
+
+            <h3>本地调试小贴士</h3>
+            <pre><code>Test-NetConnection -ComputerName &lt;host&gt; -Port &lt;port&gt;
+
+mv Clients.log Clients.log.bak</code></pre>
+
+            <h3>待交付的实现（简短）</h3>
+            <p>按优先级：实现 HeartbeatWorker → 完善 Type/SubType 映射 → 发布并验证日志字段。</p>
+
+            <!-- Converted markdown content ends here -->
+          </div>
+        </div>
+        <!-- SECTION:DETAILS_END -->
+      </main>
+      <!-- SECTION:KANBAN_END -->
+
+      <aside class="panel" style="height:fit-content">
+        <h3>近期与上下文</h3>
+        <div style="color:var(--muted);font-size:13px">发布时间轴 &amp; 关键确认</div>
+        <div style="margin-top:10px">
+          <div class="timeline-item">
+            <div><span class="badge">2026-02-10</span></div>
+            <div style="margin-top:6px"><strong>样例解析完成</strong></div>
+            <div class="meta">已生成字段对照，下一步实现 Type/SubType 映射。</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:12px">说明</h3>
+        <p class="sub">要局部更新：告诉我要替换哪个 SECTION（例如：SECTION:KANBAN）并提交新的 HTML 段。</p>
+      </aside>
+    </div>
+
+    <footer>生成于 2026-02-10 · 文件独立，可直接在浏览器打开</footer>
+  </div>
+
+  <script>
+    // 简单拖放与本地持久化（localStorage）
+    (function(){
+      const cols = document.querySelectorAll('.drop');
+      let dragCard = null;
+      document.querySelectorAll('.card').forEach(c=>{
+        c.addEventListener('dragstart', e=>{ dragCard=c; setTimeout(()=>c.style.display='none',0); });
+        c.addEventListener('dragend', e=>{ if(c) c.style.display='block'; dragCard=null; saveState(); });
+      });
+      cols.forEach(col=>{
+        col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('over'); });
+        col.addEventListener('dragleave', e=>{ col.classList.remove('over'); });
+        col.addEventListener('drop', e=>{ col.classList.remove('over'); if(!dragCard) return; col.appendChild(dragCard); });
+      });
+      function saveState(){
+        const data={};
+        document.querySelectorAll('.drop').forEach(d=>{ data[d.dataset.col]=Array.from(d.children).map(c=>({id:c.dataset.id,title:c.querySelector('.title').innerText,meta:c.querySelector('.meta').innerText,cls:c.className})); });
+        localStorage.setItem('project_board_state',JSON.stringify(data));
+      }
+      function loadState(){
+        const raw=localStorage.getItem('project_board_state'); if(!raw) return; try{const data=JSON.parse(raw); for(const key in data){const col=document.querySelector('[data-col="'+key+'"]'); if(!col) continue; col.innerHTML=''; data[key].forEach(item=>{const div=document.createElement('div');div.className=item.cls;div.draggable=true;div.dataset.id=item.id;div.innerHTML='<div class="title">'+item.title+'</div><div class="meta">'+item.meta+'</div>'; col.appendChild(div); div.addEventListener('dragstart',e=>{dragCard=div; setTimeout(()=>div.style.display='none',0)});div.addEventListener('dragend',e=>{div.style.display='block';dragCard=null;saveState()});}); } }catch(e){console.warn(e)} }
+      loadState();
+    })();
+  </script>
+</body>
+</html>
