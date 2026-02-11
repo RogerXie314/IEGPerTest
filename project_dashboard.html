@@ -84,12 +84,13 @@ project_dashboard.html
       <aside class="panel overview">
         <h2>项目概览</h2>
         <p class="sub">状态：<strong>Version 2.0 已发布</strong> - UI界面完善，达到完美布局状态；已发布自包含 <code>SimulatorApp.exe</code>（68.44MB单文件）。</p>
-        <h3 style="margin-bottom:6px">Version 2.0 核心成果</h3>
+        <h3 style="margin-bottom:6px">最新成果 (v1.1)</h3>
         <ul style="color:#cfe6ff">
+          <li>🎉 <strong>完成11个日志类型实现</strong></li>
           <li>✅ 全新UI增强（HTTPS心跳、项目类型、17个日志分类）</li>
           <li>✅ 统一样式（Button模板、150px TextBox、8px边距）</li>
           <li>✅ 单文件发布（68.44MB独立exe）</li>
-          <li>✅ 完善文档和版本管理</li>
+          <li>📝 <a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训文档</a></li>
         </ul>
 
         <h3 style="margin-top:12px">快速上手</h3>
@@ -175,10 +176,19 @@ dotnet run --project src/SimulatorApp</code></pre>
                   <div class="title">创建版本文档和标签</div>
                   <div class="meta">docs/里程碑-Version2.0-UI完善.md + git tag v2.0</div>
                 </div>
+                <div class="card done" draggable="true" data-id="task-12">
+                  <div class="title">✅ 完成11个日志类型实现</div>
+                  <div class="meta">修正HostDefence日志LogContent字段格式（简单数字字符串），完成文件保护/注册表保护/强制访问控制 · v1.1-11logtypes</div>
+                </div>
               </div>
               <h3 style="margin-top:18px">更新时间线</h3>
               <div class="timeline">
                 <!-- SECTION:TIMELINE_START -->
+                <div class="timeline-item">
+                  <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
+                  <div style="margin-top:6px"><strong>完成11个日志类型实现 🎉</strong></div>
+                  <div class="meta">修正HostDefence日志LogContent字段格式（从描述性文本改为简单数字字符串1-5），完成文件保护、注册表保护、强制访问控制。已记录<a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训</a>。标签：v1.1-11logtypes</div>
+                </div>
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#22c55e">2026-02-10</span></div>
                   <div style="margin-top:6px"><strong>Version 2.0 发布 - UI界面完善</strong></div>
@@ -290,9 +300,30 @@ mv Clients.log Clients.log.bak</code></pre>
       </main>
       <!-- SECTION:KANBAN_END -->
 
-      <aside class="panel" style="height:fit-content">
-        <h3>近期与上下文</h3>
+      <aside已实现的11个日志类型</h3>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:8px">2026-02-11 完成</div>
+        <ol style="color:#cfe6ff;font-size:13px;line-height:1.8">
+          <li>非法程序启动（非白名单）</li>
+          <li>白名单防篡改</li>
+          <li>进程审计事件</li>
+          <li>病毒告警事件</li>
+          <li>漏洞预警</li>
+          <li>系统资源异常告警</li>
+          <li>违规外联</li>
+          <li>威胁数据采集-进程启动</li>
+          <li>文件保护 ✓</li>
+          <li>注册表保护 ✓</li>
+          <li>强制访问控制 ✓</li>
+        </ol>
+更新于 2026-02-11
+        <h3 style="margin-top:16px">近期与上下文</h3>
         <div style="color:var(--muted);font-size:13px">发布时间轴 &amp; 关键确认</div>
+        <div style="margin-top:10px">
+          <div class="timeline-item">
+            <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
+            <div style="margin-top:6px"><strong>11个日志类型完成</strong></div>
+            <div class="meta">关键修复：LogContent字段格式。<a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">查看经验教训</a></div>
+          </divd);font-size:13px">发布时间轴 &amp; 关键确认</div>
         <div style="margin-top:10px">
           <div class="timeline-item">
             <div><span class="badge">2026-02-10</span></div>
