@@ -83,14 +83,14 @@ project_dashboard.html
       <!-- SECTION:OVERVIEW_START -->
       <aside class="panel overview">
         <h2>项目概览</h2>
-        <p class="sub">状态：<strong>Version 2.0 已发布</strong> - UI界面完善，达到完美布局状态；已发布自包含 <code>SimulatorApp.exe</code>（68.44MB单文件）。</p>
-        <h3 style="margin-bottom:6px">最新成果 (v1.1)</h3>
+        <p class="sub">状态：<strong style="color:#ff9f43">⏸️ 项目暂停（v2.1.0）</strong> - 11个日志类型完成验证，代码清理完毕，文档齐全。已发布自包含 <code>SimulatorApp.exe</code>（146.59MB + 5个WPF依赖DLL）。</p>
+        <h3 style="margin-bottom:6px">当前成果 (v2.1.0)</h3>
         <ul style="color:#cfe6ff">
-          <li>🎉 <strong>完成11个日志类型实现</strong></li>
-          <li>✅ 全新UI增强（HTTPS心跳、项目类型、17个日志分类）</li>
-          <li>✅ 统一样式（Button模板、150px TextBox、8px边距）</li>
-          <li>✅ 单文件发布（68.44MB独立exe）</li>
-          <li>📝 <a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训文档</a></li>
+          <li>🎉 <strong>完成11个日志类型实现</strong>（剩余6个待实现）</li>
+          <li>✅ 代码清理（LogFieldHelper.cs、临时文件清理）</li>
+          <li>✅ 文档完善（README、暂停状态快照）</li>
+          <li>✅ Git规范化（语义化版本控制）</li>
+          <li>📝 <a href="docs/项目暂停状态-2026-02-12.md" style="color:#5b7bff">暂停状态文档</a> | <a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训</a></li>
         </ul>
 
         <h3 style="margin-top:12px">快速上手</h3>
@@ -109,11 +109,16 @@ dotnet run --project src/SimulatorApp</code></pre>
         <h3 style="margin-top:12px">关键文件</h3>
         <ul style="color:#cfe6ff">
           <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code></li>
+          <li><code>src/SimulatorLib/Protocol/LogFieldHelper.cs</code> ⭐ 新增</li>
           <li><code>src/SimulatorLib/Workers/LogWorker.cs</code></li>
-          <li><code>src/SimulatorLib/Models/LogCategory.cs</code></li>
-          <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code></li>
           <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code></li>
         </ul>
+        
+        <h3 style="margin-top:12px">快速恢复</h3>
+        <div style="background:rgba(255,159,67,0.1);padding:10px;border-radius:6px;border-left:3px solid #ff9f43">
+          <div style="font-size:13px;color:#ff9f43;margin-bottom:6px">📖 阅读暂停文档</div>
+          <code style="color:#cfe6ff;font-size:12px">docs/项目暂停状态-2026-02-12.md</code>
+        </div>
 
       </aside>
       <!-- SECTION:OVERVIEW_END -->
@@ -184,10 +189,19 @@ dotnet run --project src/SimulatorApp</code></pre>
                   <div class="title">✅ Git 仓库重构与规范化</div>
                   <div class="meta">实现语义化版本控制：创建 v2.0.0/v2.1.0 标签，清理旧标签，重命名分支为 feature/log-implementation</div>
                 </div>
+                <div class="card done" draggable="true" data-id="task-14">
+                  <div class="title">✅ 项目清理与暂停准备</div>
+                  <div class="meta">清理临时文件、代码改进提交、更新README与文档、创建暂停状态快照 · 3bfe376, f85e229</div>
+                </div>
               </div>
               <h3 style="margin-top:18px">更新时间线</h3>
               <div class="timeline">
                 <!-- SECTION:TIMELINE_START -->
+                <div class="timeline-item">
+                  <div><span class="badge" style="background:#ff9f43">2026-02-12</span></div>
+                  <div style="margin-top:6px"><strong>项目清理与暂停 ⏸️</strong></div>
+                  <div class="meta">完成项目清理：删除临时文件（SimulatorApp_Portable.*、WLDefender.log、冗余文档），提交代码改进（LogFieldHelper.cs等），重写<a href="README.md" style="color:#5b7bff">README.md</a>反映v2.1.0实际状态，创建<a href="docs/项目暂停状态-2026-02-12.md" style="color:#5b7bff">暂停状态文档</a>包含完整快照和恢复指南。工作区干净，3次提交推送至远程。项目进入良好暂停状态。</div>
+                </div>
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
                   <div style="margin-top:6px"><strong>Git 仓库重构与规范化 ✨</strong></div>
