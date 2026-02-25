@@ -25,6 +25,8 @@ namespace SimulatorLib.Persistence
         public int LogMessagesPerClient { get; set; } = 50;
         public int LogMessagesPerSecondPerClient { get; set; } = 10;
 
+        public int RegConcurrency { get; set; } = 20;
+
         public string WhitelistFilePath { get; set; } = string.Empty;
         public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;

@@ -60,6 +60,28 @@ namespace SimulatorLib.Persistence
             return list;
         }
 
+        /// <summary>
+        /// 用给定记录集合覆写整个 Clients.log，替换之前的所有内容。
+        /// 用于：注册前预写「Generated」记录，注册完成后回写最终状态。
+        /// </summary>
+        public static async Task WriteAllAsync(IEnumerable<ClientRecord> records)
+        {
+            await _writeLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                using var fs = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                using var sw = new StreamWriter(fs);
+                foreach (var rec in records)
+                {
+                    await sw.WriteLineAsync(JsonSerializer.Serialize(rec)).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
+        }
+
         public static bool Exists()
         {
             return File.Exists(FilePath);

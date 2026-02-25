@@ -53,6 +53,7 @@ namespace SimulatorApp.ViewModels
         private bool _catFirewall;
         private bool _catSysGuard;
 
+        private int _regConcurrency = 20;
         private int _regTotal;
         private int _regSuccess;
         private int _regFailed;
@@ -130,6 +131,7 @@ namespace SimulatorApp.ViewModels
         public bool CatFirewall { get => _catFirewall; set { _catFirewall = value; OnProp(); } }
         public bool CatSysGuard { get => _catSysGuard; set { _catSysGuard = value; OnProp(); } }
 
+        public int RegConcurrency { get => _regConcurrency; set { _regConcurrency = value; OnProp(); } }
         public int RegTotal { get => _regTotal; set { _regTotal = value; OnProp(); } }
         public int RegSuccess { get => _regSuccess; set { _regSuccess = value; OnProp(); } }
         public int RegFailed { get => _regFailed; set { _regFailed = value; OnProp(); } }
@@ -201,6 +203,7 @@ namespace SimulatorApp.ViewModels
                 RegStart = cfg.RegStartIndex;
                 RegStartIp = cfg.RegStartIp;
                 RegCount = cfg.RegCount;
+                RegConcurrency = cfg.RegConcurrency;
                 HbInterval = cfg.HeartbeatIntervalMs;
 
                 LogClientCount = cfg.LogClientCount;
@@ -228,6 +231,7 @@ namespace SimulatorApp.ViewModels
                 RegStartIndex = RegStart,
                 RegStartIp = RegStartIp,
                 RegCount = RegCount,
+                RegConcurrency = RegConcurrency,
                 HeartbeatIntervalMs = HbInterval,
                 LogClientCount = LogClientCount,
                 LogMessagesPerClient = LogMessagesPerClient,
@@ -342,13 +346,13 @@ namespace SimulatorApp.ViewModels
                     RegSuccess = 0;
                     RegFailed = 0;
                     RegFailureDetail = string.Empty;
-                    AppendStatus($"开始注册 {RegCount} 个客户端...");
+                    AppendStatus($"开始注册 {RegCount} 个客户端（并发={RegConcurrency}），预生成数据中...");
                 });
 
                 var summary = await reg.RegisterAsync(
                     RegPrefix, RegStart, RegCount,
                     startIp: RegStartIp, host: PlatformHost, port: PlatformPort,
-                    concurrency: 4, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
+                    concurrency: RegConcurrency, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
 
                 // 构建失败原因文本
                 var detailSb = new StringBuilder();
@@ -454,6 +458,7 @@ namespace SimulatorApp.ViewModels
             if (PlatformPort <= 0 || PlatformPort > 65535) return (false, "PlatformPort 不在有效范围");
             if (UseLogServer && (LogPort <= 0 || LogPort > 65535)) return (false, "LogPort 不在有效范围");
             if (RegCount <= 0) return (false, "RegCount 必须大于 0");
+            if (RegConcurrency <= 0 || RegConcurrency > 5000) return (false, "并发数必须在 1~5000 之间");
             if (LogClientCount <= 0) return (false, "LogClientCount 必须大于 0");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
             if (LogMessagesPerSecondPerClient < 0) return (false, "LogMessagesPerSecondPerClient 不能为负数");
