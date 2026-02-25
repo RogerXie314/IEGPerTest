@@ -16,15 +16,27 @@ namespace SimulatorLib.Persistence
     {
         private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Clients.log");
 
+        // 串行化并发写入，防止多任务同时追加时出现文件共享冲突（IOException），
+        // 导致部分记录静默丢失（原 FileShare.Read 不允许并发写入）。
+        private static readonly SemaphoreSlim _writeLock = new SemaphoreSlim(1, 1);
+
         public static string GetPath() => FilePath;
 
         public static async Task AppendAsync(ClientRecord record)
         {
             var line = JsonSerializer.Serialize(record);
-            // 使用 FileShare.Read 以允许并发读取，追加写入
-            using var fs = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
-            using var sw = new StreamWriter(fs);
-            await sw.WriteLineAsync(line).ConfigureAwait(false);
+            await _writeLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                // FileShare.ReadWrite：写入期间允许其他方读取文件，不影响性能监控等工具实时查看日志
+                using var fs = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                using var sw = new StreamWriter(fs);
+                await sw.WriteLineAsync(line).ConfigureAwait(false);
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
         }
 
         public static async Task<List<ClientRecord>> ReadAllAsync()
