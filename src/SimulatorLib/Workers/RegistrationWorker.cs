@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using SimulatorLib.Network;
 using SimulatorLib.Protocol;
@@ -27,6 +28,24 @@ namespace SimulatorLib.Workers
         {
             var sem = new SemaphoreSlim(concurrency);
             var tasks = new List<Task>();
+
+            // 用 Channel 解耦注册速度与文件写入速度：
+            // 注册任务 HTTP 完成后立即投递记录到 channel 并释放并发门控，
+            // 独立的消费者 Task 从 channel 读取并串行写入 Clients.log。
+            // 这样文件写入的快慢不会阻塞下一批注册任务的启动。
+            var writeChannel = Channel.CreateUnbounded<ClientRecord>(
+                new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
+
+            // 后台消费者：串行写入，保证文件安全；channel 关闭后将剩余记录全部刷完再退出
+            var writerTask = Task.Run(async () =>
+            {
+                await foreach (var rec in writeChannel.Reader.ReadAllAsync(CancellationToken.None)
+                                                              .ConfigureAwait(false))
+                {
+                    try { await ClientsPersistence.AppendAsync(rec).ConfigureAwait(false); }
+                    catch { /* 单条写入失败不影响其余记录 */ }
+                }
+            });
 
             using var http = CreateHttpClient(timeoutMs);
             var loginUrl = new Uri($"https://{host}:{port}/USM/clientLogin.do");
@@ -113,7 +132,9 @@ namespace SimulatorLib.Workers
                             DeviceId = deviceId,
                             TcpPort = tcpPort,
                         };
-                        await ClientsPersistence.AppendAsync(rec).ConfigureAwait(false);
+                        // HTTP 完成后立即投入 channel，sem 随后立刻释放，
+                        // 不再等待文件写入完成，保证注册速度不受磁盘 I/O 影响。
+                        writeChannel.Writer.TryWrite(rec);
                     }
                     catch (OperationCanceledException) { }
                     catch { }
@@ -124,7 +145,12 @@ namespace SimulatorLib.Workers
                 }, ct));
             }
 
+            // 等待所有注册任务完成，再告知 channel 写端关闭
             await Task.WhenAll(tasks).ConfigureAwait(false);
+            writeChannel.Writer.Complete();
+
+            // 等待消费者把 channel 中剩余记录全部刷写完毕
+            await writerTask.ConfigureAwait(false);
         }
 
         private static HttpClient CreateHttpClient(int timeoutMs)

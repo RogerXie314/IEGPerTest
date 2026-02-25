@@ -16,8 +16,9 @@ namespace SimulatorLib.Persistence
     {
         private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Clients.log");
 
-        // 串行化并发写入，防止多任务同时追加时出现文件共享冲突（IOException），
-        // 导致部分记录静默丢失（原 FileShare.Read 不允许并发写入）。
+        // 兜底保护：防止多处直接调用 AppendAsync 时出现并发冲突。
+        // 正常路径下，RegistrationWorker 通过 Channel<ClientRecord> 保证只有单一消费者
+        // 调用 AppendAsync，此锁实际上不会产生竞争，但保留作为防御性保障。
         private static readonly SemaphoreSlim _writeLock = new SemaphoreSlim(1, 1);
 
         public static string GetPath() => FilePath;
