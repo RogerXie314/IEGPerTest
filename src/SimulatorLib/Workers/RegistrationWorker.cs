@@ -82,23 +82,33 @@ namespace SimulatorLib.Workers
                         uint deviceId = 0;
                         int tcpPort = 0;
 
+                        // 对齐原项目 WlSetUPApp.cpp 的重试策略：
+                        //   WL_CONNECT_USM_RETRY_COUNTS = 3（最多3次）
+                        //   WL_SETUP_DOPOST_RETRY_TIME  = 1000ms（固定间隔，给服务器恢复时间）
+                        // clientLogin.do 和 clientResult.do 均在同一重试循环内，
+                        // 任意一步失败都消耗一次重试计数并等待 1000ms 后重试整个流程，
+                        // 对应原项目 USM_BUSY（errCode=8）等繁忙场景。
+                        const int RetryDelayMs = 1000;
+
                         for (int attempt = 1; attempt <= retry && !ok && !ct.IsCancellationRequested; attempt++)
                         {
                             try
                             {
+                                // Step 1: clientLogin.do（对应原项目 SetUp_DoPost）
                                 using var content = new StringContent(reqJson, Encoding.UTF8, "application/json");
                                 using var resp = await http.PostAsync(loginUrl, content, ct).ConfigureAwait(false);
                                 var respText = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
                                 if (!resp.IsSuccessStatusCode)
                                 {
-                                    await Task.Delay(200 * attempt, ct).ConfigureAwait(false);
+                                    await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                                     continue;
                                 }
 
                                 if (!UsmResponseParsers.TryCheckSetupResult(respText, out var errCode, out _))
                                 {
-                                    await Task.Delay(200 * attempt, ct).ConfigureAwait(false);
+                                    // errCode=8 → USM_BUSY（服务器繁忙），固定等待 1000ms 后重试
+                                    await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                                     continue;
                                 }
 
@@ -108,21 +118,30 @@ namespace SimulatorLib.Workers
                                     tcpPort = cfg.TcpPort;
                                 }
 
-                                ok = true;
-
-                                // 按原项目 Register 完还会调用 clientResult.do，上报安装结束结果
+                                // Step 2: clientResult.do（对应原项目 Setup_InstallEnd）
+                                // 原项目同样纳入重试循环：失败时 iRetry-- + Sleep(1000ms) + continue
                                 var resultJson = UsmRegistrationJsonBuilder.BuildClientResultJson(
                                     computerId: clientId,
                                     username: "SysAdmin",
                                     cmdType: UsmRegistrationJsonBuilder.SetupCmdType,
                                     cmdId: UsmRegistrationJsonBuilder.CmdClientRegistry,
                                     dealResult: 0);
-                                _ = TryPostFireAndForget(http, resultUrl, resultJson, ct);
+
+                                using var resultContent = new StringContent(resultJson, Encoding.UTF8, "application/json");
+                                using var resultResp = await http.PostAsync(resultUrl, resultContent, ct).ConfigureAwait(false);
+
+                                if (!resultResp.IsSuccessStatusCode)
+                                {
+                                    await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
+                                    continue;
+                                }
+
+                                ok = true;
                             }
                             catch (OperationCanceledException) { throw; }
                             catch
                             {
-                                await Task.Delay(200 * attempt, ct).ConfigureAwait(false);
+                                await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                             }
                         }
 
@@ -163,16 +182,6 @@ namespace SimulatorLib.Workers
             {
                 Timeout = TimeSpan.FromMilliseconds(Math.Max(500, timeoutMs)),
             };
-        }
-
-        private static async Task TryPostFireAndForget(HttpClient http, Uri url, string json, CancellationToken ct)
-        {
-            try
-            {
-                using var content = new StringContent(json, Encoding.UTF8, "application/json");
-                using var _ = await http.PostAsync(url, content, ct).ConfigureAwait(false);
-            }
-            catch { }
         }
 
         private static string IncrementIPv4(string startIp, int offset)
