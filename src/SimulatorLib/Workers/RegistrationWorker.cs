@@ -144,11 +144,22 @@ namespace SimulatorLib.Workers
 
                                     ok = true;
                                 }
-                                catch (OperationCanceledException) { throw; }
+                                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                                {
+                                    // 用户主动取消，向上传播
+                                    throw;
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    // HttpClient 内部超时（TaskCanceledException），不是用户取消
+                                    // 当作超时/网络异常处理，继续重试
+                                    lastFailReason = "超时/网络异常";
+                                    try { await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false); } catch { }
+                                }
                                 catch
                                 {
                                     lastFailReason = "超时/网络异常";
-                                    await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
+                                    try { await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false); } catch { }
                                 }
                             }
 
@@ -217,8 +228,8 @@ namespace SimulatorLib.Workers
                 orderedFinal.Add(finalDict.TryGetValue(r.ClientId, out var fr) ? fr : r);
             await ClientsPersistence.WriteAllAsync(orderedFinal).ConfigureAwait(false);
 
-            int finalFailed = 0;
-            foreach (var r in orderedFinal) if (r.Status != "Registered") finalFailed++;
+            // 用「总数 - 累计成功」计算最终失败数，避免「Generated/消失」状态被误算
+            int finalFailed = count - totalSuccess;
 
             return new RegistrationSummary
             {
