@@ -81,7 +81,17 @@ namespace SimulatorApp.ViewModels
         public string LogHost { get => _logHost; set { _logHost = value; OnProp(); } }
         public int LogPort { get => _logPort; set { _logPort = value; OnProp(); } }
         public bool UseLogServer { get => _useLogServer; set { _useLogServer = value; OnProp(); } }
-        public string ProjectType { get => _projectType; set { _projectType = value; OnProp(); } }
+        public string ProjectType 
+        { 
+            get => _projectType; 
+            set 
+            { 
+                _projectType = value; 
+                OnProp();
+                // 项目类型改变时，自动勾选对应的日志分类
+                ApplyProjectTypeSelection();
+            } 
+        }
         public string RegPrefix { get => _regPrefix; set { _regPrefix = value; OnProp(); } }
         public int RegStart { get => _regStart; set { _regStart = value; OnProp(); } }
         public string RegStartIp { get => _regStartIp; set { _regStartIp = value; OnProp(); } }
@@ -178,6 +188,7 @@ namespace SimulatorApp.ViewModels
                 UseLogServer = cfg.UseLogServer;
                 RegPrefix = cfg.RegClientPrefix;
                 RegStart = cfg.RegStartIndex;
+                RegStartIp = cfg.RegStartIp;
                 RegCount = cfg.RegCount;
                 HbInterval = cfg.HeartbeatIntervalMs;
 
@@ -204,6 +215,7 @@ namespace SimulatorApp.ViewModels
                 UseLogServer = UseLogServer,
                 RegClientPrefix = RegPrefix,
                 RegStartIndex = RegStart,
+                RegStartIp = RegStartIp,
                 RegCount = RegCount,
                 HeartbeatIntervalMs = HbInterval,
                 LogClientCount = LogClientCount,
@@ -220,6 +232,63 @@ namespace SimulatorApp.ViewModels
         private void AppendStatus(string text)
         {
             StatusLog += $"[{DateTime.Now:HH:mm:ss}] {text}\r\n";
+        }
+        
+        private void ApplyProjectTypeSelection()
+        {
+            // 根据项目类型自动勾选对应的日志分类
+            if (_projectType == "IEG")
+            {
+                // IEG专属分类
+                CatVulnProtect = true;
+                CatProcessAudit = true;
+                CatNonWhitelist = true;
+                CatWhitelistTamper = true;
+                CatRegProtect = true;
+                CatUsb = true;
+                CatUsbWarning = true;
+                CatUDiskPlug = true;
+                
+                // 通用分类
+                CatClientOps = true;
+                // CatProcessControl 已移除
+                CatOs = true;
+                CatOutbound = true;
+                CatThreat = false; // IEG的威胁检测只有系统数据采集，不单独发送威胁数据采集
+                CatFileProtect = true;
+                CatMandatoryAccess = true;
+                CatVirusAlert = true;
+                
+                // 取消EDR专属
+                CatFirewall = false;
+                CatSysGuard = false;
+            }
+            else if (_projectType == "EDR")
+            {
+                // EDR专属分类
+                CatFirewall = true;
+                CatSysGuard = true;
+                
+                // 通用分类
+                CatClientOps = true;
+                // CatProcessControl 已移除
+                CatOs = true;
+                CatOutbound = true;
+                CatThreat = true; // EDR的威胁检测包含威胁数据采集
+                CatFileProtect = true;
+                CatMandatoryAccess = true;
+                CatVirusAlert = true;
+                
+                // 取消IEG专属
+                CatVulnProtect = false;
+                CatProcessAudit = false;
+                CatNonWhitelist = false;
+                CatWhitelistTamper = false;
+                CatRegProtect = false;
+                CatUsb = false;
+                CatUsbWarning = false;
+                CatUDiskPlug = false;
+            }
         }
 
         private void RunOnUi(Action action)
@@ -255,7 +324,7 @@ namespace SimulatorApp.ViewModels
                 var sender = new TcpSender();
                 var reg = new RegistrationWorker(sender);
                 RunOnUi(() => AppendStatus($"开始注册 {RegCount} 个客户端..."));
-                await reg.RegisterAsync(RegPrefix, RegStart, RegCount, host: PlatformHost, port: PlatformPort, concurrency: 4, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
+                await reg.RegisterAsync(RegPrefix, RegStart, RegCount, startIp: RegStartIp, host: PlatformHost, port: PlatformPort, concurrency: 4, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
                 RunOnUi(() => AppendStatus("注册任务完成"));
             }
             catch (Exception ex)
@@ -292,10 +361,11 @@ namespace SimulatorApp.ViewModels
                             HbTcpFail = s.FailTcp;
                             HbUdpOk = s.SuccessUdp;
                             HbUdpFail = s.FailUdp;
-                            AppendStatus($"心跳汇总: Total={s.Total} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
+                            // 只更新状态数值，不记录日志（避免频繁滚动）
                         });
                     });
                     await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 6, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
+                    // 注意：心跳是持续运行的，不需要记录“完成”日志
                 });
             }
             catch (Exception ex)
@@ -341,6 +411,20 @@ namespace SimulatorApp.ViewModels
             if (LogMessagesPerSecondPerClient < 0) return (false, "LogMessagesPerSecondPerClient 不能为负数");
             if (WhitelistClientCount <= 0) return (false, "WhitelistClientCount 必须大于 0");
             if (WhitelistConcurrency <= 0) return (false, "WhitelistConcurrency 必须大于 0");
+            
+            // 验证起始IP格式（如果已填写）
+            if (!string.IsNullOrWhiteSpace(RegStartIp))
+            {
+                var parts = RegStartIp.Split('.');
+                if (parts.Length != 4)
+                    return (false, "起始IP格式错误，应为 x.x.x.x 格式");
+                foreach (var part in parts)
+                {
+                    if (!byte.TryParse(part, out _))
+                        return (false, "起始IP格式错误，每段应为0-255的数字");
+                }
+            }
+            
             return (true, string.Empty);
         }
 
@@ -349,16 +433,22 @@ namespace SimulatorApp.ViewModels
             var list = new System.Collections.Generic.List<string>();
             if (CatClientOps) list.Add("客户端操作");
             if (CatVulnProtect) list.Add("漏洞防护");
-            if (CatProcessControl) list.Add("进程控制");
+            // CatProcessControl 已移除，不存在对应checkbox
             if (CatOs) list.Add("操作系统");
             if (CatOutbound) list.Add("非法外联");
-            if (CatThreat) list.Add("威胁检测");
+            if (CatThreat) list.Add("威胁数据采集");
             if (CatNonWhitelist) list.Add("非白名单");
             if (CatWhitelistTamper) list.Add("白名单防篡改");
             if (CatFileProtect) list.Add("文件保护");
+            if (CatRegProtect) list.Add("注册表保护");
             if (CatMandatoryAccess) list.Add("强制访问控制");
             if (CatProcessAudit) list.Add("进程审计");
             if (CatVirusAlert) list.Add("病毒告警");
+            if (CatUsb) list.Add("USB设备");
+            if (CatUsbWarning) list.Add("USB访问告警");
+            if (CatUDiskPlug) list.Add("U盘插拔");
+            if (CatFirewall) list.Add("防火墙");
+            if (CatSysGuard) list.Add("系统防护");
             return list.Count == 0 ? new[] { "Default" } : list.ToArray();
         }
 
@@ -398,7 +488,7 @@ namespace SimulatorApp.ViewModels
                             LogTotalMessages = s.TotalMessages;
                             LogSuccess = s.Success;
                             LogFailed = s.Failed;
-                            AppendStatus($"日志汇总: Total={s.TotalMessages} OK={s.Success} FAIL={s.Failed}");
+                            // 只更新状态数值，不记录日志（避免频繁滚动）
                         });
                     });
 
@@ -415,6 +505,9 @@ namespace SimulatorApp.ViewModels
                         concurrency: 6,
                         ct: _logCts.Token,
                         progress: progress).ConfigureAwait(false);
+                    
+                    // 任务完成后记录最终结果
+                    RunOnUi(() => AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}"));
                 });
             }
             catch (Exception ex)
@@ -494,7 +587,7 @@ namespace SimulatorApp.ViewModels
                             UploadTotal = s.Total;
                             UploadSuccess = s.Success;
                             UploadFailed = s.Failed;
-                            AppendStatus($"上传汇总: Total={s.Total} OK={s.Success} FAIL={s.Failed}");
+                            // 只更新状态数值，不记录日志（避免频繁滚动）
                         });
                     });
 
@@ -506,6 +599,9 @@ namespace SimulatorApp.ViewModels
                         concurrency: WhitelistConcurrency,
                         ct: _uploadCts.Token,
                         progress: progress).ConfigureAwait(false);
+                    
+                    // 任务完成后记录最终结果
+                    RunOnUi(() => AppendStatus($"白名单上传完成: 总数={UploadTotal} 成功={UploadSuccess} 失败={UploadFailed}"));
                 });
             }
             catch (Exception ex)

@@ -69,10 +69,13 @@ public static class LogJsonBuilder
         string defIntegrity = "-",
         string clientIp = "-",
         string clientName = "-",
-        string machineCode = "-"
+        string machineCode = "-",
+        string os = "Windows 10",
+        LogFieldHelper.LogCategory category = LogFieldHelper.LogCategory.NonWhitelist
     )
     {
         // external: WarningLog_GetJsonByVector
+        // 像病毒告警一样，保持简单的字段结构
         var item = new Dictionary<string, object?>
         {
             ["Time"] = NowLocalTimeString(),
@@ -90,13 +93,6 @@ public static class LogJsonBuilder
             ["Hash"] = string.IsNullOrWhiteSpace(hash) ? "-" : hash,
             ["IEGHash"] = string.IsNullOrWhiteSpace(iegHash) ? "-" : iegHash,
             ["DefIntegrity"] = string.IsNullOrWhiteSpace(defIntegrity) ? "-" : defIntegrity,
-            // aliases and extra metadata observed in platform samples
-            ["hashvalue"] = string.IsNullOrWhiteSpace(hash) ? "-" : hash,
-            ["ieghashvalue"] = string.IsNullOrWhiteSpace(iegHash) ? "-" : iegHash,
-            ["receiptdate"] = DateTimeOffset.Now.ToString("o"),
-            ["clientip"] = string.IsNullOrWhiteSpace(clientIp) ? "-" : clientIp,
-            ["clientname"] = string.IsNullOrWhiteSpace(clientName) ? "-" : clientName,
-            ["machinecode"] = string.IsNullOrWhiteSpace(machineCode) ? "-" : machineCode,
         };
 
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.ProcessAlertLog, new[] { item });
@@ -116,7 +112,8 @@ public static class LogJsonBuilder
         string defIntegrity = "-",
         string clientIp = "-",
         string clientName = "-",
-        string machineCode = "-"
+        string machineCode = "-",
+        string os = "Windows 10"
     )
     {
         // 白名单相关的告警（非白名单告警）映射到 ProcessAlert，Type/SubType 使用映射器决定
@@ -139,7 +136,9 @@ public static class LogJsonBuilder
             defIntegrity: defIntegrity,
             clientIp: clientIp,
             clientName: clientName,
-            machineCode: machineCode
+            machineCode: machineCode,
+            os: os,
+            category: LogFieldHelper.LogCategory.NonWhitelist
         );
     }
 
@@ -156,7 +155,8 @@ public static class LogJsonBuilder
         string defIntegrity = "-",
         string clientIp = "-",
         string clientName = "-",
-        string machineCode = "-"
+        string machineCode = "-",
+        string os = "Windows 10"
     )
     {
         // 白名单防篡改：标记 integrityCheck 并使用映射器决定 Type/SubType
@@ -179,7 +179,9 @@ public static class LogJsonBuilder
             defIntegrity: defIntegrity,
             clientIp: clientIp,
             clientName: clientName,
-            machineCode: machineCode
+            machineCode: machineCode,
+            os: os,
+            category: LogFieldHelper.LogCategory.WhitelistTamper
         );
     }
 
@@ -202,19 +204,31 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.VulDefenseLog, new[] { item });
     }
 
-    public static string BuildHostDefenceLog(string computerId, string fullPath, string processName, string userName, string logContent, int detailLogTypeLevel2, bool blocked = false)
+    public static string BuildHostDefenceLog(
+        string computerId,
+        string fullPath,
+        string processName,
+        string userName,
+        string logContent,
+        int detailLogTypeLevel2,
+        string clientIp = "-",
+        string clientName = "-",
+        string machineCode = "-",
+        string os = "Windows 10",
+        bool blocked = false)
     {
         // external: hostDefence_GetJsonByVector
         // 原代码: CMDContent["LogType"] = (int)pipclogcomm->dwDetailLogTypeLevel2
         // DetailLogTypeLevel2/LogType: 文件保护=1, 注册表保护=2, 加载文件=3, 强制访问控制(MAC)=4
+        // 实际日志格式（从docs/WLDefender.log）：只包含Block、FullPath、LogContent、LogType、ProcessName、Time、Username
         var item = new Dictionary<string, object?>
         {
-            ["LogType"] = detailLogTypeLevel2,  // LogType应该等于dwDetailLogTypeLevel2
             ["Block"] = blocked ? 1 : 0,
-            ["Time"] = NowLocalTimeString(),
             ["FullPath"] = string.IsNullOrWhiteSpace(fullPath) ? "-" : fullPath,
             ["LogContent"] = string.IsNullOrWhiteSpace(logContent) ? "-" : logContent,
+            ["LogType"] = detailLogTypeLevel2,
             ["ProcessName"] = string.IsNullOrWhiteSpace(processName) ? "-" : processName,
+            ["Time"] = NowLocalTimeString(),
             ["Username"] = string.IsNullOrWhiteSpace(userName) ? "-" : userName,
         };
 

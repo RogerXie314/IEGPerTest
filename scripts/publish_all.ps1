@@ -8,10 +8,9 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-$common = @()
-$common += "-Runtime"; $common += $Runtime
-if ($SelfContained) { $common += "-SelfContained" }
-if ($SingleFile) { $common += "-SingleFile" }
+$common = @{ Runtime = $Runtime }
+if ($SelfContained) { $common['SelfContained'] = $true }
+if ($SingleFile) { $common['SingleFile'] = $true }
 
 Write-Host "Publishing all apps (Runtime=$Runtime SelfContained=$SelfContained SingleFile=$SingleFile)"
 

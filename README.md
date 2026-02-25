@@ -1,62 +1,120 @@
-# IEGPerTest Simulator
+﻿# IEGPerTest Simulator
 
-项目原型：用于模拟客户端注册、心跳、日志发送与白名单上传的桌面工具（WPF + .NET 8）。
+IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送与白名单上传的 WPF 桌面工具（.NET 8）。
 
-实施文档（快速恢复版）：[docs/项目实施文档.md](docs/项目实施文档.md)
+## 📚 核心文档
 
-快速开始：
+- **项目看板**：[project_dashboard.html](project_dashboard.html) - 可视化进度看板（启动：`.\scripts\start_dashboard.ps1`）
+- **实施文档**：[docs/项目实施文档.md](docs/项目实施文档.md)
+- **经验教训**：[docs/经验教训-日志类型实现.md](docs/经验教训-日志类型实现.md)
 
-- 打开命令行，进入项目根目录（本仓库）
-- 若机器已安装 .NET SDK，可构建并运行：
+## 🚀 快速开始
+
+### 开发环境运行
 
 ```powershell
+# 构建并运行（需要 .NET 8 SDK）
 dotnet build
 dotnet run --project src/SimulatorApp
 ```
 
-说明：
-
-- `dotnet run` / `dotnet build` 运行的是源码构建产物（总是最新）。
-- `artifacts/*Publish/*.exe` 是“发布产物”，不会因为你改了代码自动更新；需要重新 `publish`。
-
-发布最新 exe（可选）：
+### 发布独立可执行文件
 
 ```powershell
-./scripts/publish_all.ps1
+# 发布所有组件
+.\scripts\publish_all.ps1
+
+# 或单独发布
+.\scripts\publish_simulatorapp.ps1      # 主应用
+.\scripts\publish_simulatorrunner.ps1   # 运行器
+.\scripts\publish_testreceiver.ps1      # 测试接收器
+.\scripts\publish_devrunner.ps1         # 开发工具
 ```
 
-分别发布：
+发布产物位于 `artifacts/*Publish/` 目录。
 
-```powershell
-./scripts/publish_simulatorapp.ps1
-./scripts/publish_simulatorrunner.ps1
-./scripts/publish_testreceiver.ps1
-./scripts/publish_devrunner.ps1
+### 部署到无 .NET 环境的机器
+
+发布的应用是**自包含**的，但需要拷贝以下文件：
+
+```
+SimulatorApp.exe                    # 主程序（146 MB）
+D3DCompiler_47_cor3.dll            # WPF 依赖
+PenImc_cor3.dll
+PresentationNative_cor3.dll
+vcruntime140_cor3.dll
+wpfgfx_cor3.dll
 ```
 
-- `Clients.log` 将位于程序运行目录（用于持久化已注册客户端列表），运行时不要将该文件纳入版本控制（已在 `.gitignore` 中忽略）。
+保持这些文件在同一目录即可在任何 Windows x64 机器上运行。
 
-已实现（基础版）：注册、心跳、日志发送、白名单上传（均基于 `Clients.log`）；并有基础单元测试覆盖 ViewModel 与配置。
+## ✅ 当前状态（v2.1.0）
 
-下一步（建议迭代）：
-- UI：按需求补齐“任务状态表格”（开始时间/持续时间/状态等）与更细粒度的进度展示
-- 协议：按需求规则补齐“除威胁数据采集外的日志走 HTTPS（未勾选日志服务器）”等协议差异（当前日志发送为简化版示例 payload）
-- 数据：补齐 `Clients.log` 的导入/导出/清理与并发访问防护策略
+**已完成功能：**
+- ✅ 客户端注册、心跳、白名单上传（PT/HTTP/HTTPS）
+- ✅ **11 种日志类型**完整实现并验证（详见下方列表）
+- ✅ UI 界面完善（17 种日志分类、心跳选项、项目类型选择）
+- ✅ 单文件发布流程（含 WPF 原生依赖）
+- ✅ 持久化存储（`Clients.log`、`config.json`）
 
-- 自动化与 CI
-----------------
-本仓库已添加本地自动化脚本和 GitHub Actions CI：
+**已实现的 11 种日志类型：**
+1. 非法程序启动（非白名单）
+2. 白名单防篡改
+3. 进程审计事件
+4. 病毒告警事件
+5. 漏洞预警
+6. 系统资源异常告警
+7. 违规外联
+8. 威胁数据采集-进程启动事件
+9. 文件保护（HostDefence）
+10. 注册表保护（HostDefence）
+11. 强制访问控制（HostDefence）
 
-- 本地脚本：`scripts/build_and_run.ps1`，用于构建并运行演示程序；可传入 `-RunBackground` 参数后台运行。
-- 快捷方式创建：`scripts/create_shortcut.ps1`，用于在当前用户桌面创建指向 `artifacts/DevRunner/DevRunner.exe` 的快捷方式；可选在仓库 `tools/` 目录生成一份复制。示例：
+**待实现日志类型（剩余 6 种）：**
+- USB 设备认证
+- USB 访问告警（IEG）
+- U 盘插拔事件（IEG）
+- 软件安装异常（EDR）
+- 防火墙事件（EDR）
+- 客户端操作（EDR）
 
-```powershell
-# 在桌面创建快捷方式（默认目标 artifacts/DevRunner/DevRunner.exe）
-.\scripts\create_shortcut.ps1
+## 📖 下一步建议
 
-# 同时在仓库 tools/ 目录也创建快捷方式
-.\scripts\create_shortcut.ps1 -CreateInRepoTools
+**日志类型扩展：**
+- 参考 [经验教训文档](docs/经验教训-日志类型实现.md) 实现剩余 6 种日志类型
+- 核心经验：**数据优先于代码**，先对比原项目实际日志格式
+
+**UI 增强：**
+- 任务状态表格（开始时间、持续时间、状态）
+- 更细粒度的进度展示
+
+**协议完善：**
+- 日志路由规则细化（HTTPS/UDP 选择逻辑）
+- 心跳超时与重连机制
+
+## 🛠️ 技术栈
+
+- .NET 8.0 (WPF)
+- 自包含发布（win-x64）
+- 持久化：JSON 文件
+- 网络协议：HTTP/HTTPS（客户端模拟）
+
+## 📁 项目结构
+
 ```
-- CI：`.github/workflows/ci.yml`，在 `push`/`pull_request` 时于 `windows-latest` 上构建并运行一次 `SimulatorRunner` 做快速校验。
+src/
+   SimulatorApp/          # WPF 主应用
+   SimulatorLib/          # 核心业务逻辑
+   SimulatorRunner/       # CLI 运行器
+   TestReceiver/          # 测试接收服务器
+scripts/                     # 构建和发布脚本
+docs/                        # 文档和经验总结
+artifacts/                   # 发布产物输出
+```
 
-说明：如果需要自动化 `git push`，请在使用脚本的机器上配置凭据（SSH key 或 PAT）。
+## 📝 重要说明
+
+- `Clients.log` 和 `config.json` 在程序首次运行时自动生成
+- 修改代码后需重新执行 `publish` 脚本更新 exe
+- Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
+- 版本标签：v2.0.0（UI完善）、v2.1.0（11个日志类型）

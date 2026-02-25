@@ -282,7 +282,7 @@
                         <!-- 左侧：项目类型 -->
                         <StackPanel Grid.Column="0" Margin="0,0,20,0">
                             <TextBlock FontWeight="SemiBold" FontSize="14">项目类型：</TextBlock>
-                            <ComboBox Margin="0,8,0,0" SelectedItem="{Binding ProjectType, Mode=TwoWay}" Width="150">
+                            <ComboBox Margin="0,8,0,0" SelectedValuePath="Content" SelectedValue="{Binding ProjectType, Mode=TwoWay}" Width="150">
                                 <ComboBoxItem Content="IEG" IsSelected="True"/>
                                 <ComboBoxItem Content="EDR"/>
                             </ComboBox>

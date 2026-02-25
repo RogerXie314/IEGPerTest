@@ -33,10 +33,12 @@ namespace SimulatorLib.Workers
         private readonly ConcurrentDictionary<string, int> _debugSendCount = new();
         private const int MaxDebugSendPerClient = 3;
 
-        // Aligned with external/IEG_Code/code/include/format/commurl.h
+        // Aligned with external/IEG_Code/code/include/format/commurl.h and interface documentation
         private const string HttpsPathProcess = "/USM/clientAlertlog.do";
         private const string HttpsPathUsb = "/USM/clientULog.do";
-        private const string HttpsPathVulDefense = "/USM/loopholeProtectLog.do";
+        private const string HttpsPathUsbWarning = "/USM/clientUSBLog.do"; // USB访问告警
+        private const string HttpsPathUDiskPlug = "/USM/hotplugDevLog.do"; // U盘插拔
+        private const string HttpsPathVulDefense = "/USM/clientVulDefslog.do";
         private const string HttpsPathAdmin = "/USM/clientAdminLog.do";
         private const string HttpsPathHostDefence = "/USM/hostDefenceWarning.do";
         private const string HttpsPathFireWall = "/USM/clientFirewallLog.do";
@@ -46,6 +48,7 @@ namespace SimulatorLib.Workers
         private const string HttpsPathDataGuard = "/USM/docGuardLog.do";
         private const string HttpsPathSysGuard = "/USM/sysGuardLog.do";
         private const string HttpsPathOsResource = "/USM/resourceMessageLog.do";
+        private const string HttpsPathSafetyStore = "/USM/clientSafetyAppInstallLog.do";
 
         private const int MaxDebugHttps = 10;
         private int _httpsDebugCount = 0;
@@ -149,7 +152,14 @@ namespace SimulatorLib.Workers
             // 用户需求：每秒发送1条已勾选的不同的日志类型；直到遍历完已勾选的日志分类；然后再次循环，直到满足总条数
             // 全局串行发送：totalMessages = clientCount * messagesPerClient
             // 每次发送：选择 client (轮询) + category (全局轮换)
-            var intervalMs = 1000; // 每秒1条
+            
+            // 计算发送间隔：如果指定了每秒条数，则计算间隔；否则尽快发送
+            int intervalMs = 0;
+            if (messagesPerSecondPerClient.HasValue && messagesPerSecondPerClient.Value > 0)
+            {
+                // 每秒发送 N 条，间隔 = 1000ms / N
+                intervalMs = 1000 / messagesPerSecondPerClient.Value;
+            }
 
             var categoryList = (categories != null && categories.Count > 0)
                 ? categories
@@ -316,6 +326,13 @@ namespace SimulatorLib.Workers
         {
             // Best-effort mapping from simulator categories to external commurl.h.
             // If a category is unknown, fall back to the closest general endpoint.
+            
+            // 特殊处理：文件保护、注册表保护、强制访问控制都使用HostDefence endpoint
+            if (category == "文件保护" || category == "注册表保护" || category == "强制访问控制")
+            {
+                return HttpsPathHostDefence;
+            }
+            
             var cat = LogCategoryHelper.ParseDisplayName(category);
             if (!cat.HasValue) return HttpsPathProcess;
 
@@ -329,9 +346,12 @@ namespace SimulatorLib.Workers
                 LogCategory.OSResource => HttpsPathOsResource,
                 LogCategory.DP => HttpsPathDataGuard,
                 LogCategory.SysGuard => HttpsPathSysGuard,
-                LogCategory.RegProtect => HttpsPathSysGuard, // 注册表保护使用相同endpoint
+                LogCategory.RegProtect => HttpsPathHostDefence,
                 LogCategory.HostDefence => HttpsPathHostDefence,
                 LogCategory.Usb => HttpsPathUsb,
+                LogCategory.UsbWarning => HttpsPathUsbWarning,
+                LogCategory.UDiskPlug => HttpsPathUDiskPlug,
+                LogCategory.SafetyStore => HttpsPathSafetyStore,
                 LogCategory.FireWall => HttpsPathFireWall,
                 LogCategory.TFWarning => HttpsPathThreatFake,
                 _ => HttpsPathProcess,
@@ -432,7 +452,7 @@ namespace SimulatorLib.Workers
             var fullPath = $"C:\\Windows\\System32\\{exeName}";
             var parent = (messageIndex % 2 == 0) ? "explorer.exe" : "services.exe";
 
-            // 特殊处理：文件保护也使用HostDefence类型，但Level2=1
+            // 特殊处理：文件保护使用HostDefence类型，Level2=1
             if (category == "文件保护")
             {
                 return (CmdWords.SocketCmd.LogHostDefence, LogJsonBuilder.BuildHostDefenceLog(
@@ -440,8 +460,46 @@ namespace SimulatorLib.Workers
                     fullPath: $"C:\\Temp\\{client.ClientId}\\protected-{messageIndex}.txt",
                     processName: exeName,
                     userName: userName,
-                    logContent: $"文件[C:\\Temp\\{client.ClientId}\\protected-{messageIndex}.txt]被{exeName}非法修改",
+                    logContent: ((messageIndex % 5) + 1).ToString(),  // 原项目使用简单数字字符串："1", "2", "3" etc
                     detailLogTypeLevel2: 1,  // WL_IPC_LOG_TYPE_LEVE_2_SYSTEM_INTEGRALITY_FILEROTECT
+                    clientIp: client.IP,
+                    clientName: client.ClientId,
+                    machineCode: client.ClientId,
+                    os: "Windows 10",
+                    blocked: true));
+            }
+
+            // 特殊处理：注册表保护使用HostDefence类型，Level2=2
+            if (category == "注册表保护")
+            {
+                return (CmdWords.SocketCmd.LogHostDefence, LogJsonBuilder.BuildHostDefenceLog(
+                    client.ClientId,
+                    fullPath: $"HKLM\\Software\\Demo\\Key{messageIndex % 10}",
+                    processName: exeName,
+                    userName: userName,
+                    logContent: ((messageIndex % 5) + 1).ToString(),  // 原项目使用简单数字字符串："1", "2", "3" etc
+                    detailLogTypeLevel2: 2,  // WL_IPC_LOG_TYPE_LEVE_2_SYSTEM_INTEGRALITY_REGPROTECT
+                    clientIp: client.IP,
+                    clientName: client.ClientId,
+                    machineCode: client.ClientId,
+                    os: "Windows 10",
+                    blocked: false));
+            }
+
+            // 特殊处理：强制访问控制使用HostDefence类型，Level2=4
+            if (category == "强制访问控制")
+            {
+                return (CmdWords.SocketCmd.LogHostDefence, LogJsonBuilder.BuildHostDefenceLog(
+                    client.ClientId,
+                    fullPath: $"C:\\Temp\\{client.ClientId}\\demo-{messageIndex}.txt",
+                    processName: exeName,
+                    userName: userName,
+                    logContent: ((messageIndex % 5) + 1).ToString(),  // 原项目使用简单数字字符串："1", "2", "3" etc
+                    detailLogTypeLevel2: 4,  // WL_IPC_LOG_TYPE_LEVE_2_SYSTEM_INTEGRALITY_MACPROTECT
+                    clientIp: client.IP,
+                    clientName: client.ClientId,
+                    machineCode: client.ClientId,
+                    os: "Windows 10",
                     blocked: true));
             }
 
@@ -462,7 +520,8 @@ namespace SimulatorLib.Workers
                     defIntegrity: ComputeFakeSha1(fullPath + "-def" + messageIndex),
                     clientIp: client.IP,
                     clientName: client.ClientId,
-                    machineCode: client.ClientId
+                    machineCode: client.ClientId,
+                    os: "Windows 10"
                 ));
             }
 
@@ -481,37 +540,43 @@ namespace SimulatorLib.Workers
                     defIntegrity: ComputeFakeSha1(fullPath + "-def" + messageIndex),
                     clientIp: client.IP,
                     clientName: client.ClientId,
-                    machineCode: client.ClientId
+                    machineCode: client.ClientId,
+                    os: "Windows 10"
                 ));
             }
 
-            var parsedCategory = LogCategoryHelper.ParseDisplayName(category) ?? LogCategory.Process;
+            // 进程审计: Type=2 (OPTYPE_PWL_AUDIT), SubType=6 (SUBTYPE_EXECUTEFILE)
+            // 严格匹配checkbox名称，不要与其他分类混淆
+            if (category == "进程审计")
+            {
+                var (type, subType) = LogTypeMapper.GetProcessAuditType();
+                return (CmdWords.SocketCmd.LogProcess, LogJsonBuilder.BuildProcessAlertLog(
+                    client.ClientId,
+                    fullPath: fullPath,
+                    parentProcess: parent,
+                    userName: userName,
+                    holdBack: 0, // 审计模式不阻止
+                    integrityCheck: 0,
+                    certCheck: 0,
+                    type: type,
+                    subType: subType,
+                    companyName: "Microsoft Corporation",
+                    productName: "Windows",
+                    version: Environment.OSVersion.Version.ToString(),
+                    hash: ComputeFakeSha1(fullPath + client.ClientId + messageIndex),
+                    iegHash: ComputeFakeSha1("ieg" + client.ClientId + messageIndex),
+                    defIntegrity: ComputeFakeSha1(fullPath + "-def" + messageIndex),
+                    os: "Windows 10",
+                    category: LogFieldHelper.LogCategory.ProcessControl
+                ));
+            }
+
+            var parsedCategory = LogCategoryHelper.ParseDisplayName(category) ?? LogCategory.Admin;
             return parsedCategory switch
             {
                 LogCategory.Admin => (CmdWords.SocketCmd.LogAdmin, LogJsonBuilder.BuildClientAdminLog(client.ClientId, userName, $"Simulated client operation idx={messageIndex}", success: true)),
 
-                LogCategory.Process =>
-                (
-                    CmdWords.SocketCmd.LogProcess,
-                    // Fill realistic-looking fake fields so platform displays as real
-                    LogJsonBuilder.BuildProcessAlertLog(
-                        client.ClientId,
-                        fullPath: fullPath,
-                        parentProcess: parent,
-                        userName: userName,
-                        holdBack: (messageIndex % 7 == 0) ? 1 : 0,
-                        integrityCheck: 0,
-                        certCheck: 0,
-                        type: 0,
-                        subType: 0,
-                        companyName: "Microsoft Corporation",
-                        productName: "Windows",
-                        version: Environment.OSVersion.Version.ToString(),
-                        hash: ComputeFakeSha1(fullPath + client.ClientId + messageIndex),
-                        iegHash: ComputeFakeSha1("ieg" + client.ClientId + messageIndex),
-                        defIntegrity: ComputeFakeSha1(fullPath + "-def" + messageIndex)
-                    )
-                ),
+                // LogCategory.Process 已由上面的专门if分支处理（进程审计、非白名单、白名单防篡改）
 
                 LogCategory.VulDefense => (CmdWords.SocketCmd.LogVulDefense, LogJsonBuilder.BuildVulDefenseLog(client.ClientId, srcIp: client.IP, srcPort: srcPort, dstIp: dstIp, dstPort: dstPort)),
 
@@ -539,23 +604,8 @@ namespace SimulatorLib.Workers
                     action: 1,
                     result: 0)),
 
-                LogCategory.RegProtect => (CmdWords.SocketCmd.LogHostDefence, LogJsonBuilder.BuildHostDefenceLog(
-                    client.ClientId,
-                    fullPath: $"HKLM\\Software\\Demo\\Key{messageIndex % 10}",
-                    processName: exeName,
-                    userName: userName,
-                    logContent: $"注册表项[HKLM\\Software\\Demo\\Key{messageIndex % 10}]被{exeName}修改",
-                    detailLogTypeLevel2: 2,  // WL_IPC_LOG_TYPE_LEVE_2_SYSTEM_INTEGRALITY_REGPROTECT
-                    blocked: false)),
-
-                LogCategory.HostDefence => (CmdWords.SocketCmd.LogHostDefence, LogJsonBuilder.BuildHostDefenceLog(
-                    client.ClientId,
-                    fullPath: $"C:\\Temp\\{client.ClientId}\\demo-{messageIndex}.txt",
-                    processName: exeName,
-                    userName: userName,
-                    logContent: $"强制访问控制: 进程{exeName}访问文件被阻止",
-                    detailLogTypeLevel2: 4,  // WL_IPC_LOG_TYPE_LEVE_2_SYSTEM_INTEGRALITY_MACPROTECT
-                    blocked: true)),
+                // 注册表保护和强制访问控制已在前面特殊处理，此处不再列出
+                // LogCategory.RegProtect 和 LogCategory.HostDefence 已在上面if分支中处理
 
                 LogCategory.TFWarning => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventProcStartLog(
                     client.ClientId,
@@ -570,21 +620,8 @@ namespace SimulatorLib.Workers
 
                 LogCategory.FireWall => (CmdWords.SocketCmd.LogFireWall, LogJsonBuilder.BuildFireWallLog(client.ClientId, logContent: $"Firewall event idx={messageIndex} blocked connection to {dstIp}:{dstPort}", type: (messageIndex % 2))),
 
-                _ => (CmdWords.SocketCmd.LogProcess, LogJsonBuilder.BuildProcessAlertLog(
-                    client.ClientId,
-                    fullPath: fullPath,
-                    parentProcess: parent,
-                    userName: userName,
-                    companyName: "Microsoft Corporation",
-                    productName: "Windows",
-                    version: Environment.OSVersion.Version.ToString(),
-                    hash: ComputeFakeSha1(fullPath + client.ClientId + messageIndex),
-                    iegHash: ComputeFakeSha1("ieg" + client.ClientId + messageIndex),
-                    defIntegrity: ComputeFakeSha1(fullPath + "-def" + messageIndex),
-                    clientIp: client.IP,
-                    clientName: client.ClientId,
-                    machineCode: client.ClientId
-                )),
+                // 未知分类fallback到客户端操作日志
+                _ => (CmdWords.SocketCmd.LogAdmin, LogJsonBuilder.BuildClientAdminLog(client.ClientId, userName, $"Fallback: unknown category={category} idx={messageIndex}", success: true)),
             };
         }
 
