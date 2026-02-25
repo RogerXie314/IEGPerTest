@@ -54,8 +54,9 @@ namespace SimulatorApp.ViewModels
         private bool _catSysGuard;
 
         private int _regConcurrency = 20;
-        private int _regRound;
         private int _regRetryIntervalSec = 30;
+        private int _regTimeoutMs = 10000;
+        private int _regRound;
         private int _regTotal;
         private int _regSuccess;
         private int _regFailed;
@@ -135,6 +136,7 @@ namespace SimulatorApp.ViewModels
 
         public int RegConcurrency { get => _regConcurrency; set { _regConcurrency = value; OnProp(); } }
         public int RegRetryIntervalSec { get => _regRetryIntervalSec; set { _regRetryIntervalSec = value; OnProp(); } }
+        public int RegTimeoutMs { get => _regTimeoutMs; set { _regTimeoutMs = value; OnProp(); } }
         public int RegRound { get => _regRound; set { _regRound = value; OnProp(); } }
         public int RegTotal { get => _regTotal; set { _regTotal = value; OnProp(); } }
         public int RegSuccess { get => _regSuccess; set { _regSuccess = value; OnProp(); } }
@@ -209,6 +211,7 @@ namespace SimulatorApp.ViewModels
                 RegCount = cfg.RegCount;
                 RegConcurrency = cfg.RegConcurrency;
                 RegRetryIntervalSec = cfg.RegRetryIntervalSec;
+                RegTimeoutMs = cfg.RegTimeoutMs;
                 HbInterval = cfg.HeartbeatIntervalMs;
 
                 LogClientCount = cfg.LogClientCount;
@@ -238,6 +241,7 @@ namespace SimulatorApp.ViewModels
                 RegCount = RegCount,
                 RegConcurrency = RegConcurrency,
                 RegRetryIntervalSec = RegRetryIntervalSec,
+                RegTimeoutMs = RegTimeoutMs,
                 HeartbeatIntervalMs = HbInterval,
                 LogClientCount = LogClientCount,
                 LogMessagesPerClient = LogMessagesPerClient,
@@ -353,13 +357,13 @@ namespace SimulatorApp.ViewModels
                     RegFailed = 0;
                     RegRound = 0;
                     RegFailureDetail = string.Empty;
-                    AppendStatus($"开始注册 {RegCount} 个客户端（并发={RegConcurrency}，轮间隔={RegRetryIntervalSec}s），预生成数据中...");
+                    AppendStatus($"开始注册 {RegCount} 个客户端（并发={RegConcurrency}，超时={RegTimeoutMs}ms，轮间隔={RegRetryIntervalSec}s），预生成数据中...");
                 });
 
                 var summary = await reg.RegisterAsync(
                     RegPrefix, RegStart, RegCount,
                     startIp: RegStartIp, host: PlatformHost, port: PlatformPort,
-                    concurrency: RegConcurrency, retry: 3, timeoutMs: 1500,
+                    concurrency: RegConcurrency, retry: 3, timeoutMs: RegTimeoutMs,
                     retryIntervalMs: RegRetryIntervalSec * 1000,
                     roundProgress: new Progress<SimulatorLib.Workers.RegistrationRoundProgress>(p =>
                     {
@@ -482,6 +486,7 @@ namespace SimulatorApp.ViewModels
             if (RegCount <= 0) return (false, "RegCount 必须大于 0");
             if (RegConcurrency <= 0 || RegConcurrency > 5000) return (false, "并发数必须在 1~5000 之间");
             if (RegRetryIntervalSec < 0) return (false, "轮间隔不能为负数");
+            if (RegTimeoutMs < 500) return (false, "单次超时不能低于 500ms");
             if (LogClientCount <= 0) return (false, "LogClientCount 必须大于 0");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
             if (LogMessagesPerSecondPerClient < 0) return (false, "LogMessagesPerSecondPerClient 不能为负数");

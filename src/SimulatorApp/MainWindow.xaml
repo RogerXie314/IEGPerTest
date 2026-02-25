@@ -134,6 +134,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="LabelCol" />
@@ -155,10 +156,13 @@
                                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">并发数：</TextBlock>
                                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding RegConcurrency, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
-                                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding RegRetryIntervalSec, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center">超时(ms)：</TextBlock>
+                                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding RegTimeoutMs, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Button Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Width="120" Margin="0,8,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
+                                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
+                                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding RegRetryIntervalSec, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+
+                                <Button Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Width="120" Margin="0,8,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
                             </Grid>
                         </StackPanel>
                 </Border>
