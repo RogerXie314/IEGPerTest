@@ -55,7 +55,7 @@ namespace SimulatorApp.ViewModels
 
         private int _regConcurrency = 20;
         private int _regRetryIntervalSec = 30;
-        private int _regTimeoutMs = 10000;
+        private int _regTimeoutMs = 60000;
         private int _regRound;
         private int _regTotal;
         private int _regSuccess;
