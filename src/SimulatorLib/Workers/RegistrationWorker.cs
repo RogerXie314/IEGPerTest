@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
@@ -24,10 +25,15 @@ namespace SimulatorLib.Workers
         /// 解析返回的 devid/tcpPort 并持久化到 Clients.log。
         /// 支持并发限制、重试与超时；默认允许自签名证书（便于测试环境）。
         /// </summary>
-        public async Task RegisterAsync(string clientIdPrefix, int startIndex, int count, string startIp = "192.168.0.1", string host = "localhost", int port = 8441, int concurrency = 10, int retry = 3, int timeoutMs = 3000, CancellationToken ct = default)
+        public async Task<RegistrationSummary> RegisterAsync(string clientIdPrefix, int startIndex, int count, string startIp = "192.168.0.1", string host = "localhost", int port = 8441, int concurrency = 10, int retry = 3, int timeoutMs = 3000, CancellationToken ct = default)
         {
             var sem = new SemaphoreSlim(concurrency);
             var tasks = new List<Task>();
+
+            // 并发安全的统计计数器
+            int successCount = 0;
+            int failureCount = 0;
+            var failureReasons = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
 
             // 用 Channel 解耦注册速度与文件写入速度：
             // 注册任务 HTTP 完成后立即投递记录到 channel 并释放并发门控，
@@ -64,6 +70,11 @@ namespace SimulatorLib.Workers
                         var ip = IncrementIPv4(startIp, ipOffset);
                         var mac = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(ip);
 
+                        bool ok = false;
+                        uint deviceId = 0;
+                        int tcpPort = 0;
+                        string lastFailReason = "未知失败";
+
                         // 对齐原项目 WLJsonParse::SetUp_GetJson + AccessServer.cpp 的调用参数
                         var reqJson = UsmRegistrationJsonBuilder.BuildClientLoginJson(
                             computerId: clientId,
@@ -77,10 +88,6 @@ namespace SimulatorLib.Workers
                             licenseRecycle: false,
                             clientType: 0,
                             clientVersion: "V300R011C01B030");
-
-                        bool ok = false;
-                        uint deviceId = 0;
-                        int tcpPort = 0;
 
                         // 对齐原项目 WlSetUPApp.cpp 的重试策略：
                         //   WL_CONNECT_USM_RETRY_COUNTS = 3（最多3次）
@@ -101,6 +108,7 @@ namespace SimulatorLib.Workers
 
                                 if (!resp.IsSuccessStatusCode)
                                 {
+                                    lastFailReason = $"HTTP错误({(int)resp.StatusCode})";
                                     await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                                     continue;
                                 }
@@ -108,6 +116,7 @@ namespace SimulatorLib.Workers
                                 if (!UsmResponseParsers.TryCheckSetupResult(respText, out var errCode, out _))
                                 {
                                     // errCode=8 → USM_BUSY（服务器繁忙），固定等待 1000ms 后重试
+                                    lastFailReason = ErrCodeToReason(errCode);
                                     await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                                     continue;
                                 }
@@ -132,6 +141,7 @@ namespace SimulatorLib.Workers
 
                                 if (!resultResp.IsSuccessStatusCode)
                                 {
+                                    lastFailReason = $"结果上报失败(HTTP{(int)resultResp.StatusCode})";
                                     await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                                     continue;
                                 }
@@ -141,8 +151,20 @@ namespace SimulatorLib.Workers
                             catch (OperationCanceledException) { throw; }
                             catch
                             {
+                                lastFailReason = "超时/网络异常";
                                 await Task.Delay(RetryDelayMs, ct).ConfigureAwait(false);
                             }
+                        }
+
+                        // 更新统计计数
+                        if (ok)
+                        {
+                            Interlocked.Increment(ref successCount);
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref failureCount);
+                            failureReasons.AddOrUpdate(lastFailReason, 1, (_, c) => c + 1);
                         }
 
                         var status = ok ? "Registered" : "Failed";
@@ -170,7 +192,30 @@ namespace SimulatorLib.Workers
 
             // 等待消费者把 channel 中剩余记录全部刷写完毕
             await writerTask.ConfigureAwait(false);
+
+            return new RegistrationSummary
+            {
+                Total = count,
+                Success = successCount,
+                Failed = failureCount,
+                FailureReasons = new Dictionary<string, int>(failureReasons),
+            };
         }
+
+        /// <summary>
+        /// 将 USM 返回的 errCode 映射为人类可读的失败原因描述，对应原项目 WLMainDataHandle 中的错误码枚举。
+        /// </summary>
+        private static string ErrCodeToReason(int errCode) => errCode switch
+        {
+            1  => "连接服务器失败(1)",
+            2  => "节点数为空(2)",
+            3  => "JSON解析失败(3)",
+            4  => "许可证错误(4)",
+            6  => "IP重复(6)",
+            8  => "服务器繁忙(8)",
+            12 => "资产信息错误(12)",
+            _  => $"服务端拒绝({errCode})",
+        };
 
         private static HttpClient CreateHttpClient(int timeoutMs)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,6 +52,11 @@ namespace SimulatorApp.ViewModels
         private bool _catUDiskPlug;
         private bool _catFirewall;
         private bool _catSysGuard;
+
+        private int _regTotal;
+        private int _regSuccess;
+        private int _regFailed;
+        private string _regFailureDetail = string.Empty;
 
         private string _whitelistFilePath = string.Empty;
         private int _whitelistClientCount = 5;
@@ -123,6 +129,11 @@ namespace SimulatorApp.ViewModels
         public bool CatUDiskPlug { get => _catUDiskPlug; set { _catUDiskPlug = value; OnProp(); } }
         public bool CatFirewall { get => _catFirewall; set { _catFirewall = value; OnProp(); } }
         public bool CatSysGuard { get => _catSysGuard; set { _catSysGuard = value; OnProp(); } }
+
+        public int RegTotal { get => _regTotal; set { _regTotal = value; OnProp(); } }
+        public int RegSuccess { get => _regSuccess; set { _regSuccess = value; OnProp(); } }
+        public int RegFailed { get => _regFailed; set { _regFailed = value; OnProp(); } }
+        public string RegFailureDetail { get => _regFailureDetail; set { _regFailureDetail = value; OnProp(); } }
 
         public string WhitelistFilePath { get => _whitelistFilePath; set { _whitelistFilePath = value; OnProp(); } }
         public int WhitelistClientCount { get => _whitelistClientCount; set { _whitelistClientCount = value; OnProp(); } }
@@ -323,9 +334,46 @@ namespace SimulatorApp.ViewModels
                 await SaveConfigAsync().ConfigureAwait(false);
                 var sender = new TcpSender();
                 var reg = new RegistrationWorker(sender);
-                RunOnUi(() => AppendStatus($"开始注册 {RegCount} 个客户端..."));
-                await reg.RegisterAsync(RegPrefix, RegStart, RegCount, startIp: RegStartIp, host: PlatformHost, port: PlatformPort, concurrency: 4, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
-                RunOnUi(() => AppendStatus("注册任务完成"));
+
+                // 重置上次统计
+                RunOnUi(() =>
+                {
+                    RegTotal = RegCount;
+                    RegSuccess = 0;
+                    RegFailed = 0;
+                    RegFailureDetail = string.Empty;
+                    AppendStatus($"开始注册 {RegCount} 个客户端...");
+                });
+
+                var summary = await reg.RegisterAsync(
+                    RegPrefix, RegStart, RegCount,
+                    startIp: RegStartIp, host: PlatformHost, port: PlatformPort,
+                    concurrency: 4, retry: 3, timeoutMs: 1500).ConfigureAwait(false);
+
+                // 构建失败原因文本
+                var detailSb = new StringBuilder();
+                foreach (var kv in summary.FailureReasons)
+                    detailSb.AppendLine($"  {kv.Key}: {kv.Value}次");
+
+                RunOnUi(() =>
+                {
+                    RegTotal = summary.Total;
+                    RegSuccess = summary.Success;
+                    RegFailed = summary.Failed;
+                    RegFailureDetail = detailSb.ToString().Trim();
+                    AppendStatus($"注册任务完成：成功={summary.Success}  失败={summary.Failed}");
+                    if (summary.FailureReasons.Count > 0)
+                        AppendStatus("失败原因：\r\n" + detailSb.ToString().TrimEnd());
+                });
+
+                // 将统计追加写入 RegistrationStats.log 文件
+                try
+                {
+                    var statsPath = Path.Combine(AppContext.BaseDirectory, "RegistrationStats.log");
+                    var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {summary.ToLogString()}";
+                    await File.AppendAllTextAsync(statsPath, line + Environment.NewLine, Encoding.UTF8).ConfigureAwait(false);
+                }
+                catch { /* 日志写入失败不影响主流程 */ }
             }
             catch (Exception ex)
             {
