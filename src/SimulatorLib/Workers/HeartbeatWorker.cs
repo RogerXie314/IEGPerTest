@@ -179,7 +179,7 @@ namespace SimulatorLib.Workers
                 if (state == null) return false;
 
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromMilliseconds(2000));
+                cts.CancelAfter(TimeSpan.FromMilliseconds(60000));
 
                 await state.Stream.WriteAsync(payload, 0, payload.Length, cts.Token).ConfigureAwait(false);
                 await state.Stream.FlushAsync(cts.Token).ConfigureAwait(false);
@@ -220,7 +220,7 @@ namespace SimulatorLib.Workers
 
                 using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
                 {
-                    cts.CancelAfter(TimeSpan.FromMilliseconds(2000));
+                    cts.CancelAfter(TimeSpan.FromMilliseconds(10000));
                     await tcp.ConnectAsync(host, port, cts.Token).ConfigureAwait(false);
                 }
 

@@ -24,7 +24,7 @@ namespace SimulatorLib.Workers
 
         public async Task StartAsync(int intervalMs, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, CancellationToken ct, IProgress<HeartbeatStats>? progress = null)
         {
-            using var http = CreateHttpClient(timeoutMs: 2500);
+            using var http = CreateHttpClient(timeoutMs: 60000);
             var sem = new SemaphoreSlim(Math.Max(1, concurrency));
 
             while (!ct.IsCancellationRequested)
