@@ -11,9 +11,9 @@ using SimulatorLib.Persistence;
 namespace SimulatorLib.Workers
 {
     /// <summary>
-    /// 心跳 Worker：为每个已注册客户端维护一条独立的长连接 TCP socket，
-    /// 周期性发送心跳包。每个 Task 独占自己的 TcpClient，无需共享，无需加锁。
-    /// 连接断开或发送失败  立即 Dispose  下轮循环重新连接。
+    /// 心跳 Worker：每个客户端独占一个 Task + TcpClient，无共享，无锁。
+    /// 失败时 Dispose socket，下轮自动重连。
+    /// 统计上报的是"当前轮次在线数"而非累计计数，避免跨窗口重叠计数。
     /// </summary>
     public class HeartbeatWorker
     {
@@ -24,6 +24,9 @@ namespace SimulatorLib.Workers
             _udpSender = udpSender;
         }
 
+        /// <summary>
+        /// SuccessTcp / FailTcp 表示上一个报告周期内各自的发送次数（gauge）。
+        /// </summary>
         public record HeartbeatStats(int Total, int SuccessTcp, int FailTcp, int SuccessUdp, int FailUdp);
 
         public async Task StartAsync(
@@ -40,31 +43,32 @@ namespace SimulatorLib.Workers
             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             if (clients.Count == 0) return;
 
-            var successTcp = 0;
-            var failTcp    = 0;
-            var successUdp = 0;
-            var failUdp    = 0;
+            // 每个客户端用一个 int 记录上轮结果：1=成功，0=失败，-1=未发送
+            // 报告任务直接统计这个数组，不受时间窗口对齐影响
+            var lastResult = new int[clients.Count];
+            for (int j = 0; j < lastResult.Length; j++) lastResult[j] = -1;
 
-            // 错峰启动：1000 个客户端的首次 connect 在 spreadMs 内均匀错开，
-            // 避免瞬间发起大量并发 TCP 连接压垮服务端 accept 队列。
+            var lastUdpResult = new int[clients.Count];
+            for (int j = 0; j < lastUdpResult.Length; j++) lastUdpResult[j] = -1;
+
+            // 错峰启动：在 spreadMs 内均匀错开首次连接，避免瞬间 N 个并发 TCP 连接
             int spreadMs = Math.Min(intervalMs, 3000);
 
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
             {
-                var c = clients[i];
+                var c       = clients[i];
+                var idx     = i;
                 int startDelay = clients.Count > 1 ? (int)((long)i * spreadMs / clients.Count) : 0;
 
                 clientTasks.Add(Task.Run(async () =>
                 {
-                    // 错峰延迟
                     if (startDelay > 0)
                     {
                         try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
                         catch (OperationCanceledException) { return; }
                     }
 
-                    // 每个 Task 独占自己的 socket，绝对不跨 Task 共享，无需加锁
                     TcpClient?     tcp    = null;
                     NetworkStream? stream = null;
 
@@ -72,14 +76,15 @@ namespace SimulatorLib.Workers
                     {
                         try
                         {
-                            //  1. 确保连接存活 
-                            if (tcp == null || !tcp.Connected)
+                            //  1. 检查连接是否存活（含服务端关闭检测） 
+                            if (tcp == null || IsPeerClosed(tcp))
                             {
                                 tcp?.Dispose();
                                 stream = null;
+                                tcp    = null;
 
-                                int tcpPort  = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                var newTcp   = new TcpClient { NoDelay = true };
+                                int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                var newTcp  = new TcpClient { NoDelay = true };
 
                                 using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                 connCts.CancelAfter(3000);
@@ -101,7 +106,7 @@ namespace SimulatorLib.Workers
                             await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
                             await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
 
-                            //  3. 非阻塞 drain ACK，防止服务端发送缓冲区堆积 
+                            //  3. 非阻塞 drain ACK 
                             if (stream.DataAvailable)
                             {
                                 var drainBuf = new byte[256];
@@ -109,14 +114,13 @@ namespace SimulatorLib.Workers
                                     await stream.ReadAsync(drainBuf, 0, drainBuf.Length, ct).ConfigureAwait(false);
                             }
 
-                            Interlocked.Increment(ref successTcp);
+                            lastResult[idx] = 1; // 本轮成功
 
                             //  4. 可选 UDP 心跳 
                             if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
                             {
                                 var udpOk = await _udpSender.SendUdpAsync(logHost, logPort, payload, 1500, ct).ConfigureAwait(false);
-                                if (udpOk) Interlocked.Increment(ref successUdp);
-                                else       Interlocked.Increment(ref failUdp);
+                                lastUdpResult[idx] = udpOk ? 1 : 0;
                             }
                         }
                         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -125,24 +129,23 @@ namespace SimulatorLib.Workers
                         }
                         catch
                         {
-                            // 连接失败或发送失败  丢弃 socket，下轮自动重连
+                            // 连接或发送失败  丢弃 socket，下轮重连
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
-                            Interlocked.Increment(ref failTcp);
+                            lastResult[idx] = 0; // 本轮失败
                         }
 
                         try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                         catch (OperationCanceledException) { break; }
                     }
 
-                    // 退出时清理
                     tcp?.Dispose();
-
                 }, ct));
             }
 
-            // 统计上报：每个报告周期恰好 Exchange 一次，与心跳发送严格对齐
+            // 统计上报：直接扫描 lastResult 数组，反映"当前有多少客户端上次心跳成功"
+            // 与心跳发送时机完全解耦，不存在窗口对齐问题
             var reportTask = Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
@@ -150,17 +153,37 @@ namespace SimulatorLib.Workers
                     try { await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false); }
                     catch { break; }
 
-                    var stats = new HeartbeatStats(
-                        clients.Count,
-                        Interlocked.Exchange(ref successTcp, 0),
-                        Interlocked.Exchange(ref failTcp, 0),
-                        Interlocked.Exchange(ref successUdp, 0),
-                        Interlocked.Exchange(ref failUdp, 0));
-                    try { progress?.Report(stats); } catch { }
+                    int ok = 0, fail = 0, udpOk = 0, udpFail = 0;
+                    for (int j = 0; j < lastResult.Length; j++)
+                    {
+                        if      (lastResult[j] == 1) ok++;
+                        else if (lastResult[j] == 0) fail++;
+                        if      (lastUdpResult[j] == 1) udpOk++;
+                        else if (lastUdpResult[j] == 0) udpFail++;
+                    }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, ok, fail, udpOk, udpFail)); } catch { }
                 }
             }, ct);
 
             await Task.WhenAll(clientTasks).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 检测对端是否已关闭连接：Poll(SelectRead)+Available==0 是 .NET 中
+        /// 检测服务端发送 FIN（半关闭）的标准方法。
+        /// TcpClient.Connected 只反映上次 I/O 状态，不能依赖。
+        /// </summary>
+        private static bool IsPeerClosed(TcpClient tcp)
+        {
+            if (!tcp.Connected) return true;
+            try
+            {
+                var s = tcp.Client;
+                // Poll(0, SelectRead): 若有数据可读 OR 连接关闭则返回 true
+                // Available == 0 且 Poll 为 true 意味着对端已关闭（无数据，但连接标记关闭）
+                return s.Poll(0, SelectMode.SelectRead) && s.Available == 0;
+            }
+            catch { return true; }
         }
 
         private static byte[] TrimTrailingNewline(byte[] bytes)
