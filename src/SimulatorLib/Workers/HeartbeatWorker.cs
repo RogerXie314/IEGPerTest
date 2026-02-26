@@ -308,27 +308,21 @@ namespace SimulatorLib.Workers
                         bool okHeader = await ReadExactAsync(_stream, header, header.Length, ct).ConfigureAwait(false);
                         if (!okHeader) break;
 
-                        // PT header: bodyLen at [4..6)
-                        int bodyLen = (header[4] << 8) | header[5];
-                        if (bodyLen <= 0 || bodyLen > 65535)
-                        {
+                        // 验证 PT magic，防止流错位时 bodyLen 解出天量导致卡死
+                        if (header[0] != (byte)'P' || header[1] != (byte)'T')
                             break;
-                        }
 
-                        var body = new byte[bodyLen];
-                        bool okBody = await ReadExactAsync(_stream, body, bodyLen, ct).ConfigureAwait(false);
-                        if (!okBody) break;
+                        // PT header: bodyLen at [4..6), big-endian uint16，0 为合法值（纯头部 ACK）
+                        int bodyLen = (header[4] << 8) | header[5];
 
-                        // external recvHeartBeatBack parses response; here we just drain the socket.
-                        // Optional decode (best effort) to validate protocol alignment.
-                        try
+                        if (bodyLen > 0)
                         {
-                            var packet = new byte[PtProtocol.HeaderLength + bodyLen];
-                            Buffer.BlockCopy(header, 0, packet, 0, PtProtocol.HeaderLength);
-                            Buffer.BlockCopy(body, 0, packet, PtProtocol.HeaderLength, bodyLen);
-                            _ = PtProtocol.Unpack(packet);
+                            var body = new byte[bodyLen];
+                            bool okBody = await ReadExactAsync(_stream, body, bodyLen, ct).ConfigureAwait(false);
+                            if (!okBody) break;
+                            // 仅 drain，不处理内容
                         }
-                        catch { }
+                        // bodyLen == 0：合法的纯头部应答包，继续下一轮循环
                     }
                 }
                 catch { }
