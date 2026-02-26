@@ -166,15 +166,57 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                         catch
                         {
-                            // 发送失败 = 连接已死（与原始 C++ SendData 失败逻辑相同）
-                            // Dispose  下轮从步骤1重新 Connect
+                            // 发送失败：Dispose 连接，与原始 C++ CloseSocket 一致。
+                            // 对齐原始 C++：失败后尝试重连重发一次（CreateSocket → SendData）。
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             lastResult[idx] = 0;
-                            // 注意：直接 continue，不等 intervalMs，立即重连
-                            continue;
+
+                            // 重连重发一次（原始 C++ 的 retry 逻辑）
+                            try
+                            {
+                                int tcpPort2 = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                var retryTcp = new TcpClient { NoDelay = true };
+                                retryTcp.Client.SetSocketOption(
+                                    SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                                using var retryCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                retryCts.CancelAfter(3000);
+                                await retryTcp.ConnectAsync(platformHost, tcpPort2, retryCts.Token).ConfigureAwait(false);
+                                tcp    = retryTcp;
+                                stream = retryTcp.GetStream();
+                                Interlocked.Exchange(ref connectedFlags[idx], 1);
+
+                                // 重连后启动 drain
+                                var retryDrain = stream;
+                                _ = Task.Run(async () =>
+                                {
+                                    var buf2 = new byte[4096];
+                                    try { while (!ct.IsCancellationRequested) { if (await retryDrain.ReadAsync(buf2, 0, buf2.Length, ct) == 0) break; } } catch { }
+                                }, ct);
+
+                                var domainName2 = GetDomainNameSafe();
+                                var mac2        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                                var json2       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName2, c.IP, mac2);
+                                var jsonBytes2  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json2));
+                                var payload2    = PtProtocol.Pack(jsonBytes2, cmdId: 1, deviceId: c.DeviceId);
+                                using var sendCts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                sendCts2.CancelAfter(5000);
+                                await stream.WriteAsync(payload2, 0, payload2.Length, sendCts2.Token).ConfigureAwait(false);
+                                await stream.FlushAsync(sendCts2.Token).ConfigureAwait(false);
+                                lastResult[idx] = 1; // 重试成功
+                            }
+                            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                            catch
+                            {
+                                // 重试也失败：Dispose，等下一个 intervalMs 再自然重连
+                                tcp?.Dispose();
+                                tcp    = null;
+                                stream = null;
+                                Interlocked.Exchange(ref connectedFlags[idx], 0);
+                            }
+                            // 无论重试成败，等待 intervalMs 后再下一轮，避免冲击服务端
                         }
 
                         // 等待下一个心跳周期
