@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\\SimulatorLib\\SimulatorLib.csproj" />

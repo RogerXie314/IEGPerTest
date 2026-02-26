@@ -1,7 +1,7 @@
 param(
     [string]$Runtime = "win-x64",
-    [switch]$SelfContained,
-    [switch]$SingleFile
+    [switch]$FrameworkDependent,
+    [switch]$NoSingleFile
 )
 
 $proj = "src/SimulatorApp"
@@ -11,15 +11,15 @@ Write-Host "Publishing SimulatorApp to $out"
 
 $args = @($proj, "-c", "Release", "-r", $Runtime, "-o", $out)
 
-if ($SelfContained) {
-    $args += "--self-contained"
-    $args += "true"
-} else {
+if ($FrameworkDependent) {
     $args += "--self-contained"
     $args += "false"
+} else {
+    $args += "--self-contained"
+    $args += "true"
 }
 
-if ($SingleFile) {
+if (-not $NoSingleFile) {
     $args += "/p:PublishSingleFile=true"
 }
 
