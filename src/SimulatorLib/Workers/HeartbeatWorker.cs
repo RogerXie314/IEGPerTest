@@ -38,92 +38,79 @@ namespace SimulatorLib.Workers
         /// </summary>
         public async Task StartAsync(int intervalMs, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, CancellationToken ct, IProgress<HeartbeatStats>? progress = null)
         {
-            var sem = new SemaphoreSlim(concurrency);
+            var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+            if (clients.Count == 0) return;
 
-            try
+            // 每个客户端独立循环，互不等待——模拟原项目每台主机独立线程的行为
+            var successTcp = 0;
+            var failTcp = 0;
+            var successUdp = 0;
+            var failUdp = 0;
+
+            var clientTasks = clients.Select(c => Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
                 {
-                    var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-
-                    var sendTasks = new List<Task>();
-                    var successTcp = 0;
-                    var failTcp = 0;
-                    var successUdp = 0;
-                    var failUdp = 0;
-                    foreach (var c in clients)
+                    try
                     {
-                        await sem.WaitAsync(ct).ConfigureAwait(false);
-                        sendTasks.Add(Task.Run(async () =>
+                        var domainName = GetDomainNameSafe();
+                        var mac = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                        var json = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName, c.IP, mac);
+                        var jsonBytes = GetTcpHeartbeatJsonBytes(json);
+                        var payload = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
+                        var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+
+                        var tcpOk = await SendHeartbeatTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, payload, ct).ConfigureAwait(false);
+                        if (tcpOk) Interlocked.Increment(ref successTcp);
+                        else Interlocked.Increment(ref failTcp);
+
+                        if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
                         {
-                            try
-                            {
-                                var domainName = GetDomainNameSafe();
-                                var mac = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
-                                var json = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName, c.IP, mac);
-                                var jsonBytes = GetTcpHeartbeatJsonBytes(json);
-
-                                // external: CProtocal.GetPortocal(json, len-1, cmd=SOCKET_CMD_HEARTBEAT=1)
-                                var payload = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
-
-                                var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                var tcpOk = await SendHeartbeatTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, payload, ct).ConfigureAwait(false);
-                                if (tcpOk)
-                                {
-                                    Interlocked.Increment(ref successTcp);
-                                }
-                                else
-                                {
-                                    Interlocked.Increment(ref failTcp);
-                                }
-
-                                if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
-                                {
-                                    var udpOk = await _udpSender.SendUdpAsync(logHost, logPort, payload, 1500, ct).ConfigureAwait(false);
-                                    if (udpOk)
-                                    {
-                                        Interlocked.Increment(ref successUdp);
-                                    }
-                                    else
-                                    {
-                                        Interlocked.Increment(ref failUdp);
-                                    }
-                                }
-                            }
-                            catch (OperationCanceledException) { }
-                            catch { }
-                            finally
-                            {
-                                sem.Release();
-                            }
-                        }, ct));
+                            var udpOk = await _udpSender.SendUdpAsync(logHost, logPort, payload, 1500, ct).ConfigureAwait(false);
+                            if (udpOk) Interlocked.Increment(ref successUdp);
+                            else Interlocked.Increment(ref failUdp);
+                        }
                     }
+                    catch (OperationCanceledException) { return; }
+                    catch { Interlocked.Increment(ref failTcp); }
 
-                    await Task.WhenAll(sendTasks).ConfigureAwait(false);
-
-                    var stats = new HeartbeatStats(clients.Count, successTcp, failTcp, successUdp, failUdp);
-                    try
-                    {
-                        progress?.Report(stats);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-                        if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
-                        var logPath = Path.Combine(logDir, $"heartbeat-{DateTime.UtcNow:yyyyMMdd}.log");
-                        var line = $"{DateTime.UtcNow:o} Total={stats.Total} TcpOk={stats.SuccessTcp} TcpFail={stats.FailTcp} UdpOk={stats.SuccessUdp} UdpFail={stats.FailUdp}";
-                        await File.AppendAllTextAsync(logPath, line + Environment.NewLine, ct).ConfigureAwait(false);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        await Task.Delay(intervalMs, ct).ConfigureAwait(false);
-                    }
-                    catch (TaskCanceledException) { break; }
+                    try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { return; }
                 }
+            }, ct)).ToList();
+
+            // 独立的统计上报循环，每 intervalMs 上报一次并写日志
+            var reportTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!ct.IsCancellationRequested)
+                    {
+                        await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false);
+                        var stats = new HeartbeatStats(
+                            clients.Count,
+                            Interlocked.Exchange(ref successTcp, 0),
+                            Interlocked.Exchange(ref failTcp, 0),
+                            Interlocked.Exchange(ref successUdp, 0),
+                            Interlocked.Exchange(ref failUdp, 0));
+                        try { progress?.Report(stats); } catch { }
+                        try
+                        {
+                            var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                            if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
+                            var logPath = Path.Combine(logDir, $"heartbeat-{DateTime.UtcNow:yyyyMMdd}.log");
+                            var line = $"{DateTime.UtcNow:o} Total={stats.Total} TcpOk={stats.SuccessTcp} TcpFail={stats.FailTcp} UdpOk={stats.SuccessUdp} UdpFail={stats.FailUdp}";
+                            await File.AppendAllTextAsync(logPath, line + Environment.NewLine, CancellationToken.None).ConfigureAwait(false);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }, ct);
+
+            try
+            {
+                await Task.WhenAll(clientTasks).ConfigureAwait(false);
             }
             finally
             {
@@ -171,7 +158,7 @@ namespace SimulatorLib.Workers
                 if (state == null) return false;
 
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromMilliseconds(60000));
+                cts.CancelAfter(TimeSpan.FromMilliseconds(5000));
 
                 await state.Stream.WriteAsync(payload, 0, payload.Length, cts.Token).ConfigureAwait(false);
                 await state.Stream.FlushAsync(cts.Token).ConfigureAwait(false);
