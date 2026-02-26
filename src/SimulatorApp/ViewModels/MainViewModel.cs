@@ -442,7 +442,7 @@ namespace SimulatorApp.ViewModels
                             // 只更新状态数值，不记录日志（避免频繁滚动）
                         });
                     });
-                    await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 100, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
+                    await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 2000, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
                     // 注意：心跳是持续运行的，不需要记录“完成”日志
                 });
             }
