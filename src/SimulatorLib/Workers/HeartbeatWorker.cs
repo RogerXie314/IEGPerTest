@@ -35,7 +35,9 @@ namespace SimulatorLib.Workers
         /// Connected     = 当前持有有效 TCP 连接的客户端数
         /// SuccessTcp    = 上一报告周期内发送成功次数（WriteAsync 未抛异常）
         /// FailTcp       = 上一报告周期内发送失败次数（包含连接失败）
-        /// ServerReplied = 服务端有回包的客户端数（最接近「平台真实在线」的指标）
+        /// ServerReplied = 最近 3个周期内有服务端回包的客户端数
+        ///                 （滚动时间窗口：超过 3×intervalMs 没回包就计为「未回包」，
+        ///                  可发现平台静默踢人而 TCP 不断的情况）
         /// RsnServerClosed/WriteFailed/ConnFailed/ConnTimeout = 各断线原因客户端数
         /// </summary>
         public record HeartbeatStats(
@@ -76,10 +78,10 @@ namespace SimulatorLib.Workers
             // connectedFlags[i]: 1=当前有活跃 TCP 连接, 0=断开中
             var connectedFlags = new int[clients.Count];
 
-            // serverReplied[i]: 1=该客户端本次连接中至少收到过一次服务端回包
-            // 这是最接近「平台真实在线」的客户端侧指标。
-            // 每次重建连接时清零，收到服务端任何数据（n>0）时置 1。
-            var serverReplied = new int[clients.Count];
+            // lastReplyTimeMs[i]: 最近一次收到服务端回包的 Unix毫秒时间戳。0=未收到过。
+            // 统计时判断最近 3×intervalMs 内是否有回包，超过窗口就计为「未回包」。
+            // 这能发现平台静默踢人而 TCP 不断的情况（之前的 int 标志会将这种情况误报为回包）。
+            var lastReplyTimeMs = new long[clients.Count];
 
             // lastReason[i]: 最近一次断线/失败原因（见 Reason 常量）
             var lastReason = new int[clients.Count];
@@ -117,7 +119,7 @@ namespace SimulatorLib.Workers
                             stream = null;
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
-                            Interlocked.Exchange(ref serverReplied[idx], 0); // 重建连接时清零回包计数
+                            Interlocked.Exchange(ref lastReplyTimeMs[idx], 0L); // 重建连接时清零回包时间戳
 
                             try
                             {
@@ -148,9 +150,9 @@ namespace SimulatorLib.Workers
                                         {
                                             int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
                                             if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; } // 服务端 FIN
-                                            // n > 0：服务端有数据返回，说明平台已收到并处理了我们的心跳包。
-                                            // 这是客户端侧能观测到的最可靠「平台确认在线」信号。
-                                            Interlocked.Exchange(ref serverReplied[capturedIdx], 1);
+                                            // n > 0：服务端有数据返回。记录回包时间戳，统计时以滚动窗口判断是否连续在回包。
+                                            Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
+                                                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                         }
                                     }
                                     catch { alive = false; }
@@ -244,12 +246,15 @@ namespace SimulatorLib.Workers
                     int total = clients.Count;
                     int conn = 0, ok = 0, fail = 0, replied = 0;
                     int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0;
+                    long replyWindowMs2 = (long)intervalMs * 3;
+                    long nowMs2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < total; j++)
                     {
                         if (connectedFlags[j] == 1) conn++;
                         if (lastResult[j]     == 1) ok++;
                         else if (lastResult[j] == 0) fail++;
-                        if (serverReplied[j]  == 1) replied++;
+                        long t2 = Interlocked.Read(ref lastReplyTimeMs[j]);
+                        if (t2 > 0 && (nowMs2 - t2) <= replyWindowMs2) replied++;
 
                         if (connectedFlags[j] == 0)
                         {
@@ -267,7 +272,7 @@ namespace SimulatorLib.Workers
                     var sb = new StringBuilder();
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
                     sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
-                    sb.AppendLine($"  平台回包:{replied}  （连接中但未回包:{conn - replied}）← 回包数最接近平台实际在线数");
+                    sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢局则在此是现");
                     if (offline > 0)
                     {
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}");
@@ -289,6 +294,8 @@ namespace SimulatorLib.Workers
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
                     int rSC = 0, rWF = 0, rCF = 0, rCT = 0;
+                    long replyWindowMs = (long)intervalMs * 3; // 3个周期内有回包才算在线
+                    long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < clients.Count; j++)
                     {
                         if (connectedFlags[j] == 1)   conn++;
@@ -296,7 +303,9 @@ namespace SimulatorLib.Workers
                         else if (lastResult[j] == 0)  fail++;
                         if (lastUdpResult[j]  == 1)   udpOk++;
                         else if (lastUdpResult[j]==0)  udpFail++;
-                        if (serverReplied[j]  == 1)   replied++;
+                        // 仅当最近 3×intervalMs 内收到过回包，才计入 replied
+                        long t = Interlocked.Read(ref lastReplyTimeMs[j]);
+                        if (t > 0 && (nowMs - t) <= replyWindowMs) replied++;
                         // 仅统计真正离线（未连接）客户端的断线原因
                         if (connectedFlags[j] == 0)
                         {

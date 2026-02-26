@@ -463,9 +463,13 @@ namespace SimulatorApp.ViewModels
                                 string reasonStr = reasons.Count > 0
                                     ? "  离线原因: " + string.Join(", ", reasons)
                                     : string.Empty;
+                                int silentDrop = s.Connected - s.ServerReplied; // TCP在线但平台无回包 = 平台静默踢出
+                                string silentStr = silentDrop > 0
+                                    ? $"  ⚠ TCP有连接但无回包:{silentDrop}(平台静默踢出/session超时)"
+                                    : string.Empty;
                                 AppendStatus(
-                                    $"[心跳] 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  离线:{offline}↓" +
-                                    reasonStr);
+                                    $"[心跳] 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
+                                    silentStr + reasonStr);
                             }
                         });
                     });
