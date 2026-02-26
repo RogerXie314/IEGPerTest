@@ -45,7 +45,6 @@ namespace SimulatorLib.Workers
                 while (!ct.IsCancellationRequested)
                 {
                     var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                    Console.WriteLine($"心跳任务：读取到 {clients.Count} 条客户端记录");
 
                     var sendTasks = new List<Task>();
                     var successTcp = 0;
@@ -72,12 +71,10 @@ namespace SimulatorLib.Workers
                                 if (tcpOk)
                                 {
                                     Interlocked.Increment(ref successTcp);
-                                    Console.WriteLine($"心跳 TCP 成功 -> {c.ClientId}");
                                 }
                                 else
                                 {
                                     Interlocked.Increment(ref failTcp);
-                                    Console.WriteLine($"心跳 TCP 失败 -> {c.ClientId}");
                                 }
 
                                 if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
@@ -86,20 +83,15 @@ namespace SimulatorLib.Workers
                                     if (udpOk)
                                     {
                                         Interlocked.Increment(ref successUdp);
-                                        Console.WriteLine($"心跳 UDP 成功 -> {c.ClientId}");
                                     }
                                     else
                                     {
                                         Interlocked.Increment(ref failUdp);
-                                        Console.WriteLine($"心跳 UDP 失败 -> {c.ClientId}");
                                     }
                                 }
                             }
                             catch (OperationCanceledException) { }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"发送心跳时异常: {ex.Message}");
-                            }
+                            catch { }
                             finally
                             {
                                 sem.Release();
