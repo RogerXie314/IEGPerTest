@@ -47,8 +47,18 @@ namespace SimulatorLib.Workers
             var successUdp = 0;
             var failUdp = 0;
 
-            var clientTasks = clients.Select(c => Task.Run(async () =>
+            // 错峰启动：把所有客户端的首次连接均匀分散到 spreadMs 内，避免瞬间 1000 个并发 TCP 连接
+            int spreadMs = Math.Min(intervalMs, 3000); // 最多分散 3 秒
+            var clientTasks = clients.Select((c, i) => Task.Run(async () =>
             {
+                // 首次执行前，按序号等待错峰延迟
+                int startDelay = clients.Count > 1 ? (int)((long)i * spreadMs / clients.Count) : 0;
+                if (startDelay > 0)
+                {
+                    try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { return; }
+                }
+
                 while (!ct.IsCancellationRequested)
                 {
                     try
@@ -94,15 +104,6 @@ namespace SimulatorLib.Workers
                             Interlocked.Exchange(ref successUdp, 0),
                             Interlocked.Exchange(ref failUdp, 0));
                         try { progress?.Report(stats); } catch { }
-                        try
-                        {
-                            var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-                            if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
-                            var logPath = Path.Combine(logDir, $"heartbeat-{DateTime.UtcNow:yyyyMMdd}.log");
-                            var line = $"{DateTime.UtcNow:o} Total={stats.Total} TcpOk={stats.SuccessTcp} TcpFail={stats.FailTcp} UdpOk={stats.SuccessUdp} UdpFail={stats.FailUdp}";
-                            await File.AppendAllTextAsync(logPath, line + Environment.NewLine, CancellationToken.None).ConfigureAwait(false);
-                        }
-                        catch { }
                     }
                 }
                 catch { }
@@ -199,7 +200,7 @@ namespace SimulatorLib.Workers
 
                 using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
                 {
-                    cts.CancelAfter(TimeSpan.FromMilliseconds(10000));
+                    cts.CancelAfter(TimeSpan.FromMilliseconds(3000));
                     await tcp.ConnectAsync(host, port, cts.Token).ConfigureAwait(false);
                 }
 
@@ -245,6 +246,10 @@ namespace SimulatorLib.Workers
             private readonly CancellationTokenSource _recvCts = new();
             private Task? _recvTask;
 
+            // ReceiveLoopAsync 退出（服务器关闭连接/EOF/协议错误）时设为 false
+            // 供 IsConnectedTo 判活，避免向已死连接发送导致心跳静默丢失
+            private volatile bool _isAlive = true;
+
             public NetworkStream Stream => _stream;
 
             public TcpConnState(string clientId, string host, int port, TcpClient client, NetworkStream stream)
@@ -260,6 +265,7 @@ namespace SimulatorLib.Workers
             {
                 if (!string.Equals(_host, host, StringComparison.OrdinalIgnoreCase)) return false;
                 if (_port != port) return false;
+                if (!_isAlive) return false;          // ReceiveLoop 已检测到连接断开
                 if (!_client.Connected) return false;
                 return true;
             }
@@ -271,6 +277,7 @@ namespace SimulatorLib.Workers
 
             public void Close()
             {
+                _isAlive = false;
                 try { _recvCts.Cancel(); } catch { }
                 try { _stream.Close(); } catch { }
                 try { _client.Close(); } catch { }
@@ -305,6 +312,12 @@ namespace SimulatorLib.Workers
                     }
                 }
                 catch { }
+                finally
+                {
+                    // 无论何种原因退出（EOF、协议错误、异常），都标记连接已死
+                    // 下次心跳发送时 IsConnectedTo 返回 false，强制重建连接
+                    _isAlive = false;
+                }
             }
 
             private static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int len, CancellationToken ct)
