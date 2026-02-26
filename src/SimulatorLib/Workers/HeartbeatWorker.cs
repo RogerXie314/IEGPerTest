@@ -36,8 +36,13 @@ namespace SimulatorLib.Workers
         /// SuccessTcp    = 上一报告周期内发送成功次数（WriteAsync 未抛异常）
         /// FailTcp       = 上一报告周期内发送失败次数（包含连接失败）
         /// ServerReplied = 服务端有回包的客户端数（最接近「平台真实在线」的指标）
+        /// RsnServerClosed/WriteFailed/ConnFailed/ConnTimeout = 各断线原因客户端数
         /// </summary>
-        public record HeartbeatStats(int Total, int Connected, int SuccessTcp, int FailTcp, int SuccessUdp, int FailUdp, int ServerReplied = 0);
+        public record HeartbeatStats(
+            int Total, int Connected, int SuccessTcp, int FailTcp,
+            int SuccessUdp, int FailUdp, int ServerReplied = 0,
+            int RsnServerClosed = 0, int RsnWriteFailed = 0,
+            int RsnConnFailed = 0, int RsnConnTimeout = 0);
 
         // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
         static class Reason
@@ -283,6 +288,7 @@ namespace SimulatorLib.Workers
                     catch { break; }
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
+                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0;
                     for (int j = 0; j < clients.Count; j++)
                     {
                         if (connectedFlags[j] == 1)   conn++;
@@ -291,8 +297,19 @@ namespace SimulatorLib.Workers
                         if (lastUdpResult[j]  == 1)   udpOk++;
                         else if (lastUdpResult[j]==0)  udpFail++;
                         if (serverReplied[j]  == 1)   replied++;
+                        // 仅统计真正离线（未连接）客户端的断线原因
+                        if (connectedFlags[j] == 0)
+                        {
+                            switch (lastReason[j])
+                            {
+                                case Reason.ServerClosed:   rSC++; break;
+                                case Reason.WriteFailed:    rWF++; break;
+                                case Reason.ConnectFailed:  rCF++; break;
+                                case Reason.ConnectTimeout: rCT++; break;
+                            }
+                        }
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied)); } catch { }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT)); } catch { }
                 }
             }, ct);
 

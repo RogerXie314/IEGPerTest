@@ -86,6 +86,7 @@ namespace SimulatorApp.ViewModels
         private CancellationTokenSource? _httpsCts;
         private CancellationTokenSource? _logCts;
         private CancellationTokenSource? _uploadCts;
+        private DateTime _lastHbLogTime = DateTime.MinValue; // 心跳状态日志节流
 
         private readonly SynchronizationContext? _uiContext;
 
@@ -447,7 +448,25 @@ namespace SimulatorApp.ViewModels
                             HbServerReplied = s.ServerReplied;
                             HbUdpOk         = s.SuccessUdp;
                             HbUdpFail       = s.FailUdp;
-                            // 只更新状态数值，不记录日志（避免频繁滚动）
+
+                            // 每 30s 输出一条真实状态日志
+                            if ((DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
+                            {
+                                _lastHbLogTime = DateTime.Now;
+                                int offline = s.Total - s.Connected;
+                                // 居前三位原因
+                                var reasons = new System.Collections.Generic.List<string>();
+                                if (s.RsnConnFailed  > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
+                                if (s.RsnConnTimeout > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
+                                if (s.RsnServerClosed> 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
+                                if (s.RsnWriteFailed > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
+                                string reasonStr = reasons.Count > 0
+                                    ? "  离线原因: " + string.Join(", ", reasons)
+                                    : string.Empty;
+                                AppendStatus(
+                                    $"[心跳] 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  离线:{offline}↓" +
+                                    reasonStr);
+                            }
                         });
                     });
                     await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
