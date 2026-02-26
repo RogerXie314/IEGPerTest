@@ -79,32 +79,37 @@ namespace SimulatorLib.Workers
 
                     TcpClient?     tcp    = null;
                     NetworkStream? stream = null;
+                    bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
 
                     while (!ct.IsCancellationRequested)
                     {
-                        //  1. 建立连接（若尚未连接）
-                        if (tcp == null)
+                        //  1. 建立连接（连接不存在，或 drain 检测到服务端关闭时）
+                        if (tcp == null || !alive)
                         {
+                            tcp?.Dispose();
+                            tcp    = null;
+                            stream = null;
+                            alive  = false;
+                            Interlocked.Exchange(ref connectedFlags[idx], 0);
+
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
                                 var newTcp  = new TcpClient { NoDelay = true };
-
-                                // TCP KeepAlive：由 OS 探测网络层死连接（约 2 分钟后触发）
                                 newTcp.Client.SetSocketOption(
                                     SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
                                 using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                connCts.CancelAfter(3000); // 与原始 C++ select 超时 2s 对齐
+                                connCts.CancelAfter(3000);
                                 await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
 
                                 tcp    = newTcp;
                                 stream = tcp.GetStream();
+                                alive  = true;
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
 
-                                // 后台接收 drain：持续读取并丢弃服务端推送数据（策略、命令、ACK 等），
-                                // 防止服务端 TCP 发送缓冲区满而阻塞，导致平台无法更新心跳状态。
-                                // 与原始 C++ HeartBeatRecvThread 等价（只 drain，不处理命令）。
+                                // 后台 drain：读取并丢弃服务端推送（对应原始 C++ HeartBeatRecvThread）。
+                                // 当服务端主动关闭连接时（n==0），置 alive=false，
+                                // 主循环下一轮检测到后会重连。
                                 var drainStream = stream;
                                 _ = Task.Run(async () =>
                                 {
@@ -114,32 +119,26 @@ namespace SimulatorLib.Workers
                                         while (!ct.IsCancellationRequested)
                                         {
                                             int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
-                                            if (n == 0) break; // 服务端主动关闭
+                                            if (n == 0) { alive = false; break; } // 服务端 FIN
                                         }
                                     }
-                                    catch { /* ObjectDisposedException = tcp被Dispose；OperationCanceledException = 停止 */ }
+                                    catch { alive = false; }
                                 }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                             catch
                             {
-                                // 连接失败：标记失败，随机抖动后重试（避免雷同重连）
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
                                 lastResult[idx] = 0;
-
-                                // 随机抖动 0~intervalMs，防止所有失败连接同时重试
+                                // 连接失败：随机抖动后重试
                                 int jitter;
                                 lock (_rng) { jitter = _rng.Next(0, intervalMs); }
                                 try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
-                                continue; // 重新尝试连接，不等完整 intervalMs
+                                continue;
                             }
                         }
 
-                        //  2. 发送心跳包（连接存在就直接发，失败即视为连接死亡）
+                        //  2. 发送心跳包
                         try
                         {
                             var domainName = GetDomainNameSafe();
@@ -153,9 +152,9 @@ namespace SimulatorLib.Workers
                             await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
                             await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
 
-                            lastResult[idx] = 1; // 本轮成功
+                            lastResult[idx] = 1;
 
-                            //  3. 可选 UDP 心跳 
+                            //  3. 可选 UDP 心跳
                             if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
                             {
                                 var payload2 = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
@@ -166,57 +165,13 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                         catch
                         {
-                            // 发送失败：Dispose 连接，与原始 C++ CloseSocket 一致。
-                            // 对齐原始 C++：失败后尝试重连重发一次（CreateSocket → SendData）。
+                            // 写失败 = 连接已死，下一轮重连（不立即 continue，先等 intervalMs）
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
+                            alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             lastResult[idx] = 0;
-
-                            // 重连重发一次（原始 C++ 的 retry 逻辑）
-                            try
-                            {
-                                int tcpPort2 = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                var retryTcp = new TcpClient { NoDelay = true };
-                                retryTcp.Client.SetSocketOption(
-                                    SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                                using var retryCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                retryCts.CancelAfter(3000);
-                                await retryTcp.ConnectAsync(platformHost, tcpPort2, retryCts.Token).ConfigureAwait(false);
-                                tcp    = retryTcp;
-                                stream = retryTcp.GetStream();
-                                Interlocked.Exchange(ref connectedFlags[idx], 1);
-
-                                // 重连后启动 drain
-                                var retryDrain = stream;
-                                _ = Task.Run(async () =>
-                                {
-                                    var buf2 = new byte[4096];
-                                    try { while (!ct.IsCancellationRequested) { if (await retryDrain.ReadAsync(buf2, 0, buf2.Length, ct) == 0) break; } } catch { }
-                                }, ct);
-
-                                var domainName2 = GetDomainNameSafe();
-                                var mac2        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
-                                var json2       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName2, c.IP, mac2);
-                                var jsonBytes2  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json2));
-                                var payload2    = PtProtocol.Pack(jsonBytes2, cmdId: 1, deviceId: c.DeviceId);
-                                using var sendCts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                sendCts2.CancelAfter(5000);
-                                await stream.WriteAsync(payload2, 0, payload2.Length, sendCts2.Token).ConfigureAwait(false);
-                                await stream.FlushAsync(sendCts2.Token).ConfigureAwait(false);
-                                lastResult[idx] = 1; // 重试成功
-                            }
-                            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-                            catch
-                            {
-                                // 重试也失败：Dispose，等下一个 intervalMs 再自然重连
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
-                            }
-                            // 无论重试成败，等待 intervalMs 后再下一轮，避免冲击服务端
                         }
 
                         // 等待下一个心跳周期
