@@ -44,7 +44,8 @@ namespace SimulatorLib.Workers
             int Total, int Connected, int SuccessTcp, int FailTcp,
             int SuccessUdp, int FailUdp, int ServerReplied = 0,
             int RsnServerClosed = 0, int RsnWriteFailed = 0,
-            int RsnConnFailed = 0, int RsnConnTimeout = 0);
+            int RsnConnFailed = 0, int RsnConnTimeout = 0,
+            int RsnSessionStale = 0);
 
         // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
         static class Reason
@@ -54,6 +55,7 @@ namespace SimulatorLib.Workers
             public const int WriteFailed    = 2; // WriteAsync 抛异常
             public const int ConnectFailed  = 3; // ConnectAsync 抛异常（含拒绝连接）
             public const int ConnectTimeout = 4; // ConnectAsync 3s 超时
+            public const int SessionStale   = 5; // 平台静默踢除 session（TCP 不断但不再回包）
         }
 
         public async Task StartAsync(
@@ -108,6 +110,7 @@ namespace SimulatorLib.Workers
                     TcpClient?     tcp    = null;
                     NetworkStream? stream = null;
                     bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
+                    long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -134,6 +137,7 @@ namespace SimulatorLib.Workers
                                 tcp    = newTcp;
                                 stream = tcp.GetStream();
                                 alive  = true;
+                                connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
 
                                 // 后台 drain：读取并丢弃服务端推送（对应原始 C++ HeartBeatRecvThread）。
@@ -226,6 +230,31 @@ namespace SimulatorLib.Workers
                         // 等待下一个心跳周期
                         try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                         catch (OperationCanceledException) { break; }
+
+                        //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
+                        //  如果 TCP 仍连接，但自本次连接建立后一直收不到平台回包，
+                        //  说明平台 session 已失效（被踢或连接没经过认证）。
+                        //  主动断开重连，否则即使其他主机释放了槽位，我们也永远占着僵尸连接出不来。
+                        if (alive)
+                        {
+                            long staleMs   = Math.Max((long)intervalMs * 3, 30_000L);
+                            long nowCheck  = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            long lastReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
+                            // refTime: 收到过回包就用最后回包时间，否则用连接建立时间
+                            long refTime   = lastReply > 0 ? lastReply : connectedAtMs;
+                            if (refTime > 0 && (nowCheck - refTime) > staleMs)
+                            {
+                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接
+                                tcp?.Dispose();
+                                tcp    = null;
+                                stream = null;
+                                alive  = false;
+                                Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                lastResult[idx] = 0;
+                                lastReason[idx] = Reason.SessionStale; // 平台静默踢人：区别于服务端主动关闭 FIN
+                                // 不需要额外延迟，连接阶段会自行带拖动
+                            }
+                        }
                     }
 
                     tcp?.Dispose();
@@ -264,6 +293,7 @@ namespace SimulatorLib.Workers
                                 case Reason.WriteFailed:    rWriteFailed++;    break;
                                 case Reason.ConnectFailed:  rConnFailed++;     break;
                                 case Reason.ConnectTimeout: rConnTimeout++;    break;
+                                case Reason.SessionStale:   rConnFailed++;     break; // 平台静默踢人归入连接失败类
                             }
                         }
                     }
@@ -293,7 +323,7 @@ namespace SimulatorLib.Workers
                     catch { break; }
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
-                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0;
+                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0, rSS = 0;
                     long replyWindowMs = (long)intervalMs * 3; // 3个周期内有回包才算在线
                     long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < clients.Count; j++)
@@ -315,10 +345,11 @@ namespace SimulatorLib.Workers
                                 case Reason.WriteFailed:    rWF++; break;
                                 case Reason.ConnectFailed:  rCF++; break;
                                 case Reason.ConnectTimeout: rCT++; break;
+                                case Reason.SessionStale:   rSS++; break;
                             }
                         }
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT)); } catch { }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT, rSS)); } catch { }
                 }
             }, ct);
 

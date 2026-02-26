@@ -456,6 +456,7 @@ namespace SimulatorApp.ViewModels
                                 int offline = s.Total - s.Connected;
                                 // 居前三位原因
                                 var reasons = new System.Collections.Generic.List<string>();
+                                if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
                                 if (s.RsnConnFailed  > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
                                 if (s.RsnConnTimeout > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
                                 if (s.RsnServerClosed> 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
