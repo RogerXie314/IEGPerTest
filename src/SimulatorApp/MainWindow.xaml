@@ -379,6 +379,10 @@
                             <TextBlock Text="{Binding HbTotal}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <TextBlock Width="100">TCP 已连接：</TextBlock>
+                            <TextBlock Text="{Binding HbConnected}" Foreground="DodgerBlue" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <TextBlock Width="100">TCP 成功/失败：</TextBlock>
                             <TextBlock Text="{Binding HbTcpOk}" Foreground="Green" />
                             <TextBlock Text=" / " Margin="4,0" />

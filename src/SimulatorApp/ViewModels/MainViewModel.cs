@@ -70,6 +70,7 @@ namespace SimulatorApp.ViewModels
         private int _uploadFailed;
         private string _statusLog = string.Empty;
         private int _hbTotal;
+        private int _hbConnected;
         private int _hbTcpOk;
         private int _hbTcpFail;
         private int _hbUdpOk;
@@ -153,6 +154,7 @@ namespace SimulatorApp.ViewModels
         public string StatusLog { get => _statusLog; set { _statusLog = value; OnProp(); } }
 
         public int HbTotal { get => _hbTotal; set { _hbTotal = value; OnProp(); } }
+        public int HbConnected { get => _hbConnected; set { _hbConnected = value; OnProp(); } }
         public int HbTcpOk { get => _hbTcpOk; set { _hbTcpOk = value; OnProp(); } }
         public int HbTcpFail { get => _hbTcpFail; set { _hbTcpFail = value; OnProp(); } }
         public int HbUdpOk { get => _hbUdpOk; set { _hbUdpOk = value; OnProp(); } }
@@ -435,6 +437,7 @@ namespace SimulatorApp.ViewModels
                         RunOnUi(() =>
                         {
                             HbTotal = s.Total;
+                            HbConnected = s.Connected;
                             HbTcpOk = s.SuccessTcp;
                             HbTcpFail = s.FailTcp;
                             HbUdpOk = s.SuccessUdp;

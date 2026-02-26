@@ -26,7 +26,7 @@ class Program
         Console.WriteLine("开始心跳任务演示（每秒一次，10 并发，演示 5 次）...");
         var progress = new Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
         {
-            Console.WriteLine($"[汇总] 总数={s.Total} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
+            Console.WriteLine($"[汇总] 总数={s.Total} 已连接={s.Connected} TCP_OK={s.SuccessTcp} TCP_FAIL={s.FailTcp} UDP_OK={s.SuccessUdp} UDP_FAIL={s.FailUdp}");
         });
 
         // 使用 127.0.0.1 避免本机 IPv6/IPv4 解析差异导致连接失败
