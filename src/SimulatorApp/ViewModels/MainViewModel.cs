@@ -73,6 +73,7 @@ namespace SimulatorApp.ViewModels
         private int _hbConnected;
         private int _hbTcpOk;
         private int _hbTcpFail;
+        private int _hbServerReplied;
         private int _hbUdpOk;
         private int _hbUdpFail;
         private int _hbHttpsTotal;
@@ -158,6 +159,8 @@ namespace SimulatorApp.ViewModels
         public int HbConnected { get => _hbConnected; set { _hbConnected = value; OnProp(); } }
         public int HbTcpOk { get => _hbTcpOk; set { _hbTcpOk = value; OnProp(); } }
         public int HbTcpFail { get => _hbTcpFail; set { _hbTcpFail = value; OnProp(); } }
+        /// <summary>服务端有回包的客户端数（最接近「平台真实在线」的指标）</summary>
+        public int HbServerReplied { get => _hbServerReplied; set { _hbServerReplied = value; OnProp(); } }
         public int HbUdpOk { get => _hbUdpOk; set { _hbUdpOk = value; OnProp(); } }
         public int HbUdpFail { get => _hbUdpFail; set { _hbUdpFail = value; OnProp(); } }
         public int HbHttpsTotal { get => _hbHttpsTotal; set { _hbHttpsTotal = value; OnProp(); } }
@@ -437,12 +440,13 @@ namespace SimulatorApp.ViewModels
                     {
                         RunOnUi(() =>
                         {
-                            HbTotal = s.Total;
-                            HbConnected = s.Connected;
-                            HbTcpOk = s.SuccessTcp;
-                            HbTcpFail = s.FailTcp;
-                            HbUdpOk = s.SuccessUdp;
-                            HbUdpFail = s.FailUdp;
+                            HbTotal         = s.Total;
+                            HbConnected     = s.Connected;
+                            HbTcpOk         = s.SuccessTcp;
+                            HbTcpFail       = s.FailTcp;
+                            HbServerReplied = s.ServerReplied;
+                            HbUdpOk         = s.SuccessUdp;
+                            HbUdpFail       = s.FailUdp;
                             // 只更新状态数值，不记录日志（避免频繁滚动）
                         });
                     });

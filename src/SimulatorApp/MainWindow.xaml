@@ -394,10 +394,16 @@
                                     <TextBlock Text="{Binding HbConnected}" Foreground="DodgerBlue" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90">TCP 成功/失败：</TextBlock>
+                                    <TextBlock Width="90" ToolTip="WriteAsync 未抛异常。数据已进入 OS TCP 发送缓冲区，不代表平台已处理。">已发送/失败：</TextBlock>
                                     <TextBlock Text="{Binding HbTcpOk}" Foreground="Green" />
                                     <TextBlock Text=" / " Margin="2,0" />
                                     <TextBlock Text="{Binding HbTcpFail}" Foreground="Red" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Width="90" FontWeight="SemiBold" ToolTip="平台有回包：服务端对本次连接返回过数据。这是最接近「平台真实在线」的客户端侧指标。" Foreground="#E67E00">▶ 平台回包：</TextBlock>
+                                    <TextBlock Text="{Binding HbServerReplied}" Foreground="#E67E00" FontWeight="SemiBold" />
+                                    <TextBlock Text=" / " Margin="2,0" Foreground="Gray"/>
+                                    <TextBlock Text="{Binding HbTotal}" Foreground="Gray" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                     <TextBlock Width="90">UDP 成功/失败：</TextBlock>

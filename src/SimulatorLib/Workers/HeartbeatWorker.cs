@@ -32,11 +32,12 @@ namespace SimulatorLib.Workers
         }
 
         /// <summary>
-        /// Connected  = 当前持有有效 TCP 连接的客户端数
-        /// SuccessTcp = 上一报告周期内发送成功次数（gauge，上限 = Total）
-        /// FailTcp    = 上一报告周期内发送失败次数（包含连接失败）
+        /// Connected     = 当前持有有效 TCP 连接的客户端数
+        /// SuccessTcp    = 上一报告周期内发送成功次数（WriteAsync 未抛异常）
+        /// FailTcp       = 上一报告周期内发送失败次数（包含连接失败）
+        /// ServerReplied = 服务端有回包的客户端数（最接近「平台真实在线」的指标）
         /// </summary>
-        public record HeartbeatStats(int Total, int Connected, int SuccessTcp, int FailTcp, int SuccessUdp, int FailUdp);
+        public record HeartbeatStats(int Total, int Connected, int SuccessTcp, int FailTcp, int SuccessUdp, int FailUdp, int ServerReplied = 0);
 
         // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
         static class Reason
@@ -69,6 +70,11 @@ namespace SimulatorLib.Workers
 
             // connectedFlags[i]: 1=当前有活跃 TCP 连接, 0=断开中
             var connectedFlags = new int[clients.Count];
+
+            // serverReplied[i]: 1=该客户端本次连接中至少收到过一次服务端回包
+            // 这是最接近「平台真实在线」的客户端侧指标。
+            // 每次重建连接时清零，收到服务端任何数据（n>0）时置 1。
+            var serverReplied = new int[clients.Count];
 
             // lastReason[i]: 最近一次断线/失败原因（见 Reason 常量）
             var lastReason = new int[clients.Count];
@@ -106,6 +112,7 @@ namespace SimulatorLib.Workers
                             stream = null;
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
+                            Interlocked.Exchange(ref serverReplied[idx], 0); // 重建连接时清零回包计数
 
                             try
                             {
@@ -136,6 +143,9 @@ namespace SimulatorLib.Workers
                                         {
                                             int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
                                             if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; } // 服务端 FIN
+                                            // n > 0：服务端有数据返回，说明平台已收到并处理了我们的心跳包。
+                                            // 这是客户端侧能观测到的最可靠「平台确认在线」信号。
+                                            Interlocked.Exchange(ref serverReplied[capturedIdx], 1);
                                         }
                                     }
                                     catch { alive = false; }
@@ -147,8 +157,10 @@ namespace SimulatorLib.Workers
                                 // ConnectAsync 3s 超时（CancelAfter 触发）
                                 lastResult[idx]  = 0;
                                 lastReason[idx]  = Reason.ConnectTimeout;
+                                // 抖动上限 min(intervalMs/2, 5000)：避免大量客户端同时重连冲击服务端，
+                                // 同时不超过 5s，保证断线后能快速恢复，不依赖 intervalMs 的长短。
                                 int jitter;
-                                lock (_rng) { jitter = _rng.Next(0, intervalMs); }
+                                lock (_rng) { jitter = _rng.Next(0, Math.Min(intervalMs / 2, 5000)); }
                                 try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -157,9 +169,9 @@ namespace SimulatorLib.Workers
                             {
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
-                                // 连接失败：随机抖动后重试
+                                // 连接失败：随机抖动后重试（同上限 5s）
                                 int jitter;
-                                lock (_rng) { jitter = _rng.Next(0, intervalMs); }
+                                lock (_rng) { jitter = _rng.Next(0, Math.Min(intervalMs / 2, 5000)); }
                                 try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -225,13 +237,14 @@ namespace SimulatorLib.Workers
                     catch { break; }
 
                     int total = clients.Count;
-                    int conn = 0, ok = 0, fail = 0;
+                    int conn = 0, ok = 0, fail = 0, replied = 0;
                     int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0;
                     for (int j = 0; j < total; j++)
                     {
                         if (connectedFlags[j] == 1) conn++;
                         if (lastResult[j]     == 1) ok++;
                         else if (lastResult[j] == 0) fail++;
+                        if (serverReplied[j]  == 1) replied++;
 
                         if (connectedFlags[j] == 0)
                         {
@@ -248,7 +261,8 @@ namespace SimulatorLib.Workers
 
                     var sb = new StringBuilder();
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
-                    sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  上轮成功:{ok}  上轮失败:{fail}");
+                    sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
+                    sb.AppendLine($"  平台回包:{replied}  （连接中但未回包:{conn - replied}）← 回包数最接近平台实际在线数");
                     if (offline > 0)
                     {
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}");
@@ -268,7 +282,7 @@ namespace SimulatorLib.Workers
                     try { await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false); }
                     catch { break; }
 
-                    int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0;
+                    int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
                     for (int j = 0; j < clients.Count; j++)
                     {
                         if (connectedFlags[j] == 1)   conn++;
@@ -276,8 +290,9 @@ namespace SimulatorLib.Workers
                         else if (lastResult[j] == 0)  fail++;
                         if (lastUdpResult[j]  == 1)   udpOk++;
                         else if (lastUdpResult[j]==0)  udpFail++;
+                        if (serverReplied[j]  == 1)   replied++;
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail)); } catch { }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied)); } catch { }
                 }
             }, ct);
 
