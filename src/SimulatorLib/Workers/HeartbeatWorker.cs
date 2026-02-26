@@ -100,6 +100,24 @@ namespace SimulatorLib.Workers
                                 tcp    = newTcp;
                                 stream = tcp.GetStream();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
+
+                                // 后台接收 drain：持续读取并丢弃服务端推送数据（策略、命令、ACK 等），
+                                // 防止服务端 TCP 发送缓冲区满而阻塞，导致平台无法更新心跳状态。
+                                // 与原始 C++ HeartBeatRecvThread 等价（只 drain，不处理命令）。
+                                var drainStream = stream;
+                                _ = Task.Run(async () =>
+                                {
+                                    var buf = new byte[4096];
+                                    try
+                                    {
+                                        while (!ct.IsCancellationRequested)
+                                        {
+                                            int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
+                                            if (n == 0) break; // 服务端主动关闭
+                                        }
+                                    }
+                                    catch { /* ObjectDisposedException = tcp被Dispose；OperationCanceledException = 停止 */ }
+                                }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                             catch
@@ -133,14 +151,6 @@ namespace SimulatorLib.Workers
                             sendCts.CancelAfter(5000);
                             await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
                             await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
-
-                            // 非阻塞 drain：防止服务端 ACK 堆满接收缓冲区
-                            if (stream.DataAvailable)
-                            {
-                                var buf = new byte[4096];
-                                while (stream.DataAvailable)
-                                    await stream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
-                            }
 
                             lastResult[idx] = 1; // 本轮成功
 
