@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
@@ -36,6 +38,16 @@ namespace SimulatorLib.Workers
         /// </summary>
         public record HeartbeatStats(int Total, int Connected, int SuccessTcp, int FailTcp, int SuccessUdp, int FailUdp);
 
+        // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
+        static class Reason
+        {
+            public const int Ok             = 0; // 正常在线
+            public const int ServerClosed   = 1; // 服务端主动关闭（FIN，drain n==0）
+            public const int WriteFailed    = 2; // WriteAsync 抛异常
+            public const int ConnectFailed  = 3; // ConnectAsync 抛异常（含拒绝连接）
+            public const int ConnectTimeout = 4; // ConnectAsync 3s 超时
+        }
+
         public async Task StartAsync(
             int intervalMs,
             bool useLogServer,
@@ -57,6 +69,9 @@ namespace SimulatorLib.Workers
 
             // connectedFlags[i]: 1=当前有活跃 TCP 连接, 0=断开中
             var connectedFlags = new int[clients.Count];
+
+            // lastReason[i]: 最近一次断线/失败原因（见 Reason 常量）
+            var lastReason = new int[clients.Count];
 
             // 错峰启动：在 spreadMs 内均匀错开首次连接
             int spreadMs = Math.Min(intervalMs, 3000);
@@ -110,7 +125,8 @@ namespace SimulatorLib.Workers
                                 // 后台 drain：读取并丢弃服务端推送（对应原始 C++ HeartBeatRecvThread）。
                                 // 当服务端主动关闭连接时（n==0），置 alive=false，
                                 // 主循环下一轮检测到后会重连。
-                                var drainStream = stream;
+                                var drainStream  = stream;
+                                var capturedIdx  = idx;
                                 _ = Task.Run(async () =>
                                 {
                                     var buf = new byte[4096];
@@ -119,16 +135,28 @@ namespace SimulatorLib.Workers
                                         while (!ct.IsCancellationRequested)
                                         {
                                             int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
-                                            if (n == 0) { alive = false; break; } // 服务端 FIN
+                                            if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; } // 服务端 FIN
                                         }
                                     }
                                     catch { alive = false; }
                                 }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                            catch (OperationCanceledException)
+                            {
+                                // ConnectAsync 3s 超时（CancelAfter 触发）
+                                lastResult[idx]  = 0;
+                                lastReason[idx]  = Reason.ConnectTimeout;
+                                int jitter;
+                                lock (_rng) { jitter = _rng.Next(0, intervalMs); }
+                                try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { return; }
+                                continue;
+                            }
                             catch
                             {
                                 lastResult[idx] = 0;
+                                lastReason[idx] = Reason.ConnectFailed;
                                 // 连接失败：随机抖动后重试
                                 int jitter;
                                 lock (_rng) { jitter = _rng.Next(0, intervalMs); }
@@ -153,6 +181,7 @@ namespace SimulatorLib.Workers
                             await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
 
                             lastResult[idx] = 1;
+                            lastReason[idx] = Reason.Ok;
 
                             //  3. 可选 UDP 心跳
                             if (useLogServer && _udpSender != null && !string.IsNullOrEmpty(logHost))
@@ -172,6 +201,7 @@ namespace SimulatorLib.Workers
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             lastResult[idx] = 0;
+                            lastReason[idx] = Reason.WriteFailed;
                         }
 
                         // 等待下一个心跳周期
@@ -182,6 +212,53 @@ namespace SimulatorLib.Workers
                     tcp?.Dispose();
                 }, ct));
             }
+
+            // 监控日志：定时写文件，记录离线数量与断线原因分布（供开发分析）
+            int monitorIntervalMs = Math.Max(60_000, intervalMs * 10);
+            var monitorFile = Path.Combine(AppContext.BaseDirectory,
+                $"heartbeat_monitor_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            var monitorTask = Task.Run(async () =>
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    try { await Task.Delay(monitorIntervalMs, ct).ConfigureAwait(false); }
+                    catch { break; }
+
+                    int total = clients.Count;
+                    int conn = 0, ok = 0, fail = 0;
+                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0;
+                    for (int j = 0; j < total; j++)
+                    {
+                        if (connectedFlags[j] == 1) conn++;
+                        if (lastResult[j]     == 1) ok++;
+                        else if (lastResult[j] == 0) fail++;
+
+                        if (connectedFlags[j] == 0)
+                        {
+                            switch (lastReason[j])
+                            {
+                                case Reason.ServerClosed:   rServerClosed++;   break;
+                                case Reason.WriteFailed:    rWriteFailed++;    break;
+                                case Reason.ConnectFailed:  rConnFailed++;     break;
+                                case Reason.ConnectTimeout: rConnTimeout++;    break;
+                            }
+                        }
+                    }
+                    int offline = total - conn;
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
+                    sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  上轮成功:{ok}  上轮失败:{fail}");
+                    if (offline > 0)
+                    {
+                        sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}");
+                    }
+                    sb.AppendLine();
+
+                    try { await File.AppendAllTextAsync(monitorFile, sb.ToString(), ct).ConfigureAwait(false); }
+                    catch { /* 写文件失败不影响主流程 */ }
+                }
+            }, ct);
 
             // 统计上报：扫描 lastResult / connectedFlags 数组（gauge，无累计溢出）
             var reportTask = Task.Run(async () =>
