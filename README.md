@@ -35,26 +35,25 @@ dotnet run --project src/SimulatorApp
 
 ### 部署到无 .NET 环境的机器
 
-发布的应用是**自包含**的，但需要拷贝以下文件：
+发布的应用是**完全自包含单文件**，只需拷贝一个文件：
 
 ```
-SimulatorApp.exe                    # 主程序（146 MB）
-D3DCompiler_47_cor3.dll            # WPF 依赖
-PenImc_cor3.dll
-PresentationNative_cor3.dll
-vcruntime140_cor3.dll
-wpfgfx_cor3.dll
+SimulatorApp.exe    # 主程序（约 155 MB，含 .NET 运行时 + WPF 原生库）
 ```
 
-保持这些文件在同一目录即可在任何 Windows x64 机器上运行。
+在任何 Windows x64 机器上双击即可运行，无需安装 .NET 或额外 DLL。
 
-## ✅ 当前状态（v2.1.0）
+> 注意：程序首次运行时会在同目录生成 `config.json` 和 `Clients.log`。
+
+## ✅ 当前状态（v2.2.0）
 
 **已完成功能：**
 - ✅ 客户端注册、心跳、白名单上传（PT/HTTP/HTTPS）
+- ✅ **TCP 心跳 1000 客户端全部稳定在线**（独立 Task + bool alive 重连机制）
+- ✅ 心跳断线原因监控：自动写 `heartbeat_monitor_*.log`（5 种原因：服务端关闭/写失败/连接失败/超时/正常）
 - ✅ **11 种日志类型**完整实现并验证（详见下方列表）
-- ✅ UI 界面完善（17 种日志分类、心跳选项、项目类型选择）
-- ✅ 单文件发布流程（含 WPF 原生依赖）
+- ✅ UI 布局优化（左列注册+日志分类，右列心跳+白名单+日志发送，2×2 统计面板）
+- ✅ 单文件发布（154.6 MB，含 WPF 原生依赖，无需目标机安装 .NET）
 - ✅ 持久化存储（`Clients.log`、`config.json`）
 
 **已实现的 11 种日志类型：**
@@ -90,7 +89,6 @@ wpfgfx_cor3.dll
 
 **协议完善：**
 - 日志路由规则细化（HTTPS/UDP 选择逻辑）
-- 心跳超时与重连机制
 
 ## 🛠️ 技术栈
 
@@ -117,4 +115,4 @@ artifacts/                   # 发布产物输出
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
 - 修改代码后需重新执行 `publish` 脚本更新 exe
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- 版本标签：v2.0.0（UI完善）、v2.1.0（11个日志类型）
+- 版本标签脉络：`v2.0.0`（UI完善）→ `v2.1.0`（11种日志/文档）→ `v2.0-tcp-heartbeat-stable`（TCP心跳1000客户端稳定，里程碑标记）→ `v2.2.0`（UI布局优化+断线原因监控日志，当前版本）

@@ -1,19 +1,19 @@
-<!--
+﻿<!--
 project_dashboard.html
-自动生成自: docs/项目实施文档.md
-结构注释（便于后续局部替换）:
+鑷姩鐢熸垚鑷? docs/椤圭洰瀹炴柦鏂囨。.md
+缁撴瀯娉ㄩ噴锛堜究浜庡悗缁眬閮ㄦ浛鎹級:
   <!-- SECTION:OVERVIEW_START --> ... <!-- SECTION:OVERVIEW_END -->
   <!-- SECTION:KANBAN_START --> ... <!-- SECTION:KANBAN_END -->
   <!-- SECTION:TIMELINE_START --> ... <!-- SECTION:TIMELINE_END -->
   <!-- SECTION:DETAILS_START --> ... <!-- SECTION:DETAILS_END -->
-使用说明（短）：要更新看板任务或近期突破，只需提供新的任务列表或替换对应 SECTION 块的 HTML 内容，告诉我“更新 SECTION:KANBAN 内容为 ...”。
+浣跨敤璇存槑锛堢煭锛夛細瑕佹洿鏂扮湅鏉夸换鍔℃垨杩戞湡绐佺牬锛屽彧闇€鎻愪緵鏂扮殑浠诲姟鍒楄〃鎴栨浛鎹㈠搴?SECTION 鍧楃殑 HTML 鍐呭锛屽憡璇夋垜鈥滄洿鏂?SECTION:KANBAN 鍐呭涓?...鈥濄€?
 -->
 <!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>项目进度看板 — IEGPerTest</title>
+  <title>椤圭洰杩涘害鐪嬫澘 鈥?IEGPerTest</title>
   <style>
     /* Reset */
     :root{
@@ -74,50 +74,51 @@ project_dashboard.html
     <header>
       <div class="logo">IEG</div>
       <div>
-        <h1>IEGPerTest — 项目进度看板</h1>
-        <div class="sub">快速恢复与可视化管理仪表盘 · 自动生成自 docs/项目实施文档.md</div>
+        <h1>IEGPerTest 鈥?椤圭洰杩涘害鐪嬫澘</h1>
+        <div class="sub">蹇€熸仮澶嶄笌鍙鍖栫鐞嗕华琛ㄧ洏 路 鑷姩鐢熸垚鑷?docs/椤圭洰瀹炴柦鏂囨。.md</div>
       </div>
     </header>
 
     <div class="grid">
       <!-- SECTION:OVERVIEW_START -->
       <aside class="panel overview">
-        <h2>项目概览</h2>
-        <p class="sub">状态：<strong style="color:#ff9f43">⏸️ 项目暂停（v2.1.0）</strong> - 11个日志类型完成验证，代码清理完毕，文档齐全。已发布自包含 <code>SimulatorApp.exe</code>（146.59MB + 5个WPF依赖DLL）。</p>
-        <h3 style="margin-bottom:6px">当前成果 (v2.1.0)</h3>
+        <h2>椤圭洰姒傝</h2>
+        <p class="sub">鐘舵€侊細<strong style="color:#22c55e">馃殌 娲昏穬寮€鍙戯紙v2.2.0锛?/strong> - TCP蹇冭烦1000瀹㈡埛绔叏閮ㄧǔ瀹氬湪绾匡紝11绉嶆棩蹇楃被鍨嬪凡瀹炵幇銆傚凡鍙戝竷鍗曟枃浠惰嚜鍖呭惈 <code>SimulatorApp.exe</code>锛垀 155 MB锛屾棤闇€棰濆 DLL锛夈€?/p>
+        <h3 style="margin-bottom:6px">褰撳墠鎴愭灉 (v2.2.0)</h3>
         <ul style="color:#cfe6ff">
-          <li>🎉 <strong>完成11个日志类型实现</strong>（剩余6个待实现）</li>
-          <li>✅ 代码清理（LogFieldHelper.cs、临时文件清理）</li>
-          <li>✅ 文档完善（README、暂停状态快照）</li>
-          <li>✅ Git规范化（语义化版本控制）</li>
-          <li>📝 <a href="docs/项目暂停状态-2026-02-12.md" style="color:#5b7bff">暂停状态文档</a> | <a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训</a></li>
+          <li>馃帀 <strong>TCP 蹇冭烦 1000 瀹㈡埛绔叏閮ㄧǔ瀹氬湪绾?/strong>(鐙珛 Task + bool alive 閲嶈繛鏈哄埗)</li>
+          <li>鉁?蹇冭烦鏂嚎鍘熷洜鐩戞帶鏃ュ織锛? 绉嶅師鍥狅級</li>
+          <li>鉁?UI甯冨眬浼樺寲锛?脳2 缁熻闈㈡澘锛屽乏娉ㄥ唽/鍙冲績璺筹級</li>
+          <li>鉁?瀹屾垚1涓棩蹇楃被鍨嬪疄鐜帮紙鍓╀綑6涓緟瀹炵幇锛?/li>
+          <li>鉁?鍗曟枃浠跺彂甯冿紙涓嶉渶DLL锛屼换鎰?Windows x64鍙繍琛岋級</li>
+          <li>馃摑 <a href="docs/缁忛獙鏁欒-鏃ュ織绫诲瀷瀹炵幇.md" style="color:#5b7bff">缁忛獙鏁欒</a> | <a href="README.md" style="color:#5b7bff">README</a></li>
         </ul>
 
-        <h3 style="margin-top:12px">快速上手</h3>
+        <h3 style="margin-top:12px">蹇€熶笂鎵?/h3>
         <div class="quick-commands">
           <pre><code>dotnet build
 dotnet test
 
-# 启动本地接收器（推荐用于调试）
+# 鍚姩鏈湴鎺ユ敹鍣紙鎺ㄨ崘鐢ㄤ簬璋冭瘯锛?
 .\artifacts\TestReceiverPublish\TestReceiver.exe
 
-# 启动演示或 UI
+# 鍚姩婕旂ず鎴?UI
 .\artifacts\SimulatorRunnerPublish\SimulatorRunner.exe
 dotnet run --project src/SimulatorApp</code></pre>
         </div>
 
-        <h3 style="margin-top:12px">关键文件</h3>
+        <h3 style="margin-top:12px">鍏抽敭鏂囦欢</h3>
         <ul style="color:#cfe6ff">
           <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code></li>
-          <li><code>src/SimulatorLib/Protocol/LogFieldHelper.cs</code> ⭐ 新增</li>
+          <li><code>src/SimulatorLib/Protocol/LogFieldHelper.cs</code> 猸?鏂板</li>
           <li><code>src/SimulatorLib/Workers/LogWorker.cs</code></li>
           <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code></li>
         </ul>
         
-        <h3 style="margin-top:12px">快速恢复</h3>
+        <h3 style="margin-top:12px">蹇€熸仮澶?/h3>
         <div style="background:rgba(255,159,67,0.1);padding:10px;border-radius:6px;border-left:3px solid #ff9f43">
-          <div style="font-size:13px;color:#ff9f43;margin-bottom:6px">📖 阅读暂停文档</div>
-          <code style="color:#cfe6ff;font-size:12px">docs/项目暂停状态-2026-02-12.md</code>
+          <div style="font-size:13px;color:#ff9f43;margin-bottom:6px">馃摉 闃呰鏆傚仠鏂囨。</div>
+          <code style="color:#cfe6ff;font-size:12px">docs/椤圭洰鏆傚仠鐘舵€?2026-02-12.md</code>
         </div>
 
       </aside>
@@ -126,111 +127,111 @@ dotnet run --project src/SimulatorApp</code></pre>
       <!-- SECTION:KANBAN_START -->
       <main>
         <div class="panel">
-          <h2>任务看板</h2>
-          <div style="color:var(--muted);font-size:13px;margin-bottom:8px">拖动卡片可在列间移动（本地浏览器持久化）。</div>
+          <h2>浠诲姟鐪嬫澘</h2>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:8px">鎷栧姩鍗＄墖鍙湪鍒楅棿绉诲姩锛堟湰鍦版祻瑙堝櫒鎸佷箙鍖栵級銆?/div>
           <div class="kanban" id="kanban">
             <div class="col">
-              <h3>待办</h3>
+              <h3>寰呭姙</h3>
               <div class="drop" data-col="todo" id="col-todo">
                 <div class="card todo" draggable="true" data-id="task-2">
-                  <div class="title">确保 LogJsonBuilder 输出原始客户端字段</div>
-                  <div class="meta">严格大小写；保留样例文本字段以兼容平台显示</div>
+                  <div class="title">纭繚 LogJsonBuilder 杈撳嚭鍘熷瀹㈡埛绔瓧娈?/div>
+                  <div class="meta">涓ユ牸澶у皬鍐欙紱淇濈暀鏍蜂緥鏂囨湰瀛楁浠ュ吋瀹瑰钩鍙版樉绀?/div>
                 </div>
                 <div class="card todo" draggable="true" data-id="task-3">
-                  <div class="title">编译并发布自包含版本以验证平台显示</div>
-                  <div class="meta">向平台发送验证样例并记录结果</div>
+                  <div class="title">缂栬瘧骞跺彂甯冭嚜鍖呭惈鐗堟湰浠ラ獙璇佸钩鍙版樉绀?/div>
+                  <div class="meta">鍚戝钩鍙板彂閫侀獙璇佹牱渚嬪苟璁板綍缁撴灉</div>
                 </div>
               </div>
             </div>
 
             <div class="col">
-              <h3>进行中</h3>
+              <h3>杩涜涓?/h3>
               <div class="drop" data-col="inprogress" id="col-inprogress">
                 <div class="card inprogress" draggable="true" data-id="task-5">
-                  <div class="title">同步 project_dashboard.html</div>
-                  <div class="meta">将近期变更写回文档并在看板中更新状态（正在同步）</div>
+                  <div class="title">鍚屾 project_dashboard.html</div>
+                  <div class="meta">灏嗚繎鏈熷彉鏇村啓鍥炴枃妗ｅ苟鍦ㄧ湅鏉夸腑鏇存柊鐘舵€侊紙姝ｅ湪鍚屾锛?/div>
                 </div>
                 <div class="card inprogress" draggable="true" data-id="task-6">
-                  <div class="title">更新 UI 样式与可视化</div>
-                  <div class="meta">改善看板配色、响应式与卡片视觉效果</div>
+                  <div class="title">鏇存柊 UI 鏍峰紡涓庡彲瑙嗗寲</div>
+                  <div class="meta">鏀瑰杽鐪嬫澘閰嶈壊銆佸搷搴斿紡涓庡崱鐗囪瑙夋晥鏋?/div>
                 </div>
               </div>
             </div>
 
             <div class="col">
-              <h3>已完成</h3>
+              <h3>宸插畬鎴?/h3>
               <div class="drop" data-col="done" id="col-done">
                 <!-- Completed items -->
                 <div class="card done" draggable="true" data-id="task-1">
-                  <div class="title">实现 Type/SubType 映射表</div>
-                  <div class="meta">已实现：src/SimulatorLib/Protocol/LogTypeMapper.cs</div>
+                  <div class="title">瀹炵幇 Type/SubType 鏄犲皠琛?/div>
+                  <div class="meta">宸插疄鐜帮細src/SimulatorLib/Protocol/LogTypeMapper.cs</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-4">
-                  <div class="title">样例日志解析</div>
-                  <div class="meta">已写入 <code>docs/JSON/field_mapping.md</code></div>
+                  <div class="title">鏍蜂緥鏃ュ織瑙ｆ瀽</div>
+                  <div class="meta">宸插啓鍏?<code>docs/JSON/field_mapping.md</code></div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-9">
-                  <div class="title">同步 project_dashboard.html（当前）</div>
-                  <div class="meta">已将看板与文档同步并优化界面显示</div>
+                  <div class="title">鍚屾 project_dashboard.html锛堝綋鍓嶏級</div>
+                  <div class="meta">宸插皢鐪嬫澘涓庢枃妗ｅ悓姝ュ苟浼樺寲鐣岄潰鏄剧ず</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-10">
-                  <div class="title">Version 2.0 UI完善与发布</div>
-                  <div class="meta">完成MainWindow.xaml重构、新增HTTPS心跳、统一样式、单文件发布</div>
+                  <div class="title">Version 2.0 UI瀹屽杽涓庡彂甯?/div>
+                  <div class="meta">瀹屾垚MainWindow.xaml閲嶆瀯銆佹柊澧濰TTPS蹇冭烦銆佺粺涓€鏍峰紡銆佸崟鏂囦欢鍙戝竷</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-11">
-                  <div class="title">创建版本文档和标签</div>
-                  <div class="meta">docs/里程碑-Version2.0-UI完善.md + git tag v2.0</div>
+                  <div class="title">鍒涘缓鐗堟湰鏂囨。鍜屾爣绛?/div>
+                  <div class="meta">docs/閲岀▼纰?Version2.0-UI瀹屽杽.md + git tag v2.0</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-12">
-                  <div class="title">✅ 完成11个日志类型实现</div>
-                  <div class="meta">修正HostDefence日志LogContent字段格式（简单数字字符串），完成文件保护/注册表保护/强制访问控制 · v1.1-11logtypes</div>
+                  <div class="title">鉁?瀹屾垚11涓棩蹇楃被鍨嬪疄鐜?/div>
+                  <div class="meta">淇HostDefence鏃ュ織LogContent瀛楁鏍煎紡锛堢畝鍗曟暟瀛楀瓧绗︿覆锛夛紝瀹屾垚鏂囦欢淇濇姢/娉ㄥ唽琛ㄤ繚鎶?寮哄埗璁块棶鎺у埗 路 v1.1-11logtypes</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-13">
-                  <div class="title">✅ Git 仓库重构与规范化</div>
-                  <div class="meta">实现语义化版本控制：创建 v2.0.0/v2.1.0 标签，清理旧标签，重命名分支为 feature/log-implementation</div>
+                  <div class="title">鉁?Git 浠撳簱閲嶆瀯涓庤鑼冨寲</div>
+                  <div class="meta">瀹炵幇璇箟鍖栫増鏈帶鍒讹細鍒涘缓 v2.0.0/v2.1.0 鏍囩锛屾竻鐞嗘棫鏍囩锛岄噸鍛藉悕鍒嗘敮涓?feature/log-implementation</div>
                 </div>
                 <div class="card done" draggable="true" data-id="task-14">
-                  <div class="title">✅ 项目清理与暂停准备</div>
-                  <div class="meta">清理临时文件、代码改进提交、更新README与文档、创建暂停状态快照 · 3bfe376, f85e229</div>
+                  <div class="title">鉁?椤圭洰娓呯悊涓庢殏鍋滃噯澶?/div>
+                  <div class="meta">娓呯悊涓存椂鏂囦欢銆佷唬鐮佹敼杩涙彁浜ゃ€佹洿鏂癛EADME涓庢枃妗ｃ€佸垱寤烘殏鍋滅姸鎬佸揩鐓?路 3bfe376, f85e229</div>
                 </div>
               </div>
-              <h3 style="margin-top:18px">更新时间线</h3>
+              <h3 style="margin-top:18px">鏇存柊鏃堕棿绾?/h3>
               <div class="timeline">
                 <!-- SECTION:TIMELINE_START -->
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#ff9f43">2026-02-12</span></div>
-                  <div style="margin-top:6px"><strong>项目清理与暂停 ⏸️</strong></div>
-                  <div class="meta">完成项目清理：删除临时文件（SimulatorApp_Portable.*、WLDefender.log、冗余文档），提交代码改进（LogFieldHelper.cs等），重写<a href="README.md" style="color:#5b7bff">README.md</a>反映v2.1.0实际状态，创建<a href="docs/项目暂停状态-2026-02-12.md" style="color:#5b7bff">暂停状态文档</a>包含完整快照和恢复指南。工作区干净，3次提交推送至远程。项目进入良好暂停状态。</div>
+                  <div style="margin-top:6px"><strong>椤圭洰娓呯悊涓庢殏鍋?鈴革笍</strong></div>
+                  <div class="meta">瀹屾垚椤圭洰娓呯悊锛氬垹闄や复鏃舵枃浠讹紙SimulatorApp_Portable.*銆乄LDefender.log銆佸啑浣欐枃妗ｏ級锛屾彁浜や唬鐮佹敼杩涳紙LogFieldHelper.cs绛夛級锛岄噸鍐?a href="README.md" style="color:#5b7bff">README.md</a>鍙嶆槧v2.1.0瀹為檯鐘舵€侊紝鍒涘缓<a href="docs/椤圭洰鏆傚仠鐘舵€?2026-02-12.md" style="color:#5b7bff">鏆傚仠鐘舵€佹枃妗?/a>鍖呭惈瀹屾暣蹇収鍜屾仮澶嶆寚鍗椼€傚伐浣滃尯骞插噣锛?娆℃彁浜ゆ帹閫佽嚦杩滅▼銆傞」鐩繘鍏ヨ壇濂芥殏鍋滅姸鎬併€?/div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
-                  <div style="margin-top:6px"><strong>Git 仓库重构与规范化 ✨</strong></div>
-                  <div class="meta">实现语义化版本控制（Semantic Versioning）：创建 v2.0.0（UI完善）、v2.1.0（11个日志类型）标签，删除旧标签（milestone-2.0/milestone-20260207/v1.1-11logtypes），重命名分支 feature/log-worker → feature/log-implementation。建立清晰的 Git 命名规范。</div>
+                  <div style="margin-top:6px"><strong>Git 浠撳簱閲嶆瀯涓庤鑼冨寲 鉁?/strong></div>
+                  <div class="meta">瀹炵幇璇箟鍖栫増鏈帶鍒讹紙Semantic Versioning锛夛細鍒涘缓 v2.0.0锛圲I瀹屽杽锛夈€乿2.1.0锛?1涓棩蹇楃被鍨嬶級鏍囩锛屽垹闄ゆ棫鏍囩锛坢ilestone-2.0/milestone-20260207/v1.1-11logtypes锛夛紝閲嶅懡鍚嶅垎鏀?feature/log-worker 鈫?feature/log-implementation銆傚缓绔嬫竻鏅扮殑 Git 鍛藉悕瑙勮寖銆?/div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
-                  <div style="margin-top:6px"><strong>完成11个日志类型实现 🎉</strong></div>
-                  <div class="meta">修正HostDefence日志LogContent字段格式（从描述性文本改为简单数字字符串1-5），完成文件保护、注册表保护、强制访问控制。已记录<a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">经验教训</a>。标签：v2.1.0</div>
+                  <div style="margin-top:6px"><strong>瀹屾垚11涓棩蹇楃被鍨嬪疄鐜?馃帀</strong></div>
+                  <div class="meta">淇HostDefence鏃ュ織LogContent瀛楁鏍煎紡锛堜粠鎻忚堪鎬ф枃鏈敼涓虹畝鍗曟暟瀛楀瓧绗︿覆1-5锛夛紝瀹屾垚鏂囦欢淇濇姢銆佹敞鍐岃〃淇濇姢銆佸己鍒惰闂帶鍒躲€傚凡璁板綍<a href="docs/缁忛獙鏁欒-鏃ュ織绫诲瀷瀹炵幇.md" style="color:#5b7bff">缁忛獙鏁欒</a>銆傛爣绛撅細v2.1.0</div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge" style="background:#22c55e">2026-02-10</span></div>
-                  <div style="margin-top:6px"><strong>Version 2.0 发布 - UI界面完善</strong></div>
-                  <div class="meta">完成MainWindow.xaml全面重构（405行），新增HTTPS心跳、项目类型选择器、17个日志分类（IEG/EDR色彩编码），统一TextBox宽度150px，单文件发布68.44MB，窗口高度820px。标签：v2.0</div>
+                  <div style="margin-top:6px"><strong>Version 2.0 鍙戝竷 - UI鐣岄潰瀹屽杽</strong></div>
+                  <div class="meta">瀹屾垚MainWindow.xaml鍏ㄩ潰閲嶆瀯锛?05琛岋級锛屾柊澧濰TTPS蹇冭烦銆侀」鐩被鍨嬮€夋嫨鍣ㄣ€?7涓棩蹇楀垎绫伙紙IEG/EDR鑹插僵缂栫爜锛夛紝缁熶竴TextBox瀹藉害150px锛屽崟鏂囦欢鍙戝竷68.44MB锛岀獥鍙ｉ珮搴?20px銆傛爣绛撅細v2.0</div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge">2026-02-10</span></div>
-                  <div style="margin-top:6px"><strong>样例解析与字段确认</strong></div>
-                  <div class="meta">确定原始客户端 JSON 字段与来源，并定位 Type/SubType 映射需求。</div>
+                  <div style="margin-top:6px"><strong>鏍蜂緥瑙ｆ瀽涓庡瓧娈电‘璁?/strong></div>
+                  <div class="meta">纭畾鍘熷瀹㈡埛绔?JSON 瀛楁涓庢潵婧愶紝骞跺畾浣?Type/SubType 鏄犲皠闇€姹傘€?/div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge">2026-02-10</span></div>
-                  <div style="margin-top:6px"><strong>实现 Type/SubType 映射</strong></div>
-                  <div class="meta">已实现 <code>LogTypeMapper</code> 并通过本地构建。</div>
+                  <div style="margin-top:6px"><strong>瀹炵幇 Type/SubType 鏄犲皠</strong></div>
+                  <div class="meta">宸插疄鐜?<code>LogTypeMapper</code> 骞堕€氳繃鏈湴鏋勫缓銆?/div>
                 </div>
                 <div class="timeline-item">
                   <div><span class="badge">2026-02-10</span></div>
-                  <div style="margin-top:6px"><strong>看板同步与 UI 优化</strong></div>
-                  <div class="meta">已同步看板状态并优化界面配色/排版（本文件）。</div>
+                  <div style="margin-top:6px"><strong>鐪嬫澘鍚屾涓?UI 浼樺寲</strong></div>
+                  <div class="meta">宸插悓姝ョ湅鏉跨姸鎬佸苟浼樺寲鐣岄潰閰嶈壊/鎺掔増锛堟湰鏂囦欢锛夈€?/div>
                 </div>
                 <!-- SECTION:TIMELINE_END -->
               </div>
@@ -240,15 +241,15 @@ dotnet run --project src/SimulatorApp</code></pre>
 
         <!-- SECTION:DETAILS_START -->
         <div class="panel details" style="margin-top:12px">
-          <h2>完整实施文档（原始内容）</h2>
+          <h2>瀹屾暣瀹炴柦鏂囨。锛堝師濮嬪唴瀹癸級</h2>
           <div class="md">
             <!-- Converted markdown content starts here -->
 
-            <h3>当前概览</h3>
-            <p>状态：核心功能可运行（注册、心跳、日志发送）；已发布自包含 <code>SimulatorApp.exe</code>（artifacts/SimulatorAppPublish）。</p>
-            <p>重点：优先完成 <code>HeartbeatWorker</code>、<code>Type/SubType</code> 映射与日志字段对齐（见 <code>docs/JSON/field_mapping.md</code>）。</p>
+            <h3>褰撳墠姒傝</h3>
+            <p>鐘舵€侊細鏍稿績鍔熻兘鍙繍琛岋紙娉ㄥ唽銆佸績璺炽€佹棩蹇楀彂閫侊級锛涘凡鍙戝竷鑷寘鍚?<code>SimulatorApp.exe</code>锛坅rtifacts/SimulatorAppPublish锛夈€?/p>
+            <p>閲嶇偣锛氫紭鍏堝畬鎴?<code>HeartbeatWorker</code>銆?code>Type/SubType</code> 鏄犲皠涓庢棩蹇楀瓧娈靛榻愶紙瑙?<code>docs/JSON/field_mapping.md</code>锛夈€?/p>
 
-            <h3>快速上手（最少命令）</h3>
+            <h3>蹇€熶笂鎵嬶紙鏈€灏戝懡浠わ級</h3>
             <pre><code>dotnet build
 dotnet test
 
@@ -257,45 +258,45 @@ dotnet test
 .\artifacts\SimulatorRunnerPublish\SimulatorRunner.exe
 dotnet run --project src/SimulatorApp</code></pre>
 
-            <h3>关键文件（快速定位）</h3>
+            <h3>鍏抽敭鏂囦欢锛堝揩閫熷畾浣嶏級</h3>
             <ul>
-              <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code> — JSON 构建器（需严格对齐字段名）</li>
-              <li><code>src/SimulatorLib/Workers/LogWorker.cs</code> — 日志发送逻辑（PT/HTTPS/UDP 路径）</li>
-              <li><code>src/SimulatorLib/Models/LogCategory.cs</code> — 日志分类与映射辅助</li>
-              <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code> — <code>Clients.log</code> 读写</li>
-              <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code> — UI 入口</li>
+              <li><code>src/SimulatorLib/Protocol/LogJsonBuilder.cs</code> 鈥?JSON 鏋勫缓鍣紙闇€涓ユ牸瀵归綈瀛楁鍚嶏級</li>
+              <li><code>src/SimulatorLib/Workers/LogWorker.cs</code> 鈥?鏃ュ織鍙戦€侀€昏緫锛圥T/HTTPS/UDP 璺緞锛?/li>
+              <li><code>src/SimulatorLib/Models/LogCategory.cs</code> 鈥?鏃ュ織鍒嗙被涓庢槧灏勮緟鍔?/li>
+              <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code> 鈥?<code>Clients.log</code> 璇诲啓</li>
+              <li><code>src/SimulatorApp/ViewModels/MainViewModel.cs</code> 鈥?UI 鍏ュ彛</li>
             </ul>
 
-            <h3>近期突破（关键确认）</h3>
-            <p><strong>2026-02-10：</strong>完成样例日志解析并写入 <code>docs/JSON/field_mapping.md</code>；确认原始客户端 JSON 字段与来源（<code>Time, HoldBack, IntegrityCheck, CertCheck, Type, FullPath, ParentProcess, CompanyName, ProductName, Version, UserName, Hash, IEGHash</code>），并发现需要实现 <code>Type/SubType</code> 精确数值映射以及同时兼容样例中的文本键（如 <code>hashvalue</code>/<code>ieghashvalue</code>）。</p>
+            <h3>杩戞湡绐佺牬锛堝叧閿‘璁わ級</h3>
+            <p><strong>2026-02-10锛?/strong>瀹屾垚鏍蜂緥鏃ュ織瑙ｆ瀽骞跺啓鍏?<code>docs/JSON/field_mapping.md</code>锛涚‘璁ゅ師濮嬪鎴风 JSON 瀛楁涓庢潵婧愶紙<code>Time, HoldBack, IntegrityCheck, CertCheck, Type, FullPath, ParentProcess, CompanyName, ProductName, Version, UserName, Hash, IEGHash</code>锛夛紝骞跺彂鐜伴渶瑕佸疄鐜?<code>Type/SubType</code> 绮剧‘鏁板€兼槧灏勪互鍙婂悓鏃跺吋瀹规牱渚嬩腑鐨勬枃鏈敭锛堝 <code>hashvalue</code>/<code>ieghashvalue</code>锛夈€?/p>
 
-            <h3>待办（优先级）</h3>
+            <h3>寰呭姙锛堜紭鍏堢骇锛?/h3>
             <ol>
-              <li>实现 <code>Type/SubType</code> 映射表并优先对齐：白名单/文件保护/强制访问控制。</li>
-              <li>确保 <code>LogJsonBuilder</code> 输出原始客户端字段（严格大小写），并保留样例字段以兼容平台显示。</li>
-              <li>编译、发布自包含版本并向平台发送验证样例，记录结果到 <code>docs/JSON/field_mapping.md</code>。</li>
+              <li>瀹炵幇 <code>Type/SubType</code> 鏄犲皠琛ㄥ苟浼樺厛瀵归綈锛氱櫧鍚嶅崟/鏂囦欢淇濇姢/寮哄埗璁块棶鎺у埗銆?/li>
+              <li>纭繚 <code>LogJsonBuilder</code> 杈撳嚭鍘熷瀹㈡埛绔瓧娈碉紙涓ユ牸澶у皬鍐欙級锛屽苟淇濈暀鏍蜂緥瀛楁浠ュ吋瀹瑰钩鍙版樉绀恒€?/li>
+              <li>缂栬瘧銆佸彂甯冭嚜鍖呭惈鐗堟湰骞跺悜骞冲彴鍙戦€侀獙璇佹牱渚嬶紝璁板綍缁撴灉鍒?<code>docs/JSON/field_mapping.md</code>銆?/li>
             </ol>
 
-            <h3>调试与验证要点</h3>
+            <h3>璋冭瘯涓庨獙璇佽鐐?/h3>
             <ul>
-              <li>时间字段：保留 <code>Time</code>（可读格式）并同时输出样例常用的 ISO8601 字段以便核对。</li>
-              <li>哈希字段：<code>Hash</code> 来源于内核审计（hex），<code>IEGHash/DefIntegrity</code> 为用户态 SHA1（大写 hex）。若样例仅含一项，模拟器应优先填充 <code>Hash</code> 并同时填 <code>IEGHash</code> 以保证展示一致性。</li>
-              <li>发送路径：威胁数据（TFWarning）走 PT/TCP（或 UDP/AES）；DP/SysGuard 必须通过 HTTPS（对齐 <code>AccessServer.cpp</code>）。</li>
+              <li>鏃堕棿瀛楁锛氫繚鐣?<code>Time</code>锛堝彲璇绘牸寮忥級骞跺悓鏃惰緭鍑烘牱渚嬪父鐢ㄧ殑 ISO8601 瀛楁浠ヤ究鏍稿銆?/li>
+              <li>鍝堝笇瀛楁锛?code>Hash</code> 鏉ユ簮浜庡唴鏍稿璁★紙hex锛夛紝<code>IEGHash/DefIntegrity</code> 涓虹敤鎴锋€?SHA1锛堝ぇ鍐?hex锛夈€傝嫢鏍蜂緥浠呭惈涓€椤癸紝妯℃嫙鍣ㄥ簲浼樺厛濉厖 <code>Hash</code> 骞跺悓鏃跺～ <code>IEGHash</code> 浠ヤ繚璇佸睍绀轰竴鑷存€с€?/li>
+              <li>鍙戦€佽矾寰勶細濞佽儊鏁版嵁锛圱FWarning锛夎蛋 PT/TCP锛堟垨 UDP/AES锛夛紱DP/SysGuard 蹇呴』閫氳繃 HTTPS锛堝榻?<code>AccessServer.cpp</code>锛夈€?/li>
             </ul>
 
-            <h3>恢复步骤（最短）</h3>
+            <h3>鎭㈠姝ラ锛堟渶鐭級</h3>
             <pre><code>git checkout pause/2026-02-06
 
 dotnet run --project src/TestReceiver
 
 dotnet run --project src/SimulatorRunner
 
-# 检查 Clients.log 与 logs/heartbeat-YYYYMMDD.log</code></pre>
+# 妫€鏌?Clients.log 涓?logs/heartbeat-YYYYMMDD.log</code></pre>
 
-            <h3>下一次优先项</h3>
-            <p>在 UI 中集成 <code>WhitelistUploadWorker</code> 与 <code>LogWorker</code>（包含文件选择、进度、统计显示）。</p>
+            <h3>涓嬩竴娆′紭鍏堥」</h3>
+            <p>鍦?UI 涓泦鎴?<code>WhitelistUploadWorker</code> 涓?<code>LogWorker</code>锛堝寘鍚枃浠堕€夋嫨銆佽繘搴︺€佺粺璁℃樉绀猴級銆?/p>
 
-            <h3>详细补充（保存的 TODO / 快速定位）</h3>
+            <h3>璇︾粏琛ュ厖锛堜繚瀛樼殑 TODO / 蹇€熷畾浣嶏級</h3>
             <ul>
               <li><code>src/SimulatorLib/Persistence/ClientsPersistence.cs</code></li>
               <li><code>src/SimulatorLib/Workers/RegistrationWorker.cs</code></li>
@@ -308,13 +309,13 @@ dotnet run --project src/SimulatorRunner
               <li><code>src/SimulatorRunner/Program.cs</code></li>
             </ul>
 
-            <h3>本地调试小贴士</h3>
+            <h3>鏈湴璋冭瘯灏忚创澹?/h3>
             <pre><code>Test-NetConnection -ComputerName &lt;host&gt; -Port &lt;port&gt;
 
 mv Clients.log Clients.log.bak</code></pre>
 
-            <h3>待交付的实现（简短）</h3>
-            <p>按优先级：实现 HeartbeatWorker → 完善 Type/SubType 映射 → 发布并验证日志字段。</p>
+            <h3>寰呬氦浠樼殑瀹炵幇锛堢畝鐭級</h3>
+            <p>鎸変紭鍏堢骇锛氬疄鐜?HeartbeatWorker 鈫?瀹屽杽 Type/SubType 鏄犲皠 鈫?鍙戝竷骞堕獙璇佹棩蹇楀瓧娈点€?/p>
 
             <!-- Converted markdown content ends here -->
           </div>
@@ -323,48 +324,48 @@ mv Clients.log Clients.log.bak</code></pre>
       </main>
       <!-- SECTION:KANBAN_END -->
 
-      <aside已实现的11个日志类型</h3>
-        <div style="color:var(--muted);font-size:13px;margin-bottom:8px">2026-02-11 完成</div>
+      <aside宸插疄鐜扮殑11涓棩蹇楃被鍨?/h3>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:8px">2026-02-11 瀹屾垚</div>
         <ol style="color:#cfe6ff;font-size:13px;line-height:1.8">
-          <li>非法程序启动（非白名单）</li>
-          <li>白名单防篡改</li>
-          <li>进程审计事件</li>
-          <li>病毒告警事件</li>
-          <li>漏洞预警</li>
-          <li>系统资源异常告警</li>
-          <li>违规外联</li>
-          <li>威胁数据采集-进程启动</li>
-          <li>文件保护 ✓</li>
-          <li>注册表保护 ✓</li>
-          <li>强制访问控制 ✓</li>
+          <li>闈炴硶绋嬪簭鍚姩锛堥潪鐧藉悕鍗曪級</li>
+          <li>鐧藉悕鍗曢槻绡℃敼</li>
+          <li>杩涚▼瀹¤浜嬩欢</li>
+          <li>鐥呮瘨鍛婅浜嬩欢</li>
+          <li>婕忔礊棰勮</li>
+          <li>绯荤粺璧勬簮寮傚父鍛婅</li>
+          <li>杩濊澶栬仈</li>
+          <li>濞佽儊鏁版嵁閲囬泦-杩涚▼鍚姩</li>
+          <li>鏂囦欢淇濇姢 鉁?/li>
+          <li>娉ㄥ唽琛ㄤ繚鎶?鉁?/li>
+          <li>寮哄埗璁块棶鎺у埗 鉁?/li>
         </ol>
-更新于 2026-02-11
-        <h3 style="margin-top:16px">近期与上下文</h3>
-        <div style="color:var(--muted);font-size:13px">发布时间轴 &amp; 关键确认</div>
+鏇存柊浜?2026-02-11
+        <h3 style="margin-top:16px">杩戞湡涓庝笂涓嬫枃</h3>
+        <div style="color:var(--muted);font-size:13px">鍙戝竷鏃堕棿杞?&amp; 鍏抽敭纭</div>
         <div style="margin-top:10px">
           <div class="timeline-item">
             <div><span class="badge" style="background:#22c55e">2026-02-11</span></div>
-            <div style="margin-top:6px"><strong>11个日志类型完成</strong></div>
-            <div class="meta">关键修复：LogContent字段格式。<a href="docs/经验教训-日志类型实现.md" style="color:#5b7bff">查看经验教训</a></div>
-          </divd);font-size:13px">发布时间轴 &amp; 关键确认</div>
+            <div style="margin-top:6px"><strong>11涓棩蹇楃被鍨嬪畬鎴?/strong></div>
+            <div class="meta">鍏抽敭淇锛歀ogContent瀛楁鏍煎紡銆?a href="docs/缁忛獙鏁欒-鏃ュ織绫诲瀷瀹炵幇.md" style="color:#5b7bff">鏌ョ湅缁忛獙鏁欒</a></div>
+          </divd);font-size:13px">鍙戝竷鏃堕棿杞?&amp; 鍏抽敭纭</div>
         <div style="margin-top:10px">
           <div class="timeline-item">
             <div><span class="badge">2026-02-10</span></div>
-            <div style="margin-top:6px"><strong>样例解析完成</strong></div>
-            <div class="meta">已生成字段对照，下一步实现 Type/SubType 映射。</div>
+            <div style="margin-top:6px"><strong>鏍蜂緥瑙ｆ瀽瀹屾垚</strong></div>
+            <div class="meta">宸茬敓鎴愬瓧娈靛鐓э紝涓嬩竴姝ュ疄鐜?Type/SubType 鏄犲皠銆?/div>
           </div>
         </div>
 
-        <h3 style="margin-top:12px">说明</h3>
-        <p class="sub">要局部更新：告诉我要替换哪个 SECTION（例如：SECTION:KANBAN）并提交新的 HTML 段。</p>
+        <h3 style="margin-top:12px">璇存槑</h3>
+        <p class="sub">瑕佸眬閮ㄦ洿鏂帮細鍛婅瘔鎴戣鏇挎崲鍝釜 SECTION锛堜緥濡傦細SECTION:KANBAN锛夊苟鎻愪氦鏂扮殑 HTML 娈点€?/p>
       </aside>
     </div>
 
-    <footer>生成于 2026-02-10 · 文件独立，可直接在浏览器打开</footer>
+    <footer>鐢熸垚浜?2026-02-10 路 鏂囦欢鐙珛锛屽彲鐩存帴鍦ㄦ祻瑙堝櫒鎵撳紑</footer>
   </div>
 
   <script>
-    // 简单拖放与本地持久化（localStorage）
+    // 绠€鍗曟嫋鏀句笌鏈湴鎸佷箙鍖栵紙localStorage锛?
     (function(){
       const cols = document.querySelectorAll('.drop');
       let dragCard = null;
