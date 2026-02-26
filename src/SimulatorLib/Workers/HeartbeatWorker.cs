@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -222,6 +223,97 @@ namespace SimulatorLib.Workers
         {
             try { return Environment.UserDomainName ?? string.Empty; }
             catch { return string.Empty; }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+        // HTTPS 心跳：POST https://{host}:{port}/USM/clientHeartbeat.do
+        // 不经过 PT 协议加密，用于诊断 TCP 心跳是否是协议/加密问题。
+        // ──────────────────────────────────────────────────────────────────────
+        public async Task StartHttpsAsync(
+            int intervalMs,
+            string platformHost,
+            int platformPort,
+            CancellationToken ct,
+            IProgress<HeartbeatStats>? progress = null)
+        {
+            var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+            if (clients.Count == 0) return;
+
+            var lastResult = new int[clients.Count];
+            for (int j = 0; j < clients.Count; j++) lastResult[j] = -1;
+
+            int spreadMs = Math.Min(intervalMs, 3000);
+
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+            using var http = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMilliseconds(Math.Max(intervalMs, 10000)),
+            };
+            var url = $"https://{platformHost}:{platformPort}/USM/clientHeartbeat.do";
+
+            var clientTasks = new List<Task>(clients.Count);
+            for (int i = 0; i < clients.Count; i++)
+            {
+                var c   = clients[i];
+                var idx = i;
+                int startDelay = clients.Count > 1
+                    ? (int)((long)i * spreadMs / clients.Count) : 0;
+
+                clientTasks.Add(Task.Run(async () =>
+                {
+                    if (startDelay > 0)
+                    {
+                        try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
+                        catch (OperationCanceledException) { return; }
+                    }
+
+                    while (!ct.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var domainName = GetDomainNameSafe();
+                            var mac        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                            var json       = HeartbeatJsonBuilder.BuildV3R7C02(
+                                                c.ClientId, domainName, c.IP, mac);
+
+                            using var content = new StringContent(
+                                json, Encoding.UTF8, "application/json");
+                            using var resp = await http.PostAsync(url, content, ct)
+                                               .ConfigureAwait(false);
+
+                            lastResult[idx] = resp.IsSuccessStatusCode ? 1 : 0;
+                        }
+                        catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                        catch { lastResult[idx] = 0; }
+
+                        try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                        catch (OperationCanceledException) { break; }
+                    }
+                }, ct));
+            }
+
+            var reportTask = Task.Run(async () =>
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    try { await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false); }
+                    catch { break; }
+
+                    int ok = 0, fail = 0;
+                    for (int j = 0; j < clients.Count; j++)
+                    {
+                        if      (lastResult[j] == 1) ok++;
+                        else if (lastResult[j] == 0) fail++;
+                    }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, 0, ok, fail, 0, 0)); } catch { }
+                }
+            }, ct);
+
+            await Task.WhenAll(clientTasks).ConfigureAwait(false);
         }
     }
 }

@@ -82,6 +82,7 @@ namespace SimulatorApp.ViewModels
         private int _hbHttpsUdpFail;
 
         private CancellationTokenSource? _hbCts;
+        private CancellationTokenSource? _httpsCts;
         private CancellationTokenSource? _logCts;
         private CancellationTokenSource? _uploadCts;
 
@@ -183,8 +184,8 @@ namespace SimulatorApp.ViewModels
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
             StartHeartbeatCommand = new RelayCommand(async _ => await StartHeartbeatAsync());
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
-            StartHttpsHeartbeatCommand = new RelayCommand(_ => AppendStatus("HTTPS心跳功能待实现"));
-            StopHttpsHeartbeatCommand = new RelayCommand(_ => AppendStatus("HTTPS心跳停止功能待实现"));
+            StartHttpsHeartbeatCommand = new RelayCommand(async _ => await StartHttpsHeartbeatAsync());
+            StopHttpsHeartbeatCommand  = new RelayCommand(_ => StopHttpsHeartbeat());
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
             StartLogSendCommand = new RelayCommand(async _ => await StartLogSendAsync());
             StopLogSendCommand = new RelayCommand(_ => StopLogSend());
@@ -461,6 +462,52 @@ namespace SimulatorApp.ViewModels
             {
                 _hbCts.Cancel();
                 RunOnUi(() => AppendStatus("已请求停止心跳任务"));
+            }
+        }
+
+        private async Task StartHttpsHeartbeatAsync()
+        {
+            try
+            {
+                var (ok, reason) = ValidateInputs();
+                if (!ok) { RunOnUi(() => AppendStatus("输入校验失败: " + reason)); return; }
+
+                await SaveConfigAsync().ConfigureAwait(false);
+                _httpsCts?.Cancel();
+                _httpsCts = new CancellationTokenSource();
+                var hb = new HeartbeatWorker(new TcpSender());
+                RunOnUi(() => AppendStatus("开始 HTTPS 心跳任务..."));
+                _ = Task.Run(async () =>
+                {
+                    var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
+                    {
+                        RunOnUi(() =>
+                        {
+                            HbHttpsTotal = s.Total;
+                            HbHttpsOk    = s.SuccessTcp;   // 复用 TCP 成功字段
+                            HbHttpsFail  = s.FailTcp;
+                        });
+                    });
+                    await hb.StartHttpsAsync(
+                        HbInterval,
+                        platformHost: PlatformHost,
+                        platformPort: PlatformPort,
+                        ct: _httpsCts.Token,
+                        progress: progress).ConfigureAwait(false);
+                });
+            }
+            catch (Exception ex)
+            {
+                RunOnUi(() => AppendStatus("HTTPS 心跳启动异常: " + ex.Message));
+            }
+        }
+
+        private void StopHttpsHeartbeat()
+        {
+            if (_httpsCts != null && !_httpsCts.IsCancellationRequested)
+            {
+                _httpsCts.Cancel();
+                RunOnUi(() => AppendStatus("已请求停止 HTTPS 心跳任务"));
             }
         }
 
