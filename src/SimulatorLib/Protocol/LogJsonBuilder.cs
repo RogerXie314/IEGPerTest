@@ -37,6 +37,22 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(root, JsonOptions);
     }
 
+    // 带 CMDVER 字段的 Envelope（用于 USB 插拔/访问告警等需要区分协议版本的日志）
+    private static string EnvelopeWithVer(string computerId, int cmdType, int cmdId, int cmdVer, IReadOnlyList<Dictionary<string, object?>> cmdContent)
+    {
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"] = computerId,
+            ["CMDTYPE"] = cmdType,
+            ["CMDID"] = cmdId,
+            ["CMDVER"] = cmdVer,
+            ["CMDContent"] = cmdContent,
+        };
+
+        var root = new object[] { person };
+        return JsonSerializer.Serialize(root, JsonOptions);
+    }
+
     public static string BuildClientAdminLog(string computerId, string userName, string logContent, bool success)
     {
         // external: UserActionLog_GetJsonByVector
@@ -352,14 +368,14 @@ public static class LogJsonBuilder
 
     public static string BuildDataProtectLog(string computerId, string @operator, string operationObject, uint action, uint result)
     {
-        // external: WLJsonParse.cpp::DPLog_GetJsonByVector(vector<EVENT_DATA_PROTECT*>)
-        // Fields: OperationTime(UInt64), Operator(string), OperationObject(string), Action(uint), Result(uint)
+        // external: WLJsonParse.cpp::DPLog_GetJsonByVector(vector<CWLMetaData*>) — 主路径版本
+        // Fields: Time(UInt64), ProcessName(string), FileName(string), Operation(uint), Result(uint)
         var item = new Dictionary<string, object?>
         {
-            ["OperationTime"] = (ulong)NowUnixSeconds(),
-            ["Operator"] = string.IsNullOrWhiteSpace(@operator) ? "-" : @operator,
-            ["OperationObject"] = string.IsNullOrWhiteSpace(operationObject) ? "-" : operationObject,
-            ["Action"] = action,
+            ["Time"] = (ulong)NowUnixSeconds(),
+            ["ProcessName"] = string.IsNullOrWhiteSpace(@operator) ? "-" : @operator,
+            ["FileName"] = string.IsNullOrWhiteSpace(operationObject) ? "-" : operationObject,
+            ["Operation"] = action,
             ["Result"] = result,
         };
 
@@ -368,11 +384,11 @@ public static class LogJsonBuilder
 
     public static string BuildSysGuardLog(string computerId, string subject, string @object, uint action, uint result)
     {
-        // external: WLJsonParse.cpp::SysGuardLog_GetJsonByVector(vector<SYSTEM_GUARD_LOG*>)
-        // Fields: OperationTime(UInt64), Subject(string), Object(string), Action(uint), Result(uint)
+        // external: WLJsonParse.cpp::SysGuardLog_GetJsonByVector(vector<CWLMetaData*>) — 主路径版本
+        // Fields: Time(UInt64), Subject(string), Object(string), Action(uint), Result(uint)
         var item = new Dictionary<string, object?>
         {
-            ["OperationTime"] = (ulong)NowUnixSeconds(),
+            ["Time"] = (ulong)NowUnixSeconds(),
             ["Subject"] = string.IsNullOrWhiteSpace(subject) ? "-" : subject,
             ["Object"] = string.IsNullOrWhiteSpace(@object) ? "-" : @object,
             ["Action"] = action,
@@ -382,15 +398,18 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.SysGuardLog, new[] { item });
     }
 
-    public static string BuildUsbDeviceLog(string computerId, string deviceType, string deviceName, int state)
+    public static string BuildUsbDeviceLog(string computerId, string deviceType, string deviceName, int state, int usbType = 2)
     {
-        // external: ExtDevLog_GetJsonByVector (CDROM、蓝牙、串口等非法使用记录的告警)
+        // external: ExtDevLog_GetJsonByVector → /USM/clientULog.do
+        // 字段: Time, UsbType(int=dwLogType), LogContent, UserName, FullPath
+        // usbType 对应 UDISK_LOG_TYPE_* 枚举值，区分具体禁用的外设类型
         var item = new Dictionary<string, object?>
         {
             ["Time"] = NowLocalTimeString(),
-            ["DeviceType"] = string.IsNullOrWhiteSpace(deviceType) ? "USB" : deviceType,
-            ["DeviceName"] = string.IsNullOrWhiteSpace(deviceName) ? "-" : deviceName,
-            ["State"] = state, // 0: 禁用, 1: 启用
+            ["UsbType"] = usbType,
+            ["LogContent"] = string.IsNullOrWhiteSpace(deviceName) ? "-" : deviceName,
+            ["UserName"] = "-",
+            ["FullPath"] = "-",
         };
 
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });
@@ -398,43 +417,62 @@ public static class LogJsonBuilder
 
     public static string BuildUsbWarningLog(string computerId, string filePath, string operation, string userName)
     {
-        // external: UsbDiskWarningLog_GetJsonByVector (U盘文件操作违权告警)
+        // external: UsbDiskWarningLog_GetJsonByVector → /USM/clientUSBLog.do (CMDVER=2)
+        // 字段: Time, UserName, UDiskType, serialID, FullPath, ProcessName, OperationContent, Block
         var item = new Dictionary<string, object?>
         {
             ["Time"] = NowLocalTimeString(),
-            ["FilePath"] = string.IsNullOrWhiteSpace(filePath) ? "-" : filePath,
-            ["Operation"] = string.IsNullOrWhiteSpace(operation) ? "Read" : operation,
             ["UserName"] = string.IsNullOrWhiteSpace(userName) ? "-" : userName,
-            ["Result"] = 0, // 0: 拦截，1: 放行
+            ["UDiskType"] = 1,   // 1=普通U盘
+            ["serialID"] = "SIM-USB-001",
+            ["FullPath"] = string.IsNullOrWhiteSpace(filePath) ? "-" : filePath,
+            ["ProcessName"] = "explorer.exe",
+            ["OperationContent"] = 1,  // 1=读取
+            ["Block"] = 1,  // 1=拦截
         };
 
-        return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });
+        // CMDVER=2 区别旧版本 USB 访问告警 JSON 规格
+        return EnvelopeWithVer(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, 2, new[] { item });
     }
 
     public static string BuildUDiskPlugLog(string computerId, string diskType, string diskName, int action)
     {
-        // external: UsbDiskPlugLog_GetJsonByVector (Udisk 插拔或插入告警)
+        // external: UsbDiskPlugLog_GetJsonByVector → /USM/hotplugDevLog.do (CMDVER=1, 普通U盘/移动硬盘)
+        // 字段: Time, UDiskType, serialID, registerStatus, DiskDriverLetter(array), plugEvent
         var item = new Dictionary<string, object?>
         {
             ["Time"] = NowLocalTimeString(),
-            ["DiskType"] = string.IsNullOrWhiteSpace(diskType) ? "Udisk" : diskType,
-            ["DiskName"] = string.IsNullOrWhiteSpace(diskName) ? "-" : diskName,
-            ["Action"] = action, // 0: 移除, 1: 插入
+            ["UDiskType"] = 1,   // 1=普通U盘
+            ["serialID"] = string.IsNullOrWhiteSpace(diskName) ? "SIM-001" : diskName,
+            ["registerStatus"] = 0,  // 0=未注册
+            ["DiskDriverLetter"] = new[] { "E:\\" },
+            ["plugEvent"] = action,  // 1=插入, 0=拔出
         };
 
-        return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });
+        // CMDVER=1 表示普通/安全U盘/移动硬盘的插拔格式
+        return EnvelopeWithVer(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, 1, new[] { item });
     }
 
     public static string BuildSafetyStoreLog(string computerId, string softwareName, string softwarePath, int installType)
     {
-        // external: AppStore_TraceLog_GetJsonByVector (安全商店/软件安装追踪)
+        // external: SafetyStoreLog_GetJsonByVector (TRACEINSTALL_LOG_STRUCT*)
+        // 字段: userName, StartTime, EndTime, TraceType, installPackageWLCode,
+        //       installPackageNameConfiged, InstallorUnisntallState, stat, Version, installDir, DisplayIcon, Publisher
+        var now = NowLocalTimeString();
         var item = new Dictionary<string, object?>
         {
-            ["Time"] = NowLocalTimeString(),
-            ["SoftwareName"] = string.IsNullOrWhiteSpace(softwareName) ? "-" : softwareName,
-            ["SoftwarePath"] = string.IsNullOrWhiteSpace(softwarePath) ? "-" : softwarePath,
-            ["InstallType"] = installType, // 0: 未知, 1: 安装, 2: 卸载
-            ["Result"] = 0,
+            ["userName"] = "admin",
+            ["StartTime"] = now,
+            ["EndTime"] = now,
+            ["TraceType"] = 1,   // 1=安装追踪
+            ["installPackageWLCode"] = "SIM00000000000000000000000000001",
+            ["installPackageNameConfiged"] = string.IsNullOrWhiteSpace(softwareName) ? "SimApp" : softwareName,
+            ["InstallorUnisntallState"] = installType, // 0=未知, 1=安装, 2=卸载
+            ["stat"] = 1,
+            ["Version"] = "1.0.0",
+            ["installDir"] = string.IsNullOrWhiteSpace(softwarePath) ? "C:\\Program Files\\SimApp" : softwarePath,
+            ["DisplayIcon"] = string.IsNullOrWhiteSpace(softwarePath) ? "-" : softwarePath,
+            ["Publisher"] = "SimulatorCo",
         };
 
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.SafetyStoreLog, new[] { item });
