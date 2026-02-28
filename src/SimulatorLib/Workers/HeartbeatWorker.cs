@@ -274,7 +274,7 @@ namespace SimulatorLib.Workers
 
                     int total = clients.Count;
                     int conn = 0, ok = 0, fail = 0, replied = 0;
-                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0;
+                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0, rSessionStale = 0;
                     long replyWindowMs2 = (long)intervalMs * 3;
                     long nowMs2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < total; j++)
@@ -293,7 +293,7 @@ namespace SimulatorLib.Workers
                                 case Reason.WriteFailed:    rWriteFailed++;    break;
                                 case Reason.ConnectFailed:  rConnFailed++;     break;
                                 case Reason.ConnectTimeout: rConnTimeout++;    break;
-                                case Reason.SessionStale:   rConnFailed++;     break; // 平台静默踢人归入连接失败类
+                                case Reason.SessionStale:   rSessionStale++;   break;
                             }
                         }
                     }
@@ -302,10 +302,10 @@ namespace SimulatorLib.Workers
                     var sb = new StringBuilder();
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
                     sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
-                    sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢局则在此是现");
+                    sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢出则数量偏高");
                     if (offline > 0)
                     {
-                        sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}");
+                        sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}  平台踢session:{rSessionStale}");
                     }
                     sb.AppendLine();
 
@@ -315,11 +315,12 @@ namespace SimulatorLib.Workers
             }, ct);
 
             // 统计上报：扫描 lastResult / connectedFlags 数组（gauge，无累计溢出）
+            // 固定 2s 刷新，与心跳间隔解耦：心跳间隔再长（如 30s），UI 也能保持实时响应。
             var reportTask = Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
                 {
-                    try { await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false); }
+                    try { await Task.Delay(2000, ct).ConfigureAwait(false); }
                     catch { break; }
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
@@ -446,7 +447,7 @@ namespace SimulatorLib.Workers
             {
                 while (!ct.IsCancellationRequested)
                 {
-                    try { await Task.Delay(Math.Max(1000, intervalMs), ct).ConfigureAwait(false); }
+                    try { await Task.Delay(2000, ct).ConfigureAwait(false); }
                     catch { break; }
 
                     int ok = 0, fail = 0;

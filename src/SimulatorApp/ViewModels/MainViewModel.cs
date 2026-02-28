@@ -24,7 +24,7 @@ namespace SimulatorApp.ViewModels
         private int _regStart = 1;
         private string _regStartIp = string.Empty;
         private int _regCount = 5;
-        private int _hbInterval = 1000;
+        private int _hbInterval = 30000;
         private string _projectType = "IEG";
 
         private int _logClientCount = 5;
@@ -464,9 +464,11 @@ namespace SimulatorApp.ViewModels
                                 string reasonStr = reasons.Count > 0
                                     ? "  离线原因: " + string.Join(", ", reasons)
                                     : string.Empty;
-                                int silentDrop = s.Connected - s.ServerReplied; // TCP在线但平台无回包 = 平台静默踢出
-                                string silentStr = silentDrop > 0
-                                    ? $"  ⚠ TCP有连接但无回包:{silentDrop}(平台静默踢出/session超时)"
+                                int silentDrop = s.Connected - s.ServerReplied; // TCP在线但平台无回包
+                                // 只有在已有部分客户端收到过回包（ServerReplied>0）时才告警；
+                                // 若全部都没回包（如刚启动前几秒），不误报"被踢"。
+                                string silentStr = (silentDrop > 0 && s.ServerReplied > 0)
+                                    ? $"  ⚠ TCP在线但无回包:{silentDrop}(平台静默踢出/session超时)"
                                     : string.Empty;
                                 AppendStatus(
                                     $"[心跳] 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
