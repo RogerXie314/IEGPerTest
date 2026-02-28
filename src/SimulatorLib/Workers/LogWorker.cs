@@ -36,7 +36,9 @@ namespace SimulatorLib.Workers
         private const string HttpsPathUsb = "/USM/clientULog.do";
         private const string HttpsPathUsbWarning = "/USM/clientUSBLog.do"; // USB访问告警
         private const string HttpsPathUDiskPlug = "/USM/hotplugDevLog.do"; // U盘插拔
-        private const string HttpsPathVulDefense = "/USM/clientVulDefslog.do";
+        // external/IEG_Code/code/include/format/commurl.h: URL_LOG_VUL
+        // 注意：clientVulDefslog.do 是漏洞库同步接口，日志上报应使用 loopholeProtectLog.do
+        private const string HttpsPathVulDefense = "/USM/loopholeProtectLog.do";
         private const string HttpsPathAdmin = "/USM/clientAdminLog.do";
         private const string HttpsPathHostDefence = "/USM/hostDefenceWarning.do";
         private const string HttpsPathFireWall = "/USM/clientFirewallLog.do";
@@ -166,10 +168,14 @@ namespace SimulatorLib.Workers
                 ? categories
                 : new[] { "Default" };
 
-            using var http = CreateHttpClient(timeoutMs: 4000);
+            // 原始客户端（libcurl）：连接超时6s，请求超时30s，每次请求独立TLS连接。
+            using var http = CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
 
             // 错峰启动：在 spreadMs 内均匀分散各客户端的首次发送，避免瞬间冲击。
-            int spreadMs = clients.Count > 1 ? Math.Min(intervalMs > 0 ? intervalMs : 1000, 3000) : 0;
+            // 1000客户端 × 2/s → 若全部同时启动，瞬间 2000 TLS 握手/s 直接打垮服务端。
+            // 扩大为 10s 启动窗口 → 100 握手/s，服务端可承受。
+            // 最大不超过 30s，单客户端不超过 1 轮 interval。
+            int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
             var clientTasks = new List<Task>(clients.Count);
             for (int ci = 0; ci < clients.Count; ci++)
@@ -188,19 +194,49 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) { return; }
                     }
 
+                    // deadline 模式：目标时刻按固定步长递增，HTTP 耗时从等待中扣除，不叠加。
+                    // 超期分两种情况处理：
+                    //   慢响应（耗时 >= fastFailThresholdMs）：正常压力大，重置基准直接继续。
+                    //   快速失败（耗时 < fastFailThresholdMs，如 TLS 握手被拒 ~1ms）：
+                    //     额外等 intervalMs，防止多主机叠加产生握手风暴打垮服务端。
+                    var intervalTicks = intervalMs > 0 ? (long)(intervalMs * (double)Stopwatch.Frequency / 1000.0) : 0L;
+                    const int fastFailThresholdMs = 50; // 低于此值视为快速失败，需要 floor 限速
+                    var nextDeadlineTick = Stopwatch.GetTimestamp(); // 第1条立即发送
+                    long lastSendElapsedMs = intervalMs; // 首条假设"正常耗时"
+
                     for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
                     {
-                        // 第2条起等待间隔（第1条立即发送，便于快速验证连通性）
-                        if (msgIdx > 0 && intervalMs > 0)
+                        if (msgIdx > 0 && intervalTicks > 0)
                         {
-                            try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
-                            catch (OperationCanceledException) { return; }
+                            nextDeadlineTick += intervalTicks;
+                            var remainTicks = nextDeadlineTick - Stopwatch.GetTimestamp();
+                            if (remainTicks > 0)
+                            {
+                                var waitMs = (int)(remainTicks * 1000L / Stopwatch.Frequency);
+                                if (waitMs > 0)
+                                {
+                                    try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                            }
+                            else
+                            {
+                                // 超期：重置基准，不累积欠债。
+                                nextDeadlineTick = Stopwatch.GetTimestamp();
+                                // 仅快速失败时加 floor 等待，正常慢响应直接继续。
+                                if (lastSendElapsedMs < fastFailThresholdMs)
+                                {
+                                    try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                            }
                         }
 
                         var cat = categoryList[msgIdx % categoryList.Count];
                         var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
                         bool ok;
 
+                        var sendSw = Stopwatch.StartNew();
                         try
                         {
                             if (IsThreatDataCategory(cat))
@@ -260,6 +296,7 @@ namespace SimulatorLib.Workers
                             Interlocked.Increment(ref fail);
                             TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                         }
+                        lastSendElapsedMs = sendSw.ElapsedMilliseconds;
 
                         MaybeReportProgress();
                     }
@@ -357,19 +394,36 @@ namespace SimulatorLib.Workers
                 LogCategory.SafetyStore => HttpsPathSafetyStore,
                 LogCategory.FireWall => HttpsPathFireWall,
                 LogCategory.TFWarning => HttpsPathThreatFake,
+                // 外设控制展开：全部使用 /USM/clientULog.do（ExtDevLog）
+                LogCategory.ExtDevUsbPort or LogCategory.ExtDevWpd or LogCategory.ExtDevCdrom
+                    or LogCategory.ExtDevWlan or LogCategory.ExtDevUsbEthernet or LogCategory.ExtDevFloppy
+                    or LogCategory.ExtDevBluetooth or LogCategory.ExtDevSerial or LogCategory.ExtDevParallel
+                    => HttpsPathUsb,
                 _ => HttpsPathProcess,
             };
         }
 
-        private static HttpClient CreateHttpClient(int timeoutMs)
+        private static HttpClient CreateHttpClient(int connectTimeoutMs, int requestTimeoutMs)
         {
-            var handler = new HttpClientHandler
+            // 模拟原始客户端（WLNetComm/WLCurl.cpp）行为：
+            // - 原始客户端每次请求 curl_easy_init() 新建连接，无连接复用
+            // - PooledConnectionLifetime=Zero：每次请求完成后丢弃连接，与原始行为一致
+            // - HTTP/1.1：原始客户端从未启用 HTTP/2
+            // - 超时参数与原始一致：连接6s，请求30s
+            var handler = new SocketsHttpHandler
             {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                {
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                },
+                PooledConnectionLifetime = TimeSpan.Zero, // 短连接：用完即弃，模拟原始客户端
+                ConnectTimeout           = TimeSpan.FromMilliseconds(connectTimeoutMs),
             };
             return new HttpClient(handler)
             {
-                Timeout = TimeSpan.FromMilliseconds(Math.Max(500, timeoutMs)),
+                Timeout               = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                DefaultRequestVersion = System.Net.HttpVersion.Version11,
+                DefaultVersionPolicy  = HttpVersionPolicy.RequestVersionExact,
             };
         }
 
@@ -398,8 +452,12 @@ namespace SimulatorLib.Workers
             }
             catch (Exception ex)
             {
-                TryDebugWriteHttps(host, port, path, null, ex.GetType().Name + ":" + ex.Message);
-                WriteHttpsFailureDetail(category, host, port, path, -1, ex.GetType().Name + ": " + ex.Message);
+                // 记录内层异常，便于诊断（如 远程主机强迫关闭连接 等）
+                var inner = ex.InnerException;
+                var msg = ex.GetType().Name + ": " + ex.Message
+                    + (inner != null ? " | Inner: " + inner.GetType().Name + ": " + inner.Message : string.Empty);
+                TryDebugWriteHttps(host, port, path, null, msg);
+                WriteHttpsFailureDetail(category, host, port, path, -1, msg);
                 return false;
             }
         }
@@ -641,6 +699,20 @@ namespace SimulatorLib.Workers
             }
 
             var parsedCategory = LogCategoryHelper.ParseDisplayName(category) ?? LogCategory.Admin;
+
+            // 外设控制子类（禁USB/CDROM/蓝牙等，共享同一URL和CMDID，仅UsbType字段不同）
+            if (LogCategoryHelper.IsExtDevCategory(parsedCategory))
+            {
+                var usbType = LogCategoryHelper.GetExtDevUsbType(parsedCategory) ?? 2;
+                var devName = LogCategoryHelper.GetDisplayName(parsedCategory);
+                return (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(
+                    client.ClientId,
+                    deviceType: devName,
+                    deviceName: $"{devName}-event-{messageIndex % 50}",
+                    state: 0,
+                    usbType: usbType));
+            }
+
             return parsedCategory switch
             {
                 LogCategory.Admin => (CmdWords.SocketCmd.LogAdmin, LogJsonBuilder.BuildClientAdminLog(client.ClientId, userName, $"Simulated client operation idx={messageIndex}", success: true)),
