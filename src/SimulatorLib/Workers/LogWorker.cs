@@ -28,8 +28,6 @@ namespace SimulatorLib.Workers
         private readonly ConcurrentDictionary<string, TcpConnState> _tcpStates = new();
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _tcpStateLocks = new();
 
-        private uint _serialCounter = 0;
-
         private readonly ConcurrentDictionary<string, int> _debugSendCount = new();
         private const int MaxDebugSendPerClient = 3;
 
@@ -52,6 +50,11 @@ namespace SimulatorLib.Workers
 
         private const int MaxDebugHttps = 10;
         private int _httpsDebugCount = 0;
+
+        // 失败追踪：记录每个日志分类的失败次数，输出到 logsend-failures-YYYYMMDD.log
+        private readonly ConcurrentDictionary<string, int> _failByCategory = new();
+        private int _failDebugCount = 0;
+        private const int MaxFailDebug = 500;
 
         public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null)
         {
@@ -149,17 +152,11 @@ namespace SimulatorLib.Workers
                 try { progress.Report(new LogSendStats(totalMessages, success, fail)); } catch { }
             }
 
-            // 用户需求：每秒发送1条已勾选的不同的日志类型；直到遍历完已勾选的日志分类；然后再次循环，直到满足总条数
-            // 全局串行发送：totalMessages = clientCount * messagesPerClient
-            // 每次发送：选择 client (轮询) + category (全局轮换)
-            
-            // 计算发送间隔：如果指定了每秒条数，则计算间隔；否则尽快发送
+            // 计算发送间隔：每个客户端独立按此间隔发送。
+            // 语义：messagesPerSecondPerClient=2 → 每个客户端每秒2条 → 1000客户端 = 2000 EPS（单机）
             int intervalMs = 0;
             if (messagesPerSecondPerClient.HasValue && messagesPerSecondPerClient.Value > 0)
-            {
-                // 每秒发送 N 条，间隔 = 1000ms / N
                 intervalMs = 1000 / messagesPerSecondPerClient.Value;
-            }
 
             var categoryList = (categories != null && categories.Count > 0)
                 ? categories
@@ -167,112 +164,114 @@ namespace SimulatorLib.Workers
 
             using var http = CreateHttpClient(timeoutMs: 4000);
 
-            try
+            // 错峰启动：在 spreadMs 内均匀分散各客户端的首次发送，避免瞬间冲击。
+            int spreadMs = clients.Count > 1 ? Math.Min(intervalMs > 0 ? intervalMs : 1000, 3000) : 0;
+
+            var clientTasks = new List<Task>(clients.Count);
+            for (int ci = 0; ci < clients.Count; ci++)
             {
-                // 全局串行发送所有消息
-                for (int globalIndex = 0; globalIndex < totalMessages && !ct.IsCancellationRequested; globalIndex++)
+                var c = clients[ci];
+                var startDelay = clients.Count > 1 ? (int)((long)ci * spreadMs / clients.Count) : 0;
+
+                clientTasks.Add(Task.Run(async () =>
                 {
-                    if (globalIndex > 0)
+                    // 每客户端独立 serial（序列号语义是 per-connection，无需全局唯一）
+                    uint clientSerial = 0;
+
+                    if (startDelay > 0)
                     {
-                        await Task.Delay(intervalMs, ct).ConfigureAwait(false);
+                        try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
+                        catch (OperationCanceledException) { return; }
                     }
 
-                    // 轮询选择客户端
-                    var clientIndex = globalIndex % clients.Count;
-                    var c = clients[clientIndex];
-
-                    // 全局轮换日志类别
-                    var categoryIndex = globalIndex % categoryList.Count;
-                    var cat = categoryList[categoryIndex];
-
-                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: globalIndex);
-                    bool ok;
-
-                    try
+                    for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
                     {
-                        if (IsThreatDataCategory(cat))
+                        // 第2条起等待间隔（第1条立即发送，便于快速验证连通性）
+                        if (msgIdx > 0 && intervalMs > 0)
                         {
-                            // 对齐原项目 external/WLCData/WLThreatLog.cpp + WLData.cpp：
-                            // - 默认（未启用日志服务器）：TCP/PT → 平台（zlib + 不加密）
-                            // - 启用日志服务器：UDP/PT → 日志服务器（zlib + AES）
-                            var src = GetThreatDataJsonBytes(json);
-                            uint serial = unchecked(++_serialCounter);
-                            var pt = PtProtocol.Pack(
-                                src,
-                                cmdId: socketCmd,
-                                compressType: PtCompressType.Zlib,
-                                encryptType: useLogServer ? PtEncryptType.Aes : PtEncryptType.None,
-                                deviceId: c.DeviceId,
-                                serialNumber: serial);
-                            TryDebugWriteSentPacket(c.ClientId, pt, json);
+                            try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                            catch (OperationCanceledException) { return; }
+                        }
 
-                            if (useLogServer)
+                        var cat = categoryList[msgIdx % categoryList.Count];
+                        var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                        bool ok;
+
+                        try
+                        {
+                            if (IsThreatDataCategory(cat))
                             {
-                                if (_udpSender != null && !string.IsNullOrEmpty(logHost))
+                                var src = GetThreatDataJsonBytes(json);
+                                uint serial = unchecked(++clientSerial);
+                                var pt = PtProtocol.Pack(
+                                    src,
+                                    cmdId: socketCmd,
+                                    compressType: PtCompressType.Zlib,
+                                    encryptType: useLogServer ? PtEncryptType.Aes : PtEncryptType.None,
+                                    deviceId: c.DeviceId,
+                                    serialNumber: serial);
+                                TryDebugWriteSentPacket(c.ClientId, pt, json);
+
+                                if (useLogServer)
+                                    ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
+                                        ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
+                                        : false;
+                                else
                                 {
-                                    ok = await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false);
+                                    var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                    ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                }
+                            }
+                            else if (useLogServer)
+                            {
+                                if (IsHttpsOnlyCategory(cat))
+                                {
+                                    var path = GetHttpsPathForCategory(cat);
+                                    ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, ct).ConfigureAwait(false);
                                 }
                                 else
                                 {
-                                    ok = false;
+                                    var src = GetSocketJsonBytes(json);
+                                    uint serial = unchecked(++clientSerial);
+                                    var pt = PtProtocol.Pack(src, cmdId: socketCmd, deviceId: c.DeviceId, serialNumber: serial);
+                                    TryDebugWriteSentPacket(c.ClientId, pt, json);
+
+                                    ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
+                                        ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
+                                        : false;
                                 }
                             }
                             else
                             {
-                                var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
-                            }
-                        }
-                        else if (useLogServer)
-                        {
-                            if (IsHttpsOnlyCategory(cat))
-                            {
-                                // external/WLMainDataHandle/AccessServer.cpp:
-                                // em_LogDP/em_LogSysGuard only supported via HTTPS; non-https LogServer path does not cover them.
                                 var path = GetHttpsPathForCategory(cat);
                                 ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, ct).ConfigureAwait(false);
                             }
-                            else
-                            {
-                                // 对齐原项目：LogServer/type=udp 时，日志走 UDP → 日志服务器。
-                                var src = GetSocketJsonBytes(json);
-                                uint serial = unchecked(++_serialCounter);
-                                var pt = PtProtocol.Pack(src, cmdId: socketCmd, deviceId: c.DeviceId, serialNumber: serial);
-                                TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                if (_udpSender != null && !string.IsNullOrEmpty(logHost))
-                                {
-                                    ok = await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false);
-                                }
-                                else
-                                {
-                                    ok = false;
-                                }
-                            }
+                            if (ok) Interlocked.Increment(ref success);
+                            else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
                         }
-                        else
+                        catch (OperationCanceledException) { return; }
+                        catch (Exception ex)
                         {
-                            // 对齐原项目：LogServer/type=https(默认) 时，日志走 HTTPS → 平台。
-                            var path = GetHttpsPathForCategory(cat);
-                            ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, ct).ConfigureAwait(false);
+                            Interlocked.Increment(ref fail);
+                            TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                         }
 
-                        if (ok) Interlocked.Increment(ref success);
-                        else Interlocked.Increment(ref fail);
+                        MaybeReportProgress();
                     }
-                    catch
-                    {
-                        Interlocked.Increment(ref fail);
-                    }
+                }, ct));
+            }
 
-                    MaybeReportProgress();
-                }
-
+            try
+            {
+                await Task.WhenAll(clientTasks).ConfigureAwait(false);
             }
             finally
             {
                 await CloseAllTcpAsync().ConfigureAwait(false);
             }
+
+            WriteFailureSummary();
 
             var stats = new LogSendStats(totalMessages, success, fail);
             try { progress?.Report(stats); } catch { }
@@ -416,6 +415,47 @@ namespace SimulatorLib.Workers
                 var code = status.HasValue ? ((int)status.Value).ToString() : "-";
                 var line = $"{DateTime.UtcNow:o} HTTPS host={host}:{port} path={path} status={code} preview={preview}";
                 File.AppendAllText(logPath, line + Environment.NewLine);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 记录单次失败（分类+原因），写入 logsend-failures 日志，并累计分类计数。
+        /// </summary>
+        private void TrackFailure(string category, string reason)
+        {
+            _failByCategory.AddOrUpdate(category, 1, (_, v) => v + 1);
+
+            var n = Interlocked.Increment(ref _failDebugCount);
+            if (n > MaxFailDebug) return;
+
+            try
+            {
+                var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDir);
+                var logPath = Path.Combine(logDir, $"logsend-failures-{DateTime.UtcNow:yyyyMMdd}.log");
+                var line = $"{DateTime.UtcNow:o} FAIL category={category} reason={reason}";
+                File.AppendAllText(logPath, line + Environment.NewLine);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 任务结束时将分类失败汇总写入日志，便于分析哪类日志失败率高。
+        /// </summary>
+        private void WriteFailureSummary()
+        {
+            if (_failByCategory.IsEmpty) return;
+            try
+            {
+                var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDir);
+                var logPath = Path.Combine(logDir, $"logsend-failures-{DateTime.UtcNow:yyyyMMdd}.log");
+                var sb = new StringBuilder();
+                sb.AppendLine($"{DateTime.UtcNow:o} === FAIL SUMMARY ===");
+                foreach (var kv in _failByCategory.OrderByDescending(x => x.Value))
+                    sb.AppendLine($"  {kv.Key}: {kv.Value} 次");
+                File.AppendAllText(logPath, sb.ToString());
             }
             catch { }
         }
