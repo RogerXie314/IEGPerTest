@@ -84,6 +84,35 @@ public enum LogCategory
     /// 注册表保护
     /// </summary>
     RegProtect = 15,
+
+    // ---- 外设控制子类（共享 /USM/clientULog.do + CMDID=204，区别仅在 UsbType 字段值）----
+
+    /// <summary>禁用USB接口（UDISK_LOG_TYPE_USBPORT=15）</summary>
+    ExtDevUsbPort = 16,
+
+    /// <summary>禁用手机/平板（UDISK_LOG_TYPE_WPD=14）</summary>
+    ExtDevWpd = 17,
+
+    /// <summary>禁用CDROM（UDISK_LOG_TYPE_CDROM=4）</summary>
+    ExtDevCdrom = 18,
+
+    /// <summary>禁用无线网卡（UDISK_LOG_TYPE_WIRELESS=5）</summary>
+    ExtDevWlan = 19,
+
+    /// <summary>禁用USB网卡（UDISK_LOG_TYPE_USB_ETHERNET_ADAPTER=20）</summary>
+    ExtDevUsbEthernet = 20,
+
+    /// <summary>禁用软盘（UDISK_LOG_TYPE_FD=13）</summary>
+    ExtDevFloppy = 21,
+
+    /// <summary>禁用蓝牙（UDISK_LOG_TYPE_BLUETOOTH=6）</summary>
+    ExtDevBluetooth = 22,
+
+    /// <summary>禁用串口（UDISK_LOG_TYPE_SERIALPORT=7）</summary>
+    ExtDevSerial = 23,
+
+    /// <summary>禁用并口（UDISK_LOG_TYPE_PARALLELPORT=8）</summary>
+    ExtDevParallel = 24,
 }
 
 /// <summary>
@@ -114,6 +143,15 @@ public static class LogCategoryHelper
             LogCategory.SysGuard => "系统防护",
             LogCategory.OSResource => "操作系统",
             LogCategory.RegProtect => "注册表保护",
+            LogCategory.ExtDevUsbPort => "禁USB接口",
+            LogCategory.ExtDevWpd => "禁手机平板",
+            LogCategory.ExtDevCdrom => "禁CDROM",
+            LogCategory.ExtDevWlan => "禁无线网卡",
+            LogCategory.ExtDevUsbEthernet => "禁USB网卡",
+            LogCategory.ExtDevFloppy => "禁软盘",
+            LogCategory.ExtDevBluetooth => "禁蓝牙",
+            LogCategory.ExtDevSerial => "禁串口",
+            LogCategory.ExtDevParallel => "禁并口",
             _ => "未知",
         };
     }
@@ -146,9 +184,40 @@ public static class LogCategoryHelper
             "系统加固" => LogCategory.SysGuard, // 别名，EDR专属
             "操作系统" => LogCategory.OSResource,
             "注册表保护" => LogCategory.RegProtect, // IEG: HostDefence with DetailLogTypeLevel2=2
+            // 外设控制子类
+            "禁USB接口" => LogCategory.ExtDevUsbPort,
+            "禁手机平板" => LogCategory.ExtDevWpd,
+            "禁CDROM" => LogCategory.ExtDevCdrom,
+            "禁无线网卡" => LogCategory.ExtDevWlan,
+            "禁USB网卡" => LogCategory.ExtDevUsbEthernet,
+            "禁软盘" => LogCategory.ExtDevFloppy,
+            "禁蓝牙" => LogCategory.ExtDevBluetooth,
+            "禁串口" => LogCategory.ExtDevSerial,
+            "禁并口" => LogCategory.ExtDevParallel,
             _ => null,
         };
     }
+
+    /// <summary>
+    /// 获取外设控制子类对应的 UDISK_LOG_TYPE 整数值（ExtDevLog_GetJsonByVector 的 UsbType 字段）。
+    /// 非外设控制类型返回 null。
+    /// </summary>
+    public static int? GetExtDevUsbType(LogCategory category) => category switch
+    {
+        LogCategory.ExtDevUsbPort      => 15,  // UDISK_LOG_TYPE_USBPORT
+        LogCategory.ExtDevWpd          => 14,  // UDISK_LOG_TYPE_WPD
+        LogCategory.ExtDevCdrom        => 4,   // UDISK_LOG_TYPE_CDROM
+        LogCategory.ExtDevWlan         => 5,   // UDISK_LOG_TYPE_WIRELESS
+        LogCategory.ExtDevUsbEthernet  => 20,  // UDISK_LOG_TYPE_USB_ETHERNET_ADAPTER
+        LogCategory.ExtDevFloppy       => 13,  // UDISK_LOG_TYPE_FD
+        LogCategory.ExtDevBluetooth    => 6,   // UDISK_LOG_TYPE_BLUETOOTH
+        LogCategory.ExtDevSerial       => 7,   // UDISK_LOG_TYPE_SERIALPORT
+        LogCategory.ExtDevParallel     => 8,   // UDISK_LOG_TYPE_PARALLELPORT
+        _ => null,
+    };
+
+    /// <summary>判断是否为外设控制子类（UsbType 告警）</summary>
+    public static bool IsExtDevCategory(LogCategory category) => GetExtDevUsbType(category).HasValue;
 
     /// <summary>
     /// 判断是否为威胁数据采集类别（需要特殊的PT协议封装）

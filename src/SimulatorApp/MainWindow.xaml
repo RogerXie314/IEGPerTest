@@ -70,8 +70,8 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="2*" MinWidth="220" />
                 </Grid.ColumnDefinitions>
 
                 <!-- 服务器设置（跨两列） -->
@@ -194,25 +194,45 @@
 
                             <Border Grid.Row="2" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Background="White">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                    <WrapPanel Margin="8">
-                                        <CheckBox IsChecked="{Binding CatClientOps, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">客户端操作</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatOs, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">操作系统</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatOutbound, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">非法外联</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatThreat, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">威胁数据采集</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatFileProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">文件保护</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatRegProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">注册表保护</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatMandatoryAccess, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">强制访问控制</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatVirusAlert, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">病毒告警</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatUsb, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB设备</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatUsbWarning, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB访问告警</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatUDiskPlug, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">U盘插拔</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatFirewall, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">防火墙</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatVulnProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">漏洞防护(IEG)</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatProcessAudit, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">进程审计(IEG)</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatNonWhitelist, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">非白名单(IEG)</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatWhitelistTamper, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">白名单防篡改(IEG)</CheckBox>
-                                        <CheckBox IsChecked="{Binding CatSysGuard, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkGreen">系统防护(EDR)</CheckBox>
-                                    </WrapPanel>
+                                    <StackPanel Margin="8">
+                                        <!-- 通用分类 -->
+                                        <WrapPanel>
+                                            <CheckBox IsChecked="{Binding CatClientOps, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">客户端操作</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatOs, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">操作系统</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatOutbound, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">非法外联</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatThreat, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">威胁数据采集</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatFileProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">文件保护</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatRegProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">注册表保护</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatMandatoryAccess, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">强制访问控制</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatVirusAlert, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">病毒告警</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatUsb, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB设备</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatUsbWarning, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB访问告警</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatUDiskPlug, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">U盘插拔</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatFirewall, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">防火墙</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatVulnProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">漏洞防护(IEG)</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatProcessAudit, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">进程审计(IEG)</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatNonWhitelist, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">非白名单(IEG)</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatWhitelistTamper, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">白名单防篡改(IEG)</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatSysGuard, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkGreen">系统防护(EDR)</CheckBox>
+                                        </WrapPanel>
+                                        <!-- 外设控制分组 -->
+                                        <Border BorderBrush="#B0C4DE" BorderThickness="1" CornerRadius="3" Margin="0,6,0,0" Padding="6,4">
+                                            <StackPanel>
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#4A6080" Margin="0,0,0,4">外设控制（IEG）— 禁用触发告警</TextBlock>
+                                                <WrapPanel>
+                                                    <CheckBox IsChecked="{Binding CatExtDevUsbPort, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁USB接口</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevWpd, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁手机平板</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevCdrom, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁CDROM</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevWlan, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁无线网卡</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevUsbEthernet, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁USB网卡</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevFloppy, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁软盘</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevBluetooth, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁蓝牙</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevSerial, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁串口</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatExtDevParallel, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁并口</CheckBox>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </ScrollViewer>
                             </Border>
                         </Grid>
@@ -235,16 +255,16 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">间隔 (ms)：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding HbInterval, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding HbInterval, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="90" Height="30" Command="{Binding StartHeartbeatCommand}">开始心跳</Button>
-                                    <Button Grid.Column="2" Width="60" Height="30" Command="{Binding StopHeartbeatCommand}">停止</Button>
+                                    <Button Grid.Column="0" Width="75" Height="28" Command="{Binding StartHeartbeatCommand}">开始心跳</Button>
+                                    <Button Grid.Column="2" Width="50" Height="28" Command="{Binding StopHeartbeatCommand}">停止</Button>
                                 </Grid>
                             </Grid>
                         </StackPanel>
@@ -277,19 +297,19 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WhitelistClientCount, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WhitelistClientCount, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">并发度：</TextBlock>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="90" Height="30" Command="{Binding StartWhitelistUploadCommand}">添加任务</Button>
-                                    <Button Grid.Column="2" Width="90" Height="30" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
+                                    <Button Grid.Column="0" Width="75" Height="28" Command="{Binding StartWhitelistUploadCommand}">添加任务</Button>
+                                    <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
                                 </Grid>
                             </Grid>
                         </StackPanel>
@@ -312,22 +332,22 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">客户端个数：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LogClientCount, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LogClientCount, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">每客户端总条数：</TextBlock>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">每客户端每秒条数：</TextBlock>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="90" Height="30" Command="{Binding StartLogSendCommand}">添加任务</Button>
-                                    <Button Grid.Column="2" Width="90" Height="30" Command="{Binding StopLogSendCommand}">结束任务</Button>
+                                    <Button Grid.Column="0" Width="75" Height="28" Command="{Binding StartLogSendCommand}">添加任务</Button>
+                                    <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="Gray" Text="(按 Clients.log 前 N 个客户端)" />
