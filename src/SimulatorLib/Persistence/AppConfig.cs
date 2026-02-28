@@ -12,7 +12,7 @@ namespace SimulatorLib.Persistence
         public string LogHost { get; set; } = "localhost";
         public int LogPort { get; set; } = 4565;
 
-        public bool UseLogServer { get; set; } = true;
+        public bool UseLogServer { get; set; } = false;
 
         public string RegClientPrefix { get; set; } = "Client-";
         public int RegStartIndex { get; set; } = 1;

@@ -19,7 +19,7 @@ namespace SimulatorApp.ViewModels
         private int _platformPort = 8441;
         private string _logHost = "localhost";
         private int _logPort = 4565;
-        private bool _useLogServer = true;
+        private bool _useLogServer = false;
         private string _regPrefix = "Client-";
         private int _regStart = 1;
         private string _regStartIp = string.Empty;
@@ -52,6 +52,16 @@ namespace SimulatorApp.ViewModels
         private bool _catUDiskPlug;
         private bool _catFirewall;
         private bool _catSysGuard;
+        // 外设控制子类
+        private bool _catExtDevUsbPort;
+        private bool _catExtDevWpd;
+        private bool _catExtDevCdrom;
+        private bool _catExtDevWlan;
+        private bool _catExtDevUsbEthernet;
+        private bool _catExtDevFloppy;
+        private bool _catExtDevBluetooth;
+        private bool _catExtDevSerial;
+        private bool _catExtDevParallel;
 
         private int _regConcurrency = 20;
         private int _regRetryIntervalSec = 30;
@@ -137,6 +147,16 @@ namespace SimulatorApp.ViewModels
         public bool CatUDiskPlug { get => _catUDiskPlug; set { _catUDiskPlug = value; OnProp(); } }
         public bool CatFirewall { get => _catFirewall; set { _catFirewall = value; OnProp(); } }
         public bool CatSysGuard { get => _catSysGuard; set { _catSysGuard = value; OnProp(); } }
+        // 外设控制子类
+        public bool CatExtDevUsbPort { get => _catExtDevUsbPort; set { _catExtDevUsbPort = value; OnProp(); } }
+        public bool CatExtDevWpd { get => _catExtDevWpd; set { _catExtDevWpd = value; OnProp(); } }
+        public bool CatExtDevCdrom { get => _catExtDevCdrom; set { _catExtDevCdrom = value; OnProp(); } }
+        public bool CatExtDevWlan { get => _catExtDevWlan; set { _catExtDevWlan = value; OnProp(); } }
+        public bool CatExtDevUsbEthernet { get => _catExtDevUsbEthernet; set { _catExtDevUsbEthernet = value; OnProp(); } }
+        public bool CatExtDevFloppy { get => _catExtDevFloppy; set { _catExtDevFloppy = value; OnProp(); } }
+        public bool CatExtDevBluetooth { get => _catExtDevBluetooth; set { _catExtDevBluetooth = value; OnProp(); } }
+        public bool CatExtDevSerial { get => _catExtDevSerial; set { _catExtDevSerial = value; OnProp(); } }
+        public bool CatExtDevParallel { get => _catExtDevParallel; set { _catExtDevParallel = value; OnProp(); } }
 
         public int RegConcurrency { get => _regConcurrency; set { _regConcurrency = value; OnProp(); } }
         public int RegRetryIntervalSec { get => _regRetryIntervalSec; set { _regRetryIntervalSec = value; OnProp(); } }
@@ -230,6 +250,7 @@ namespace SimulatorApp.ViewModels
                 WhitelistConcurrency = cfg.WhitelistConcurrency;
 
                 AppendStatus("配置已加载");
+                ApplyProjectTypeSelection(); // 按当前项目类型（默认IEG）恢复日志分类勾选
             });
         }
 
@@ -431,6 +452,7 @@ namespace SimulatorApp.ViewModels
 
                 await SaveConfigAsync().ConfigureAwait(false);
                 _hbCts = new CancellationTokenSource();
+                _lastHbLogTime = DateTime.Now; // 启动时重置节流，避免连接建立期间的瞬态离线误报
                 var tcp = new TcpSender();
                 var udp = new UdpSender();
                 var hb = new HeartbeatWorker(tcp, udp);
@@ -449,30 +471,36 @@ namespace SimulatorApp.ViewModels
                             HbUdpOk         = s.SuccessUdp;
                             HbUdpFail       = s.FailUdp;
 
-                            // 每 30s 输出一条真实状态日志
-                            if ((DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
+                            // 仅在出现异常时输出日志（全部正常则静默）；同一异常状态下每 30s 最多一条，避免刷屏。
                             {
-                                _lastHbLogTime = DateTime.Now;
                                 int offline = s.Total - s.Connected;
-                                // 居前三位原因
-                                var reasons = new System.Collections.Generic.List<string>();
-                                if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
-                                if (s.RsnConnFailed  > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
-                                if (s.RsnConnTimeout > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
-                                if (s.RsnServerClosed> 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
-                                if (s.RsnWriteFailed > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
-                                string reasonStr = reasons.Count > 0
-                                    ? "  离线原因: " + string.Join(", ", reasons)
-                                    : string.Empty;
                                 int silentDrop = s.Connected - s.ServerReplied; // TCP在线但平台无回包
-                                // 只有在已有部分客户端收到过回包（ServerReplied>0）时才告警；
-                                // 若全部都没回包（如刚启动前几秒），不误报"被踢"。
-                                string silentStr = (silentDrop > 0 && s.ServerReplied > 0)
-                                    ? $"  ⚠ TCP在线但无回包:{silentDrop}(平台静默踢出/session超时)"
-                                    : string.Empty;
-                                AppendStatus(
-                                    $"[心跳] 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
-                                    silentStr + reasonStr);
+                                bool hasSilentDrop = silentDrop > 0 && s.ServerReplied > 0;
+                                bool hasOffline    = offline > 0;
+                                bool hasReasons    = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
+                                                     s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
+                                                     s.RsnWriteFailed  > 0;
+                                bool hasIssue = hasOffline || hasSilentDrop || hasReasons;
+
+                                if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
+                                {
+                                    _lastHbLogTime = DateTime.Now;
+                                    var reasons = new System.Collections.Generic.List<string>();
+                                    if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
+                                    if (s.RsnConnFailed   > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
+                                    if (s.RsnConnTimeout  > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
+                                    if (s.RsnServerClosed > 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
+                                    if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
+                                    string reasonStr = reasons.Count > 0
+                                        ? "  离线原因: " + string.Join(", ", reasons)
+                                        : string.Empty;
+                                    string silentStr = hasSilentDrop
+                                        ? $"  ⚠ TCP在线但无回包:{silentDrop}(平台静默踢出/session超时)"
+                                        : string.Empty;
+                                    AppendStatus(
+                                        $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
+                                        silentStr + reasonStr);
+                                }
                             }
                         });
                     });
@@ -610,6 +638,16 @@ namespace SimulatorApp.ViewModels
             if (CatUDiskPlug) list.Add("U盘插拔");
             if (CatFirewall) list.Add("防火墙");
             if (CatSysGuard) list.Add("系统防护");
+            // 外设控制子类
+            if (CatExtDevUsbPort) list.Add("禁USB接口");
+            if (CatExtDevWpd) list.Add("禁手机平板");
+            if (CatExtDevCdrom) list.Add("禁CDROM");
+            if (CatExtDevWlan) list.Add("禁无线网卡");
+            if (CatExtDevUsbEthernet) list.Add("禁USB网卡");
+            if (CatExtDevFloppy) list.Add("禁软盘");
+            if (CatExtDevBluetooth) list.Add("禁蓝牙");
+            if (CatExtDevSerial) list.Add("禁串口");
+            if (CatExtDevParallel) list.Add("禁并口");
             return list.Count == 0 ? new[] { "Default" } : list.ToArray();
         }
 
