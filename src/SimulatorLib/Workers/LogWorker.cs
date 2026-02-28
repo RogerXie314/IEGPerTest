@@ -51,6 +51,10 @@ namespace SimulatorLib.Workers
         private const int MaxDebugHttps = 10;
         private int _httpsDebugCount = 0;
 
+        // 失败 HTTPS 响应详情日志（不受 MaxDebugHttps 限制，单独写入 logsend-failures-https-*.log）
+        private const int MaxHttpsFail = 5000;
+        private int _httpsFailCount = 0;
+
         // 失败追踪：记录每个日志分类的失败次数，输出到 logsend-failures-YYYYMMDD.log
         private readonly ConcurrentDictionary<string, int> _failByCategory = new();
         private int _failDebugCount = 0;
@@ -227,7 +231,7 @@ namespace SimulatorLib.Workers
                                 if (IsHttpsOnlyCategory(cat))
                                 {
                                     var path = GetHttpsPathForCategory(cat);
-                                    ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, ct).ConfigureAwait(false);
+                                    ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                                 }
                                 else
                                 {
@@ -244,7 +248,7 @@ namespace SimulatorLib.Workers
                             else
                             {
                                 var path = GetHttpsPathForCategory(cat);
-                                ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, ct).ConfigureAwait(false);
+                                ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                             }
 
                             if (ok) Interlocked.Increment(ref success);
@@ -369,7 +373,7 @@ namespace SimulatorLib.Workers
             };
         }
 
-        private async Task<bool> PostLogHttpsAsync(HttpClient http, string host, int port, string path, string json, CancellationToken ct)
+        private async Task<bool> PostLogHttpsAsync(HttpClient http, string host, int port, string path, string json, string category, CancellationToken ct)
         {
             try
             {
@@ -384,6 +388,8 @@ namespace SimulatorLib.Workers
                 var respText = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
                 TryDebugWriteHttps(host, port, path, resp.StatusCode, respText);
+                if (!resp.IsSuccessStatusCode)
+                    WriteHttpsFailureDetail(category, host, port, path, (int)resp.StatusCode, respText);
                 return resp.IsSuccessStatusCode;
             }
             catch (OperationCanceledException)
@@ -393,8 +399,31 @@ namespace SimulatorLib.Workers
             catch (Exception ex)
             {
                 TryDebugWriteHttps(host, port, path, null, ex.GetType().Name + ":" + ex.Message);
+                WriteHttpsFailureDetail(category, host, port, path, -1, ex.GetType().Name + ": " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 记录HTTPS失败响应详情（状态码+响应体），写入 logsend-failures-https-YYYYMMDD.log。
+        /// 不受 MaxDebugHttps 限制，最多写 MaxHttpsFail 条。
+        /// </summary>
+        private void WriteHttpsFailureDetail(string category, string host, int port, string path, int statusCode, string respBody)
+        {
+            var n = Interlocked.Increment(ref _httpsFailCount);
+            if (n > MaxHttpsFail) return;
+            try
+            {
+                var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDir);
+                var logPath = Path.Combine(logDir, $"logsend-failures-https-{DateTime.UtcNow:yyyyMMdd}.log");
+                var preview = respBody ?? string.Empty;
+                if (preview.Length > 500) preview = preview.Substring(0, 500);
+                preview = preview.Replace("\r", "\\r").Replace("\n", "\\n");
+                var line = $"{DateTime.UtcNow:o} FAIL category={category} host={host}:{port} path={path} status={statusCode} body={preview}";
+                File.AppendAllText(logPath, line + Environment.NewLine);
+            }
+            catch { }
         }
 
         private void TryDebugWriteHttps(string host, int port, string path, System.Net.HttpStatusCode? status, string text)
