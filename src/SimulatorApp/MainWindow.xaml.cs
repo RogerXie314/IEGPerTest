@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows;
 
 namespace SimulatorApp
@@ -8,6 +9,11 @@ namespace SimulatorApp
         {
             InitializeComponent();
             DataContext = new ViewModels.MainViewModel();
+
+            var ver = Assembly.GetExecutingAssembly().GetName().Version;
+            Title = ver != null
+                ? $"IEG 模拟器 v{ver.Major}.{ver.Minor}.{ver.Build}"
+                : "IEG 模拟器";
         }
     }
 }
