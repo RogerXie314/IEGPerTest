@@ -84,6 +84,7 @@ namespace SimulatorLib.Workers
                 logHost: logHost,
                 logPort: logPort,
                 concurrency: concurrency,
+                stressMode: false,
                 ct: ct,
                 progress: progress).ConfigureAwait(false);
         }
