@@ -75,6 +75,8 @@ namespace SimulatorApp.ViewModels
         private string _whitelistFilePath = string.Empty;
         private int _whitelistClientCount = 5;
         private int _whitelistConcurrency = 4;
+        private int _logConcurrency = 50;
+        private bool _logStressMode = false;
         private int _uploadTotal;
         private int _uploadSuccess;
         private int _uploadFailed;
@@ -125,6 +127,8 @@ namespace SimulatorApp.ViewModels
         public int LogClientCount { get => _logClientCount; set { _logClientCount = value; OnProp(); } }
         public int LogMessagesPerClient { get => _logMessagesPerClient; set { _logMessagesPerClient = value; OnProp(); } }
         public int LogMessagesPerSecondPerClient { get => _logMessagesPerSecondPerClient; set { _logMessagesPerSecondPerClient = value; OnProp(); } }
+        public int LogConcurrency { get => _logConcurrency; set { _logConcurrency = value; OnProp(); } }
+        public bool IsLogStressMode { get => _logStressMode; set { _logStressMode = value; OnProp(); } }
         public int LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
         public int LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
         public int LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
@@ -244,6 +248,8 @@ namespace SimulatorApp.ViewModels
                 LogClientCount = cfg.LogClientCount;
                 LogMessagesPerClient = cfg.LogMessagesPerClient;
                 LogMessagesPerSecondPerClient = cfg.LogMessagesPerSecondPerClient;
+                LogConcurrency = cfg.LogConcurrency;
+                IsLogStressMode = cfg.LogStressMode;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
                 WhitelistClientCount = cfg.WhitelistClientCount;
@@ -274,6 +280,8 @@ namespace SimulatorApp.ViewModels
                 LogClientCount = LogClientCount,
                 LogMessagesPerClient = LogMessagesPerClient,
                 LogMessagesPerSecondPerClient = LogMessagesPerSecondPerClient,
+                LogConcurrency = LogConcurrency,
+                LogStressMode = IsLogStressMode,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
                 WhitelistConcurrency = WhitelistConcurrency
@@ -701,7 +709,8 @@ namespace SimulatorApp.ViewModels
                         platformPort: PlatformPort,
                         logHost: LogHost,
                         logPort: LogPort,
-                        concurrency: 6,
+                        concurrency: LogConcurrency,
+                        stressMode: IsLogStressMode,
                         ct: _logCts.Token,
                         progress: progress).ConfigureAwait(false);
                     

@@ -325,6 +325,8 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -340,7 +342,56 @@
                                 <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">每客户端每秒条数：</TextBlock>
                                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <!-- 并发连接数（压测模式下生效） -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"
+                                           IsEnabled="{Binding IsLogStressMode}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLogStressMode}" Value="False">
+                                                    <Setter Property="Foreground" Value="Gray"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <Run>并发连接数：</Run>
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel MaxWidth="320">
+                                                <TextBlock FontWeight="Bold" Margin="0,0,0,4">压测模式：并发连接数</TextBlock>
+                                                <TextBlock TextWrapping="Wrap">压测模式下同时向平台保持的最大 HTTPS 连接数，同时也是信号量门控容量。</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold">最大 EPS = 并发数 × (1000 / 平均响应ms)</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#555">示例（局域网 20ms 响应）：</TextBlock>
+                                                <TextBlock Margin="8,2,0,0" Foreground="#555">50 并发 → 2500 EPS</TextBlock>
+                                                <TextBlock Margin="8,2,0,0" Foreground="#555">200 并发 → 10000 EPS</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="Gray" FontStyle="Italic">仅在压测模式下生效，模拟模式忽略此项。</TextBlock>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                                <TextBox Grid.Row="3" Grid.Column="1"
+                                         Text="{Binding LogConcurrency, Mode=TwoWay}"
+                                         Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
+                                         IsEnabled="{Binding IsLogStressMode}" />
+
+                                <!-- 压测模式开关 -->
+                                <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                          Margin="0,6,0,0" IsChecked="{Binding IsLogStressMode, Mode=TwoWay}">
+                                    <CheckBox.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel MaxWidth="340">
+                                                <TextBlock FontWeight="Bold" Margin="0,0,0,4">日志发送模式对比</TextBlock>
+                                                <TextBlock FontWeight="SemiBold">■ 模拟模式（默认，不勾选）</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">每条日志新建独立 TLS 连接，完全对齐原始客户端行为。端口每条消耗1个（120s后释放），单机约 50 客户端上限（~100 EPS）。用途：验证行为兼容性。</TextBlock>
+                                                <TextBlock FontWeight="SemiBold">■ 压测模式（勾选）</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">连接复用 + 信号量门控，消除端口耗尽。单机可模拟 3000 客户端 / 6000+ EPS。平台感知不到连接方式差异（HTTP 请求内容完全相同）。用途：测试平台吞吐上限。</TextBlock>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </CheckBox.ToolTip>
+                                    压测模式
+                                </CheckBox>
+
+                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -350,7 +401,7 @@
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="Gray" Text="(按 Clients.log 前 N 个客户端)" />
+                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="Gray" Text="(按 Clients.log 前 N 个客户端)" />
                             </Grid>
                         </StackPanel>
                     </Border>

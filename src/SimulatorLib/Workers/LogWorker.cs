@@ -94,7 +94,7 @@ namespace SimulatorLib.Workers
         /// - messagesPerSecondPerClient：每客户端每秒条数（<=0 或 null 表示不做速率控制）
         /// - categories：日志分类（为空则用 Default）；会按消息序号轮转
         /// </summary>
-        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, CancellationToken ct, IProgress<LogSendStats>? progress = null)
+        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, CancellationToken ct, IProgress<LogSendStats>? progress = null)
         {
             await StartCoreAsync(
                 messagesPerClient: messagesPerClient,
@@ -107,11 +107,12 @@ namespace SimulatorLib.Workers
                 logHost: logHost,
                 logPort: logPort,
                 concurrency: concurrency,
+                stressMode: stressMode,
                 ct: ct,
                 progress: progress).ConfigureAwait(false);
         }
 
-        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, CancellationToken ct, IProgress<LogSendStats>? progress)
+        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, CancellationToken ct, IProgress<LogSendStats>? progress)
         {
             var clientsAll = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             var clients = (maxClients.HasValue && maxClients.Value > 0)
@@ -169,7 +170,16 @@ namespace SimulatorLib.Workers
                 : new[] { "Default" };
 
             // 原始客户端（libcurl）：连接超时6s，请求超时30s，每次请求独立TLS连接。
-            using var http = CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
+            // 压测模式：允许连接复用，MaxConnectionsPerServer=concurrency，消除端口耗尽问题。
+            using var http = stressMode
+                ? CreateHttpClientStress(concurrency, connectTimeoutMs: 6000, requestTimeoutMs: 30000)
+                : CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
+
+            // 压测模式下用信号量限制同时飞行的 HTTPS 请求数，避免连接池内锁竞争。
+            // 门控容量 == MaxConnectionsPerServer，进门即有连接，零等待。
+            using var httpsGate = stressMode
+                ? new SemaphoreSlim(Math.Max(1, concurrency), Math.Max(1, concurrency))
+                : null;
 
             // 错峰启动：在 spreadMs 内均匀分散各客户端的首次发送，避免瞬间冲击。
             // 1000客户端 × 2/s → 若全部同时启动，瞬间 2000 TLS 握手/s 直接打垮服务端。
@@ -267,7 +277,7 @@ namespace SimulatorLib.Workers
                                 if (IsHttpsOnlyCategory(cat))
                                 {
                                     var path = GetHttpsPathForCategory(cat);
-                                    ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
+                                    ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                                 }
                                 else
                                 {
@@ -284,7 +294,7 @@ namespace SimulatorLib.Workers
                             else
                             {
                                 var path = GetHttpsPathForCategory(cat);
-                                ok = await PostLogHttpsAsync(http, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
+                                ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                             }
 
                             if (ok) Interlocked.Increment(ref success);
@@ -425,6 +435,52 @@ namespace SimulatorLib.Workers
                 DefaultRequestVersion = System.Net.HttpVersion.Version11,
                 DefaultVersionPolicy  = HttpVersionPolicy.RequestVersionExact,
             };
+        }
+
+        /// <summary>
+        /// 压测模式专用 HttpClient：连接复用，MaxConnectionsPerServer=concurrency。
+        /// 消除短连接的端口耗尽问题，单机可支撑 3000+ 客户端 / 6000+ EPS。
+        /// </summary>
+        private static HttpClient CreateHttpClientStress(int concurrency, int connectTimeoutMs, int requestTimeoutMs)
+        {
+            var handler = new SocketsHttpHandler
+            {
+                SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                {
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                },
+                // 连接复用：不设 PooledConnectionLifetime=Zero，连接可长期保持。
+                // 限制对平台的最大并发连接数，与信号量门控数量保持一致。
+                MaxConnectionsPerServer = Math.Max(1, concurrency),
+                ConnectTimeout          = TimeSpan.FromMilliseconds(connectTimeoutMs),
+            };
+            return new HttpClient(handler)
+            {
+                Timeout               = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                DefaultRequestVersion = System.Net.HttpVersion.Version11,
+                DefaultVersionPolicy  = HttpVersionPolicy.RequestVersionExact,
+            };
+        }
+
+        /// <summary>
+        /// 带信号量门控的 HTTPS 发送：
+        /// 压测模式下先获取信号量再发起请求，保证同时飞行的请求数 == 连接池大小，消除池内锁竞争。
+        /// 非压测模式（gate=null）直接透传，行为与原来一致。
+        /// </summary>
+        private async Task<bool> PostLogHttpsGatedAsync(HttpClient http, SemaphoreSlim? gate, string host, int port, string path, string json, string category, CancellationToken ct)
+        {
+            if (gate == null)
+                return await PostLogHttpsAsync(http, host, port, path, json, category, ct).ConfigureAwait(false);
+
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return await PostLogHttpsAsync(http, host, port, path, json, category, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
 
         private async Task<bool> PostLogHttpsAsync(HttpClient http, string host, int port, string path, string json, string category, CancellationToken ct)

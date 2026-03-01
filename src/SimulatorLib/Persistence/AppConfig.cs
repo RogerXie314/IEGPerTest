@@ -33,6 +33,9 @@ namespace SimulatorLib.Persistence
         public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;
 
+        public int LogConcurrency { get; set; } = 50;
+        public bool LogStressMode { get; set; } = false;
+
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 
         public static async Task<AppConfig> LoadAsync()
