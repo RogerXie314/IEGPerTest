@@ -354,7 +354,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
-                                    <Run>并发连接数：</Run>
+                                    <Run>并发连接数：</Run><Run Foreground="#1976D2" FontSize="11" FontWeight="Bold"> ⓘ</Run>
                                     <TextBlock.ToolTip>
                                         <ToolTip>
                                             <StackPanel MaxWidth="320">
@@ -388,7 +388,10 @@
                                             </StackPanel>
                                         </ToolTip>
                                     </CheckBox.ToolTip>
-                                    压测模式
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock>压测模式</TextBlock>
+                                        <TextBlock Foreground="#1976D2" FontSize="11" FontWeight="Bold" Margin="3,0,0,0" VerticalAlignment="Center">ⓘ</TextBlock>
+                                    </StackPanel>
                                 </CheckBox>
 
                                 <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
