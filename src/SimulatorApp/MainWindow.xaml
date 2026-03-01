@@ -343,32 +343,37 @@
                                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <!-- 并发连接数（压测模式下生效） -->
-                                <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"
-                                           IsEnabled="{Binding IsLogStressMode}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
+                                <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsLogStressMode}" Value="False">
-                                                    <Setter Property="Foreground" Value="Gray"/>
+                                                    <Setter Property="Opacity" Value="0.45"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </TextBlock.Style>
-                                    <Run>并发连接数：</Run><Run Foreground="#1976D2" FontSize="11" FontWeight="Bold"> ⓘ</Run>
-                                    <TextBlock.ToolTip>
-                                        <ToolTip>
-                                            <StackPanel MaxWidth="320">
-                                                <TextBlock FontWeight="Bold" Margin="0,0,0,4">压测模式：并发连接数</TextBlock>
-                                                <TextBlock TextWrapping="Wrap">压测模式下同时向平台保持的最大 HTTPS 连接数，同时也是信号量门控容量。</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold">最大 EPS = 并发数 × (1000 / 平均响应ms)</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#555">示例（局域网 20ms 响应）：</TextBlock>
-                                                <TextBlock Margin="8,2,0,0" Foreground="#555">50 并发 → 2500 EPS</TextBlock>
-                                                <TextBlock Margin="8,2,0,0" Foreground="#555">200 并发 → 10000 EPS</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="Gray" FontStyle="Italic">仅在压测模式下生效，模拟模式忽略此项。</TextBlock>
-                                            </StackPanel>
-                                        </ToolTip>
-                                    </TextBlock.ToolTip>
-                                </TextBlock>
+                                    </StackPanel.Style>
+                                    <TextBlock VerticalAlignment="Center">并发连接数：</TextBlock>
+                                    <Border Background="#1976D2" CornerRadius="8" Width="16" Height="16"
+                                            VerticalAlignment="Center" Margin="4,0,0,0" Cursor="Help">
+                                        <TextBlock Text="i" Foreground="White" FontSize="11" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.ToolTip>
+                                                <ToolTip>
+                                                    <StackPanel MaxWidth="320">
+                                                        <TextBlock FontWeight="Bold" Margin="0,0,0,4">压测模式：并发连接数</TextBlock>
+                                                        <TextBlock TextWrapping="Wrap">压测模式下同时向平台保持的最大 HTTPS 连接数，同时也是信号量门控容量。</TextBlock>
+                                                        <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold">最大 EPS = 并发数 × (1000 / 平均响应ms)</TextBlock>
+                                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#555">示例（局域网 20ms 响应）：</TextBlock>
+                                                        <TextBlock Margin="8,2,0,0" Foreground="#555">50 并发 → 2500 EPS</TextBlock>
+                                                        <TextBlock Margin="8,2,0,0" Foreground="#555">200 并发 → 10000 EPS</TextBlock>
+                                                        <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="Gray" FontStyle="Italic">仅在压测模式下生效，模拟模式忽略此项。</TextBlock>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
                                 <TextBox Grid.Row="3" Grid.Column="1"
                                          Text="{Binding LogConcurrency, Mode=TwoWay}"
                                          Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
@@ -389,8 +394,12 @@
                                         </ToolTip>
                                     </CheckBox.ToolTip>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock>压测模式</TextBlock>
-                                        <TextBlock Foreground="#1976D2" FontSize="11" FontWeight="Bold" Margin="3,0,0,0" VerticalAlignment="Center">ⓘ</TextBlock>
+                                        <TextBlock VerticalAlignment="Center">压测模式</TextBlock>
+                                        <Border Background="#1976D2" CornerRadius="8" Width="16" Height="16"
+                                                VerticalAlignment="Center" Margin="5,0,0,0" Cursor="Help">
+                                            <TextBlock Text="i" Foreground="White" FontSize="11" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
                                     </StackPanel>
                                 </CheckBox>
 
