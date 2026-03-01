@@ -456,7 +456,8 @@ namespace SimulatorLib.Workers
                         if      (lastResult[j] == 1) ok++;
                         else if (lastResult[j] == 0) fail++;
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, 0, ok, fail, 0, 0)); } catch { }
+                    // HTTPS 心跳：用 Connected 字段表示当前在线（响应成功）数量
+                    try { progress?.Report(new HeartbeatStats(clients.Count, ok, 0, 0, 0, 0)); } catch { }
                 }
             }, ct);
 

@@ -550,8 +550,8 @@ namespace SimulatorApp.ViewModels
                         RunOnUi(() =>
                         {
                             HbHttpsTotal = s.Total;
-                            HbHttpsOk    = s.SuccessTcp;   // 复用 TCP 成功字段
-                            HbHttpsFail  = s.FailTcp;
+                            HbHttpsOk    = s.Connected;          // HTTPS 响应成功数
+                            HbHttpsFail  = s.Total - s.Connected; // 其余为失败/未响应
                         });
                     });
                     await hb.StartHttpsAsync(
