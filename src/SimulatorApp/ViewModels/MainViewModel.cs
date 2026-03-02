@@ -40,7 +40,12 @@ namespace SimulatorApp.ViewModels
         private bool _catProcessControl;
         private bool _catOs;
         private bool _catOutbound;
-        private bool _catThreat = true;
+        // 威胁检测5种事件（均通过 TCP 长连接）
+        private bool _catThreatProcStart;   // 进程启动（EDR）
+        private bool _catThreatRegAccess;    // 注册表访问（EDR）
+        private bool _catThreatFileAccess;   // 文件访问（EDR）
+        private bool _catThreatOsEvent;      // 操作系统日志（IEG）
+        private bool _catThreatDllLoad;      // DLL加载（EDR）
         private bool _catNonWhitelist;
         private bool _catWhitelistTamper;
         private bool _catFileProtect;
@@ -143,7 +148,12 @@ namespace SimulatorApp.ViewModels
         public bool CatProcessControl { get => _catProcessControl; set { _catProcessControl = value; OnProp(); } }
         public bool CatOs { get => _catOs; set { _catOs = value; OnProp(); } }
         public bool CatOutbound { get => _catOutbound; set { _catOutbound = value; OnProp(); } }
-        public bool CatThreat { get => _catThreat; set { _catThreat = value; OnProp(); } }
+        // 威胁检测5种事件
+        public bool CatThreatProcStart { get => _catThreatProcStart; set { _catThreatProcStart = value; OnProp(); } }
+        public bool CatThreatRegAccess { get => _catThreatRegAccess; set { _catThreatRegAccess = value; OnProp(); } }
+        public bool CatThreatFileAccess { get => _catThreatFileAccess; set { _catThreatFileAccess = value; OnProp(); } }
+        public bool CatThreatOsEvent { get => _catThreatOsEvent; set { _catThreatOsEvent = value; OnProp(); } }
+        public bool CatThreatDllLoad { get => _catThreatDllLoad; set { _catThreatDllLoad = value; OnProp(); } }
         public bool CatNonWhitelist { get => _catNonWhitelist; set { _catNonWhitelist = value; OnProp(); } }
         public bool CatWhitelistTamper { get => _catWhitelistTamper; set { _catWhitelistTamper = value; OnProp(); } }
         public bool CatFileProtect { get => _catFileProtect; set { _catFileProtect = value; OnProp(); } }
@@ -324,7 +334,12 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                CatThreat = false; // IEG的威胁检测只有系统数据采集，不单独发送威胁数据采集
+                // IEG如属：威胁检测中只有操作系统日志
+                CatThreatOsEvent = true;
+                CatThreatProcStart = false;
+                CatThreatRegAccess = false;
+                CatThreatFileAccess = false;
+                CatThreatDllLoad = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
                 CatVirusAlert = true;
@@ -344,7 +359,12 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                CatThreat = true; // EDR的威胁检测包含威胁数据采集
+                // EDR如属：威胁检测 4 种 EDR 事件
+                CatThreatProcStart = true;
+                CatThreatRegAccess = true;
+                CatThreatFileAccess = true;
+                CatThreatDllLoad = true;
+                CatThreatOsEvent = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
                 CatVirusAlert = true;
@@ -642,7 +662,12 @@ namespace SimulatorApp.ViewModels
             // CatProcessControl 已移除，不存在对应checkbox
             if (CatOs) list.Add("操作系统");
             if (CatOutbound) list.Add("非法外联");
-            if (CatThreat) list.Add("威胁数据采集");
+            // 威胁检测 5 种事件（TCP 长连接）
+            if (CatThreatProcStart) list.Add("威胁检测-进程启动");
+            if (CatThreatRegAccess) list.Add("威胁检测-注册表访问");
+            if (CatThreatFileAccess) list.Add("威胁检测-文件访问");
+            if (CatThreatOsEvent) list.Add("威胁检测-系统日志");
+            if (CatThreatDllLoad) list.Add("威胁检测-DLL加载");
             if (CatNonWhitelist) list.Add("非白名单");
             if (CatWhitelistTamper) list.Add("白名单防篡改");
             if (CatFileProtect) list.Add("文件保护");

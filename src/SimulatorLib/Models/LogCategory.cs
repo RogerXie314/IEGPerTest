@@ -113,6 +113,20 @@ public enum LogCategory
 
     /// <summary>禁用并口（UDISK_LOG_TYPE_PARALLELPORT=8）</summary>
     ExtDevParallel = 24,
+
+    // ---- 威胁检测子类（共享 TCP 长连接 + PtProtocol + CMDID=21，区别仅在 EventType 字段） ----
+
+    /// <summary>威胁检测-注册表访问事件（EDR）THREAT_LOG_TYPE_REG, EventType=63</summary>
+    ThreatRegAccess = 25,
+
+    /// <summary>威胁检测-文件访问事件（EDR）THREAT_LOG_TYPE_FILE, EventType=62</summary>
+    ThreatFileAccess = 26,
+
+    /// <summary>威胁检测-操作系统日志（IEG）WLOSEventLog, EventType=65</summary>
+    ThreatOsEvent = 27,
+
+    /// <summary>威胁检测-DLL加载/跨进程（EDR）THREAT_LOG_TYPE_PROC, EventType=61</summary>
+    ThreatDllLoad = 28,
 }
 
 /// <summary>
@@ -138,7 +152,11 @@ public static class LogCategoryHelper
             LogCategory.UsbWarning => "USB访问告警",
             LogCategory.UDiskPlug => "U盘插拔",
             LogCategory.VPScan => "病毒告警",
-            LogCategory.TFWarning => "威胁数据采集",
+            LogCategory.TFWarning => "威胁检测-进程启动",
+            LogCategory.ThreatRegAccess => "威胁检测-注册表访问",
+            LogCategory.ThreatFileAccess => "威胁检测-文件访问",
+            LogCategory.ThreatOsEvent => "威胁检测-系统日志",
+            LogCategory.ThreatDllLoad => "威胁检测-DLL加载",
             LogCategory.DP => "文件保护",
             LogCategory.SysGuard => "系统防护",
             LogCategory.OSResource => "操作系统",
@@ -178,7 +196,12 @@ public static class LogCategoryHelper
             "USB访问告警" => LogCategory.UsbWarning,
             "U盘插拔" => LogCategory.UDiskPlug,
             "病毒告警" => LogCategory.VPScan,
-            "威胁数据采集" => LogCategory.TFWarning,
+            "威胁数据采集" => LogCategory.TFWarning, // 向后兼容旧名称
+            "威胁检测-进程启动" => LogCategory.TFWarning,
+            "威胁检测-注册表访问" => LogCategory.ThreatRegAccess,
+            "威胁检测-文件访问" => LogCategory.ThreatFileAccess,
+            "威胁检测-系统日志" => LogCategory.ThreatOsEvent,
+            "威胁检测-DLL加载" => LogCategory.ThreatDllLoad,
             "文件保护" => LogCategory.HostDefence, // IEG: HostDefence with DetailLogTypeLevel2=1
             "系统防护" => LogCategory.SysGuard, // EDR专属
             "系统加固" => LogCategory.SysGuard, // 别名，EDR专属
@@ -220,11 +243,15 @@ public static class LogCategoryHelper
     public static bool IsExtDevCategory(LogCategory category) => GetExtDevUsbType(category).HasValue;
 
     /// <summary>
-    /// 判断是否为威胁数据采集类别（需要特殊的PT协议封装）
+    /// 判断是否为威胁检测类别（5种事件均使用 TCP 长连接 + PtProtocol 封装，CMDID=21）
     /// </summary>
     public static bool IsThreatDataCategory(LogCategory category)
     {
-        return category == LogCategory.TFWarning;
+        return category == LogCategory.TFWarning
+            || category == LogCategory.ThreatRegAccess
+            || category == LogCategory.ThreatFileAccess
+            || category == LogCategory.ThreatOsEvent
+            || category == LogCategory.ThreatDllLoad;
     }
 
     /// <summary>
