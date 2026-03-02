@@ -714,8 +714,8 @@ namespace SimulatorApp.ViewModels
                 var threatCats = cats.Where(IsThreatCategoryByName).ToArray();
                 var httpsCats  = cats.Where(c => !IsThreatCategoryByName(c)).ToArray();
 
-                var totalHttps  = httpsCats.Length  > 0 ? (long)LogHttpsClientCount  * LogMessagesPerClient : 0;
-                var totalThreat = threatCats.Length > 0 ? (long)LogThreatClientCount * LogMessagesPerClient : 0;
+                var totalHttps  = (httpsCats.Length  > 0 && LogHttpsClientCount  > 0) ? (long)LogHttpsClientCount  * LogMessagesPerClient : 0;
+                var totalThreat = (threatCats.Length > 0 && LogThreatClientCount > 0) ? (long)LogThreatClientCount * LogMessagesPerClient : 0;
 
                 RunOnUi(() =>
                 {
@@ -732,9 +732,9 @@ namespace SimulatorApp.ViewModels
 
                 _ = Task.Run(async () =>
                 {
-                    if (httpsCats.Length == 0 && threatCats.Length == 0)
+                    if ((httpsCats.Length == 0 || LogHttpsClientCount <= 0) && (threatCats.Length == 0 || LogThreatClientCount <= 0))
                     {
-                        RunOnUi(() => AppendStatus("⚠ 未选择任何日志分类，请至少选择一个分类"));
+                        RunOnUi(() => AppendStatus("⚠ 未选择日志分类或客户端数为0，无可发送的通道"));
                         return;
                     }
 
@@ -754,7 +754,8 @@ namespace SimulatorApp.ViewModels
                     var workerTasks = new List<Task>();
 
                     // ── HTTPS 通道（短连接，EPS ≤100）──────────────────────────
-                    if (httpsCats.Length > 0)
+                    // 客户端数=0 表示禁用此通道
+                    if (httpsCats.Length > 0 && LogHttpsClientCount > 0)
                     {
                         var httpsWorker = new LogWorker(new TcpSender(), new UdpSender());
                         var httpsProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
@@ -781,7 +782,8 @@ namespace SimulatorApp.ViewModels
                     }
 
                     // ── 威胁检测 TCP 长连接通道（EPS 可达 6000）────────────────
-                    if (threatCats.Length > 0)
+                    // 客户端数=0 表示禁用此通道
+                    if (threatCats.Length > 0 && LogThreatClientCount > 0)
                     {
                         var threatWorker = new LogWorker(new TcpSender(), new UdpSender());
                         var threatProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
