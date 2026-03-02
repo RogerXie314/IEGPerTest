@@ -12,8 +12,8 @@ namespace SimulatorApp
 
             var ver = Assembly.GetExecutingAssembly().GetName().Version;
             Title = ver != null
-                ? $"IEG 模拟器 v{ver.Major}.{ver.Minor}.{ver.Build}"
-                : "IEG 模拟器";
+                ? $"IEG 模拟器 v{ver.Major}.{ver.Minor}.{ver.Build}  [.NET 6 · 兼容 Win2012R2]"
+                : "IEG 模拟器  [.NET 6 · 兼容 Win2012R2]";
         }
 
         private void ShowTcpDiag_Click(object sender, RoutedEventArgs e)

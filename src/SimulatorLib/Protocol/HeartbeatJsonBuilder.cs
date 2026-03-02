@@ -68,7 +68,7 @@ namespace SimulatorLib.Protocol
             {
                 byte[] b = ip.GetAddressBytes();
                 // 02: locally administered unicast
-                byte[] mac = [ 0x02, 0x00, b[0], b[1], b[2], b[3] ];
+                byte[] mac = new byte[] { 0x02, 0x00, b[0], b[1], b[2], b[3] };
                 return string.Join("-", mac.Select(x => x.ToString("X2", CultureInfo.InvariantCulture)));
             }
             return "02-00-00-00-00-00";
