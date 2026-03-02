@@ -21,10 +21,13 @@ namespace SimulatorLib.Persistence
 
         public int HeartbeatIntervalMs { get; set; } = 30000;
 
-        public int LogClientCount { get; set; } = 5;
         public int LogMessagesPerClient { get; set; } = 50;
+        /// <summary>HTTPS 短连接通道：客户端个数</summary>
+        public int LogHttpsClientCount { get; set; } = 5;
         /// <summary>HTTPS 短连接日志：每客户端每秒条数（平台规格 ≤100 EPS）</summary>
         public int LogHttpsEps { get; set; } = 10;
+        /// <summary>威胁检测 TCP 长连接通道：客户端个数</summary>
+        public int LogThreatClientCount { get; set; } = 5;
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get; set; } = 100;
 

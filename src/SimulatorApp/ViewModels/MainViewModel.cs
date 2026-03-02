@@ -29,9 +29,10 @@ namespace SimulatorApp.ViewModels
         private int _hbInterval = 30000;
         private string _projectType = "IEG";
 
-        private int _logClientCount = 5;
         private int _logMessagesPerClient = 50;
+        private int _logHttpsClientCount = 5;
         private int _logHttpsEps = 10;
+        private int _logThreatClientCount = 5;
         private int _logThreatEps = 100;
         private int _logTotalMessages;
         private int _logSuccess;
@@ -130,10 +131,13 @@ namespace SimulatorApp.ViewModels
         public int RegCount { get => _regCount; set { _regCount = value; OnProp(); } }
         public int HbInterval { get => _hbInterval; set { _hbInterval = value; OnProp(); } }
 
-        public int LogClientCount { get => _logClientCount; set { _logClientCount = value; OnProp(); } }
         public int LogMessagesPerClient { get => _logMessagesPerClient; set { _logMessagesPerClient = value; OnProp(); } }
+        /// <summary>HTTPS 短连接通道：客户端个数</summary>
+        public int LogHttpsClientCount { get => _logHttpsClientCount; set { _logHttpsClientCount = value; OnProp(); } }
         /// <summary>HTTPS 短连接日志：每客户端每秒条数（平台规格 ≤100 EPS）</summary>
         public int LogHttpsEps { get => _logHttpsEps; set { _logHttpsEps = value; OnProp(); } }
+        /// <summary>威胁检测 TCP 长连接通道：客户端个数</summary>
+        public int LogThreatClientCount { get => _logThreatClientCount; set { _logThreatClientCount = value; OnProp(); } }
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get => _logThreatEps; set { _logThreatEps = value; OnProp(); } }
         public int LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
@@ -257,9 +261,10 @@ namespace SimulatorApp.ViewModels
                 RegTimeoutMs = cfg.RegTimeoutMs;
                 HbInterval = cfg.HeartbeatIntervalMs;
 
-                LogClientCount = cfg.LogClientCount;
                 LogMessagesPerClient = cfg.LogMessagesPerClient;
+                LogHttpsClientCount = cfg.LogHttpsClientCount;
                 LogHttpsEps = cfg.LogHttpsEps;
+                LogThreatClientCount = cfg.LogThreatClientCount;
                 LogThreatEps = cfg.LogThreatEps;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
@@ -288,9 +293,10 @@ namespace SimulatorApp.ViewModels
                 RegRetryIntervalSec = RegRetryIntervalSec,
                 RegTimeoutMs = RegTimeoutMs,
                 HeartbeatIntervalMs = HbInterval,
-                LogClientCount = LogClientCount,
                 LogMessagesPerClient = LogMessagesPerClient,
+                LogHttpsClientCount = LogHttpsClientCount,
                 LogHttpsEps = LogHttpsEps,
+                LogThreatClientCount = LogThreatClientCount,
                 LogThreatEps = LogThreatEps,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
@@ -623,10 +629,12 @@ namespace SimulatorApp.ViewModels
             if (RegConcurrency <= 0 || RegConcurrency > 5000) return (false, "并发数必须在 1~5000 之间");
             if (RegRetryIntervalSec < 0) return (false, "轮间隔不能为负数");
             if (RegTimeoutMs < 500) return (false, "单次超时不能低于 500ms");
-            if (LogClientCount <= 0) return (false, "LogClientCount 必须大于 0");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
+            if (LogHttpsClientCount < 0) return (false, "HTTPS 客户端数不能为负数");
             if (LogHttpsEps < 0) return (false, "HTTPS EPS 不能为负数");
+            if (LogThreatClientCount < 0) return (false, "威胁检测客户端数不能为负数");
             if (LogThreatEps < 0) return (false, "威胁检测 EPS 不能为负数");
+            if (LogHttpsClientCount == 0 && LogThreatClientCount == 0) return (false, "HTTPS 和威胁检测客户端数不能同时为 0");
             if (WhitelistClientCount <= 0) return (false, "WhitelistClientCount 必须大于 0");
             if (WhitelistConcurrency <= 0) return (false, "WhitelistConcurrency 必须大于 0");
             
@@ -706,8 +714,8 @@ namespace SimulatorApp.ViewModels
                 var threatCats = cats.Where(IsThreatCategoryByName).ToArray();
                 var httpsCats  = cats.Where(c => !IsThreatCategoryByName(c)).ToArray();
 
-                var totalHttps  = httpsCats.Length  > 0 ? (long)LogClientCount * LogMessagesPerClient : 0;
-                var totalThreat = threatCats.Length > 0 ? (long)LogClientCount * LogMessagesPerClient : 0;
+                var totalHttps  = httpsCats.Length  > 0 ? (long)LogHttpsClientCount  * LogMessagesPerClient : 0;
+                var totalThreat = threatCats.Length > 0 ? (long)LogThreatClientCount * LogMessagesPerClient : 0;
 
                 RunOnUi(() =>
                 {
@@ -715,11 +723,11 @@ namespace SimulatorApp.ViewModels
                     LogSuccess = 0;
                     LogFailed  = 0;
 
-                    var httpsDesc  = httpsCats.Length  > 0 ? $"HTTPS({httpsCats.Length}种, {LogHttpsEps} EPS/客户端)" : "";
-                    var threatDesc = threatCats.Length > 0 ? $"威胁检测TCP({threatCats.Length}种, {LogThreatEps} EPS/客户端)" : "";
+                    var httpsDesc  = httpsCats.Length  > 0 ? $"HTTPS({httpsCats.Length}种, {LogHttpsClientCount}客户端, {LogHttpsEps} EPS/客户端)" : "";
+                    var threatDesc = threatCats.Length > 0 ? $"威胁检测TCP({threatCats.Length}种, {LogThreatClientCount}客户端, {LogThreatEps} EPS/客户端)" : "";
                     var channels = string.Join(" + ",
                         new[] { httpsDesc, threatDesc }.Where(s => s.Length > 0));
-                    AppendStatus($"开始日志发送：客户端数={LogClientCount} 每客户端条数={LogMessagesPerClient} 通道=[{channels}]");
+                    AppendStatus($"开始日志发送：每客户端条数={LogMessagesPerClient} 通道=[{channels}]");
                 });
 
                 _ = Task.Run(async () =>
@@ -758,7 +766,7 @@ namespace SimulatorApp.ViewModels
                         workerTasks.Add(httpsWorker.StartAsync(
                             messagesPerClient:          LogMessagesPerClient,
                             messagesPerSecondPerClient: LogHttpsEps  <= 0 ? null : (int?)LogHttpsEps,
-                            maxClients:                 LogClientCount,
+                            maxClients:                 LogHttpsClientCount,
                             categories:                 httpsCats,
                             useLogServer:               UseLogServer,
                             platformHost:               PlatformHost,
@@ -785,7 +793,7 @@ namespace SimulatorApp.ViewModels
                         workerTasks.Add(threatWorker.StartAsync(
                             messagesPerClient:          LogMessagesPerClient,
                             messagesPerSecondPerClient: LogThreatEps <= 0 ? null : (int?)LogThreatEps,
-                            maxClients:                 LogClientCount,
+                            maxClients:                 LogThreatClientCount,
                             categories:                 threatCats,
                             useLogServer:               UseLogServer,
                             platformHost:               PlatformHost,
