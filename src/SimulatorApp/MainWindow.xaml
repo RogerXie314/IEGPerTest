@@ -195,12 +195,12 @@
                             <Border Grid.Row="2" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Background="White">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel Margin="8">
-                                        <!-- 通用分类 -->
+                                        <!-- HTTPS 短连接分类（平台规格≤100EPS） -->
+                                        <TextBlock FontSize="10" Foreground="#777" Margin="0,0,0,4">HTTPS 短连接（平台规格 ≤100 EPS）</TextBlock>
                                         <WrapPanel>
                                             <CheckBox IsChecked="{Binding CatClientOps, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">客户端操作</CheckBox>
                                             <CheckBox IsChecked="{Binding CatOs, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">操作系统</CheckBox>
                                             <CheckBox IsChecked="{Binding CatOutbound, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">非法外联</CheckBox>
-                                            <CheckBox IsChecked="{Binding CatThreat, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">威胁数据采集</CheckBox>
                                             <CheckBox IsChecked="{Binding CatFileProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">文件保护</CheckBox>
                                             <CheckBox IsChecked="{Binding CatRegProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">注册表保护</CheckBox>
                                             <CheckBox IsChecked="{Binding CatMandatoryAccess, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">强制访问控制</CheckBox>
@@ -216,7 +216,7 @@
                                             <CheckBox IsChecked="{Binding CatSysGuard, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkGreen">系统防护(EDR)</CheckBox>
                                         </WrapPanel>
                                         <!-- 外设控制分组 -->
-                                        <Border BorderBrush="#B0C4DE" BorderThickness="1" CornerRadius="3" Margin="0,6,0,0" Padding="6,4">
+                                        <Border BorderBrush="#B0C4DE" BorderThickness="1" CornerRadius="3" Margin="0,4,0,0" Padding="6,4">
                                             <StackPanel>
                                                 <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#4A6080" Margin="0,0,0,4">外设控制（IEG）— 禁用触发告警</TextBlock>
                                                 <WrapPanel>
@@ -229,6 +229,21 @@
                                                     <CheckBox IsChecked="{Binding CatExtDevBluetooth, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁蓝牙</CheckBox>
                                                     <CheckBox IsChecked="{Binding CatExtDevSerial, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁串口</CheckBox>
                                                     <CheckBox IsChecked="{Binding CatExtDevParallel, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="90" Foreground="DarkBlue">禁并口</CheckBox>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                        <!-- 威胁检测分组（TCP长连接，平台规格6000EPS） -->
+                                        <Border BorderBrush="#C8A020" BorderThickness="1" CornerRadius="3" Margin="0,6,0,0" Padding="6,4" Background="#FFFDF0">
+                                            <StackPanel>
+                                                <DockPanel LastChildFill="False" Margin="0,0,0,4">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#7A5800">威胁检测（5种事件）— TCP长连接，平台规格6000EPS</TextBlock>
+                                                </DockPanel>
+                                                <WrapPanel>
+                                                    <CheckBox IsChecked="{Binding CatThreatProcStart, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="110" Foreground="DarkGreen">进程启动(EDR)</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatThreatRegAccess, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="120" Foreground="DarkGreen">注册表访问事件(EDR)</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatThreatFileAccess, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="110" Foreground="DarkGreen">文件访问(EDR)</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatThreatDllLoad, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="110" Foreground="DarkGreen">DLL加载(EDR)</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatThreatOsEvent, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="120" Foreground="DarkBlue">操作系统日志(IEG)</CheckBox>
                                                 </WrapPanel>
                                             </StackPanel>
                                         </Border>
@@ -398,9 +413,12 @@
                                             <StackPanel MaxWidth="340">
                                                 <TextBlock FontWeight="Bold" Margin="0,0,0,4">日志发送模式对比</TextBlock>
                                                 <TextBlock FontWeight="SemiBold">■ 模拟模式（默认，不勾选）</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">每条日志新建独立 TLS 连接，完全对齐原始客户端行为。端口每条消耗1个（120s后释放），单机约 50 客户端上限（~100 EPS）。用途：验证行为兼容性。</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">每条日志新建独立 TLS 连接，完全对齐原始客户端行为。适合验证行为兼容性，建议 ≤100 EPS。</TextBlock>
                                                 <TextBlock FontWeight="SemiBold">■ 压测模式（勾选）</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">连接复用 + 信号量门控，消除端口耗尽。单机可模拟 3000 客户端 / 6000+ EPS。平台感知不到连接方式差异（HTTP 请求内容完全相同）。用途：测试平台吞吐上限。</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">HTTPS 连接复用 + 信号量门控，可突破短连接端口限制，适合测试平台 HTTPS 通道吞吐。</TextBlock>
+                                                <Separator Margin="0,4,0,4"/>
+                                                <TextBlock FontWeight="SemiBold" Foreground="#7A5800">■ 威胁检测分类始终使用 TCP 长连接</TextBlock>
+                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#555">无论此开关状态，威胁检测（5种事件）均通过 TCP 持久连接 + PtProtocol 发送，平台规格6000 EPS，不受短连接端口池限制。</TextBlock>
                                             </StackPanel>
                                         </ToolTip>
                                     </CheckBox.ToolTip>

@@ -884,6 +884,33 @@ namespace SimulatorLib.Workers
                     processPath: fullPath,
                     commandLine: $"{exeName} /c whoami idx={messageIndex}")),
 
+                LogCategory.ThreatDllLoad => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventDllLoadLog(
+                    client.ClientId,
+                    processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
+                    processGuid: Guid.NewGuid().ToString("B"),
+                    processPath: fullPath,
+                    targetDll: $"C:\\Windows\\System32\\malware-{messageIndex % 50}.dll")),
+
+                LogCategory.ThreatFileAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventFileAccessLog(
+                    client.ClientId,
+                    processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
+                    processGuid: Guid.NewGuid().ToString("B"),
+                    processPath: fullPath,
+                    filePath: $"C:\\Sensitive\\{client.ClientId}\\doc-{messageIndex % 200}.docx")),
+
+                LogCategory.ThreatRegAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventRegAccessLog(
+                    client.ClientId,
+                    processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
+                    processGuid: Guid.NewGuid().ToString("B"),
+                    processPath: fullPath,
+                    regKey: $"HKLM\\SOFTWARE\\{client.ClientId}\\Config\\Key{messageIndex % 100}")),
+
+                LogCategory.ThreatOsEvent => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventOsEventLog(
+                    client.ClientId,
+                    eventId: 4624 + (messageIndex % 10),
+                    logName: (messageIndex % 3) == 0 ? "Security" : ((messageIndex % 3) == 1 ? "System" : "Application"),
+                    message: $"Simulated OS event idx={messageIndex} client={client.ClientId}")),
+
                 LogCategory.VPScan => (CmdWords.SocketCmd.LogVirus, LogJsonBuilder.BuildVirusLog(client.ClientId, virusPath: $"C:\\Temp\\{client.ClientId}\\eicar-{messageIndex}.com", virusName: "EICAR-Test-File")),
 
                 LogCategory.OSResource => (CmdWords.SocketCmd.LogOsResource, LogJsonBuilder.BuildOsResourceLog(client.ClientId, message: $"CPU usage high idx={messageIndex} client={client.ClientId}", resourceType: (messageIndex % 3) + 1)),

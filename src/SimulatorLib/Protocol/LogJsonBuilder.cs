@@ -319,6 +319,111 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(root, JsonOptions);
     }
 
+    public static string BuildThreatEventDllLoadLog(string computerId, int processId, string processGuid, string processPath, string targetDll)
+    {
+        // external: ThreatLog_Proc_GetJson — THREAT_LOG_TYPE_PROC (DLL load / cross-proc)
+        // EventType=61
+        var cmdContent = new Dictionary<string, object?>
+        {
+            ["EventType"] = 61,
+            ["Process.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["Process.ProcessId"] = processId,
+            ["Process.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["Process.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
+            ["Process.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
+            ["Process.TargetProcessId"] = processId + 100,
+            ["Process.TargetProcessGuid"] = Guid.NewGuid().ToString("B"),
+            ["Process.TargetProcessName"] = string.IsNullOrWhiteSpace(targetDll) ? "C:\\Windows\\System32\\test.dll" : targetDll,
+            ["Process.User"] = "user",
+            ["Process.UserSid"] = "S-1-5-18",
+        };
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"] = computerId,
+            ["CMDTYPE"] = 200,
+            ["CMDID"] = 21,
+            ["CMDContent"] = cmdContent,
+        };
+        return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
+    }
+
+    public static string BuildThreatEventFileAccessLog(string computerId, int processId, string processGuid, string processPath, string filePath)
+    {
+        // external: ThreatLog_File_GetJson — THREAT_LOG_TYPE_FILE
+        // EventType=62
+        var cmdContent = new Dictionary<string, object?>
+        {
+            ["EventType"] = 62,
+            ["File.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["File.ProcessId"] = processId,
+            ["File.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["File.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
+            ["File.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
+            ["File.FileName"] = string.IsNullOrWhiteSpace(filePath) ? "C:\\Temp\\test.txt" : filePath,
+            ["File.Operation"] = 2,
+            ["File.User"] = "user",
+            ["File.UserSid"] = "S-1-5-18",
+        };
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"] = computerId,
+            ["CMDTYPE"] = 200,
+            ["CMDID"] = 21,
+            ["CMDContent"] = cmdContent,
+        };
+        return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
+    }
+
+    public static string BuildThreatEventRegAccessLog(string computerId, int processId, string processGuid, string processPath, string regKey)
+    {
+        // external: ThreatLog_Reg_GetJson — THREAT_LOG_TYPE_REG
+        // EventType=63
+        var cmdContent = new Dictionary<string, object?>
+        {
+            ["EventType"] = 63,
+            ["Reg.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["Reg.ProcessId"] = processId,
+            ["Reg.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["Reg.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
+            ["Reg.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
+            ["Reg.RegKey"] = string.IsNullOrWhiteSpace(regKey) ? "HKLM\\SOFTWARE\\Test\\Key" : regKey,
+            ["Reg.Operation"] = 1,
+            ["Reg.User"] = "user",
+            ["Reg.UserSid"] = "S-1-5-18",
+        };
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"] = computerId,
+            ["CMDTYPE"] = 200,
+            ["CMDID"] = 21,
+            ["CMDContent"] = cmdContent,
+        };
+        return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
+    }
+
+    public static string BuildThreatEventOsEventLog(string computerId, long eventId, string logName, string message)
+    {
+        // external: WLOSEventLog AnalyEventDataAndGetJson — THREAT_EVENT_TYPE_SYSTEM=65
+        var cmdContent = new Dictionary<string, object?>
+        {
+            ["EventType"] = 65,
+            ["WinEventLog.TimeCreated"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            ["WinEventLog.EventID"] = eventId,
+            ["WinEventLog.Level"] = 4,
+            ["WinEventLog.Channel"] = string.IsNullOrWhiteSpace(logName) ? "System" : logName,
+            ["WinEventLog.Computer"] = computerId,
+            ["WinEventLog.Message"] = string.IsNullOrWhiteSpace(message) ? "Simulated OS event" : message,
+        };
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"] = computerId,
+            ["CMDTYPE"] = 200,
+            ["CMDID"] = 21,
+            ["CMDContent"] = cmdContent,
+        };
+        return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
+    }
+
     public static string BuildThreatFakeLog(string computerId, string fakeIp, int fakePort, string protocol, int type = 1)
     {
         // external: ThreatFake_ServicesInfo_GetJson
