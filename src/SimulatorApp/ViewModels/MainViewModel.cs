@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,6 +78,8 @@ namespace SimulatorApp.ViewModels
         private int _whitelistConcurrency = 4;
         private int _logConcurrency = 50;
         private bool _logStressMode = false;
+        private bool _logMultiIpMode = false;
+        private string _logLocalIps = string.Empty;
         private int _uploadTotal;
         private int _uploadSuccess;
         private int _uploadFailed;
@@ -129,6 +132,8 @@ namespace SimulatorApp.ViewModels
         public int LogMessagesPerSecondPerClient { get => _logMessagesPerSecondPerClient; set { _logMessagesPerSecondPerClient = value; OnProp(); } }
         public int LogConcurrency { get => _logConcurrency; set { _logConcurrency = value; OnProp(); } }
         public bool IsLogStressMode { get => _logStressMode; set { _logStressMode = value; OnProp(); } }
+        public bool IsLogMultiIpMode { get => _logMultiIpMode; set { _logMultiIpMode = value; OnProp(); } }
+        public string LogLocalIps { get => _logLocalIps; set { _logLocalIps = value; OnProp(); } }
         public int LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
         public int LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
         public int LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
@@ -250,6 +255,8 @@ namespace SimulatorApp.ViewModels
                 LogMessagesPerSecondPerClient = cfg.LogMessagesPerSecondPerClient;
                 LogConcurrency = cfg.LogConcurrency;
                 IsLogStressMode = cfg.LogStressMode;
+                IsLogMultiIpMode = cfg.LogMultiIpMode;
+                LogLocalIps = cfg.LogLocalIps;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
                 WhitelistClientCount = cfg.WhitelistClientCount;
@@ -282,6 +289,8 @@ namespace SimulatorApp.ViewModels
                 LogMessagesPerSecondPerClient = LogMessagesPerSecondPerClient,
                 LogConcurrency = LogConcurrency,
                 LogStressMode = IsLogStressMode,
+                LogMultiIpMode = IsLogMultiIpMode,
+                LogLocalIps = LogLocalIps,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
                 WhitelistConcurrency = WhitelistConcurrency
@@ -684,6 +693,30 @@ namespace SimulatorApp.ViewModels
                     LogSuccess = 0;
                     LogFailed = 0;
                     AppendStatus($"开始日志发送：客户端数={LogClientCount} 每客户端总条数={LogMessagesPerClient} 每秒条数={LogMessagesPerSecondPerClient} 分类={cats.Length}");
+
+                    // 多IP模式启动诊断日志
+                    if (IsLogMultiIpMode)
+                    {
+                        var allTokens = string.IsNullOrWhiteSpace(LogLocalIps)
+                            ? System.Array.Empty<string>()
+                            : LogLocalIps.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
+                        var validIps   = allTokens.Where(s => System.Net.IPAddress.TryParse(s, out _)).ToArray();
+                        var invalidIps = allTokens.Where(s => !System.Net.IPAddress.TryParse(s, out _)).ToArray();
+                        if (validIps.Length > 0)
+                            AppendStatus($"多IP模式：有效IP {validIps.Length} 个 → {string.Join(", ", validIps)}");
+                        else
+                            AppendStatus("⚠ 多IP模式已勾选，但未输入有效IP，将回退到单IP模式");
+                        if (invalidIps.Length > 0)
+                            AppendStatus($"⚠ 无法解析的IP（已忽略）：{string.Join(", ", invalidIps)}");
+                    }
+                    else if (IsLogStressMode)
+                    {
+                        AppendStatus("压测模式（连接池复用），此模式不受端口池限制。");
+                    }
+                    else
+                    {
+                        AppendStatus("默认短连接模式，每条日志新建独立 TLS 连接。");
+                    }
                 });
 
                 _ = Task.Run(async () =>
@@ -695,7 +728,9 @@ namespace SimulatorApp.ViewModels
                             LogTotalMessages = s.TotalMessages;
                             LogSuccess = s.Success;
                             LogFailed = s.Failed;
-                            // 只更新状态数值，不记录日志（避免频繁滚动）
+                            // 最终汇报：多IP分布摘要
+                            if (s.MultiIpSummary != null)
+                                AppendStatus(s.MultiIpSummary);
                         });
                     });
 
@@ -711,11 +746,17 @@ namespace SimulatorApp.ViewModels
                         logPort: LogPort,
                         concurrency: LogConcurrency,
                         stressMode: IsLogStressMode,
+                        localIps: (IsLogMultiIpMode && !string.IsNullOrWhiteSpace(LogLocalIps))
+                            ? LogLocalIps.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries)
+                            : null,
                         ct: _logCts.Token,
                         progress: progress).ConfigureAwait(false);
                     
-                    // 任务完成后记录最终结果
-                    RunOnUi(() => AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}"));
+                    // 任务完成后记录最终结果（最后一次 progress.Report 含 MultiIpSummary）
+                    RunOnUi(() =>
+                    {
+                        AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}");
+                    });
                 });
             }
             catch (Exception ex)

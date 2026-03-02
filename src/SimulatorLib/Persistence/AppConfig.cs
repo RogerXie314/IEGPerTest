@@ -35,6 +35,8 @@ namespace SimulatorLib.Persistence
 
         public int LogConcurrency { get; set; } = 50;
         public bool LogStressMode { get; set; } = false;
+        public bool LogMultiIpMode { get; set; } = false;
+        public string LogLocalIps { get; set; } = string.Empty;
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 

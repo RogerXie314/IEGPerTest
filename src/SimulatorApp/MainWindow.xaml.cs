@@ -15,6 +15,13 @@ namespace SimulatorApp
                 ? $"IEG 模拟器 v{ver.Major}.{ver.Minor}.{ver.Build}"
                 : "IEG 模拟器";
         }
+
+        private void ShowTcpDiag_Click(object sender, RoutedEventArgs e)
+        {
+            var vm  = (ViewModels.MainViewModel)DataContext;
+            var win = new TcpDiagWindow(vm.IsLogMultiIpMode, vm.LogLocalIps) { Owner = this };
+            win.ShowDialog();
+        }
     }
 }
 

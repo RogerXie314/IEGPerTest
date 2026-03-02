@@ -11,6 +11,7 @@ using SimulatorLib.Models;
 using System.IO;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using SimulatorLib.Protocol;
 using System.Buffers.Binary;
@@ -18,7 +19,7 @@ using System.Net.Http;
 
 namespace SimulatorLib.Workers
 {
-    public record LogSendStats(int TotalMessages, int Success, int Failed);
+    public record LogSendStats(int TotalMessages, int Success, int Failed, string? MultiIpSummary = null);
 
     public class LogWorker
     {
@@ -85,6 +86,7 @@ namespace SimulatorLib.Workers
                 logPort: logPort,
                 concurrency: concurrency,
                 stressMode: false,
+                localIps: null,
                 ct: ct,
                 progress: progress).ConfigureAwait(false);
         }
@@ -95,7 +97,7 @@ namespace SimulatorLib.Workers
         /// - messagesPerSecondPerClient：每客户端每秒条数（<=0 或 null 表示不做速率控制）
         /// - categories：日志分类（为空则用 Default）；会按消息序号轮转
         /// </summary>
-        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, CancellationToken ct, IProgress<LogSendStats>? progress = null)
+        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress = null)
         {
             await StartCoreAsync(
                 messagesPerClient: messagesPerClient,
@@ -109,11 +111,12 @@ namespace SimulatorLib.Workers
                 logPort: logPort,
                 concurrency: concurrency,
                 stressMode: stressMode,
+                localIps: localIps,
                 ct: ct,
                 progress: progress).ConfigureAwait(false);
         }
 
-        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, CancellationToken ct, IProgress<LogSendStats>? progress)
+        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress)
         {
             var clientsAll = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             var clients = (maxClients.HasValue && maxClients.Value > 0)
@@ -172,9 +175,15 @@ namespace SimulatorLib.Workers
 
             // 原始客户端（libcurl）：连接超时6s，请求超时30s，每次请求独立TLS连接。
             // 压测模式：允许连接复用，MaxConnectionsPerServer=concurrency，消除端口耗尽问题。
+            // 多IP模式：解析本地IP列表，短连接时通过 ConnectCallback 轮转绑定本地IP，每IP独立端口池。
+            var parsedLocalIps = ParseLocalIps(localIps);
+            // 每个IP的实际连接计数（原子递增），用于结束后验证分布
+            var ipCounters = parsedLocalIps.Count > 0 ? new long[parsedLocalIps.Count] : null;
             using var http = stressMode
                 ? CreateHttpClientStress(concurrency, connectTimeoutMs: 6000, requestTimeoutMs: 30000)
-                : CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
+                : parsedLocalIps.Count > 0
+                    ? CreateHttpClientMultiIp(parsedLocalIps, ipCounters!, connectTimeoutMs: 6000, requestTimeoutMs: 30000)
+                    : CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
 
             // 压测模式下用信号量限制同时飞行的 HTTPS 请求数，避免连接池内锁竞争。
             // 门控容量 == MaxConnectionsPerServer，进门即有连接，零等待。
@@ -325,7 +334,15 @@ namespace SimulatorLib.Workers
 
             WriteFailureSummary();
 
-            var stats = new LogSendStats(totalMessages, success, fail);
+            // 多IP分布摘要
+            string? multiIpSummary = null;
+            if (ipCounters != null && parsedLocalIps.Count > 0)
+            {
+                var parts = parsedLocalIps.Select((ip, i) => $"{ip}: {ipCounters[i]:N0}次").ToArray();
+                multiIpSummary = "多IP连接分布 → " + string.Join("  ", parts);
+            }
+
+            var stats = new LogSendStats(totalMessages, success, fail, multiIpSummary);
             try { progress?.Report(stats); } catch { }
 
             try
@@ -411,6 +428,66 @@ namespace SimulatorLib.Workers
                     or LogCategory.ExtDevBluetooth or LogCategory.ExtDevSerial or LogCategory.ExtDevParallel
                     => HttpsPathUsb,
                 _ => HttpsPathProcess,
+            };
+        }
+
+        private static List<IPAddress> ParseLocalIps(IReadOnlyList<string>? localIps)
+        {
+            var result = new List<IPAddress>();
+            if (localIps == null) return result;
+            foreach (var s in localIps)
+            {
+                var ip = s.Trim();
+                if (ip.Length == 0) continue;
+                if (IPAddress.TryParse(ip, out var addr))
+                    result.Add(addr);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 多IP模式 HttpClient：短连接（用完即弃），通过 ConnectCallback 轮转绑定本地 IP。
+        /// 每个本地 IP 拥有独立的端口池（约 64500 个），N 个 IP × (端口数 / TIME_WAIT) = N × EPS上限。
+        /// </summary>
+        private static HttpClient CreateHttpClientMultiIp(List<IPAddress> localIps, long[] ipCounters, int connectTimeoutMs, int requestTimeoutMs)
+        {
+            int ipIndex = -1;
+            var handler = new SocketsHttpHandler
+            {
+                SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                {
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                },
+                PooledConnectionLifetime = TimeSpan.Zero, // 短连接：用完即弃
+                ConnectTimeout           = TimeSpan.FromMilliseconds(connectTimeoutMs),
+                ConnectCallback          = async (context, cancellationToken) =>
+                {
+                    // 轮转选择本地 IP，并累计每IP的实际连接次数
+                    int idx = Math.Abs(Interlocked.Increment(ref ipIndex) % localIps.Count);
+                    var localIp = localIps[idx];
+                    Interlocked.Increment(ref ipCounters[idx]);
+
+                    var socket = new Socket(localIp.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                    socket.NoDelay = true;
+                    // 绑定到指定本地 IP，端口 0 = OS 自动从当前 IP 的端口池中分配
+                    socket.Bind(new IPEndPoint(localIp, 0));
+                    try
+                    {
+                        await socket.ConnectAsync(context.DnsEndPoint.Host, context.DnsEndPoint.Port, cancellationToken).ConfigureAwait(false);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                },
+            };
+            return new HttpClient(handler)
+            {
+                Timeout               = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                DefaultRequestVersion = System.Net.HttpVersion.Version11,
+                DefaultVersionPolicy  = HttpVersionPolicy.RequestVersionExact,
             };
         }
 
