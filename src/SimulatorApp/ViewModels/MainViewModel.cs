@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -30,7 +31,8 @@ namespace SimulatorApp.ViewModels
 
         private int _logClientCount = 5;
         private int _logMessagesPerClient = 50;
-        private int _logMessagesPerSecondPerClient = 10;
+        private int _logHttpsEps = 10;
+        private int _logThreatEps = 100;
         private int _logTotalMessages;
         private int _logSuccess;
         private int _logFailed;
@@ -81,10 +83,6 @@ namespace SimulatorApp.ViewModels
         private string _whitelistFilePath = string.Empty;
         private int _whitelistClientCount = 5;
         private int _whitelistConcurrency = 4;
-        private int _logConcurrency = 50;
-        private bool _logStressMode = false;
-        private bool _logMultiIpMode = false;
-        private string _logLocalIps = string.Empty;
         private int _uploadTotal;
         private int _uploadSuccess;
         private int _uploadFailed;
@@ -134,11 +132,10 @@ namespace SimulatorApp.ViewModels
 
         public int LogClientCount { get => _logClientCount; set { _logClientCount = value; OnProp(); } }
         public int LogMessagesPerClient { get => _logMessagesPerClient; set { _logMessagesPerClient = value; OnProp(); } }
-        public int LogMessagesPerSecondPerClient { get => _logMessagesPerSecondPerClient; set { _logMessagesPerSecondPerClient = value; OnProp(); } }
-        public int LogConcurrency { get => _logConcurrency; set { _logConcurrency = value; OnProp(); } }
-        public bool IsLogStressMode { get => _logStressMode; set { _logStressMode = value; OnProp(); } }
-        public bool IsLogMultiIpMode { get => _logMultiIpMode; set { _logMultiIpMode = value; OnProp(); } }
-        public string LogLocalIps { get => _logLocalIps; set { _logLocalIps = value; OnProp(); } }
+        /// <summary>HTTPS 短连接日志：每客户端每秒条数（平台规格 ≤100 EPS）</summary>
+        public int LogHttpsEps { get => _logHttpsEps; set { _logHttpsEps = value; OnProp(); } }
+        /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
+        public int LogThreatEps { get => _logThreatEps; set { _logThreatEps = value; OnProp(); } }
         public int LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
         public int LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
         public int LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
@@ -262,11 +259,8 @@ namespace SimulatorApp.ViewModels
 
                 LogClientCount = cfg.LogClientCount;
                 LogMessagesPerClient = cfg.LogMessagesPerClient;
-                LogMessagesPerSecondPerClient = cfg.LogMessagesPerSecondPerClient;
-                LogConcurrency = cfg.LogConcurrency;
-                IsLogStressMode = cfg.LogStressMode;
-                IsLogMultiIpMode = cfg.LogMultiIpMode;
-                LogLocalIps = cfg.LogLocalIps;
+                LogHttpsEps = cfg.LogHttpsEps;
+                LogThreatEps = cfg.LogThreatEps;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
                 WhitelistClientCount = cfg.WhitelistClientCount;
@@ -296,11 +290,8 @@ namespace SimulatorApp.ViewModels
                 HeartbeatIntervalMs = HbInterval,
                 LogClientCount = LogClientCount,
                 LogMessagesPerClient = LogMessagesPerClient,
-                LogMessagesPerSecondPerClient = LogMessagesPerSecondPerClient,
-                LogConcurrency = LogConcurrency,
-                LogStressMode = IsLogStressMode,
-                LogMultiIpMode = IsLogMultiIpMode,
-                LogLocalIps = LogLocalIps,
+                LogHttpsEps = LogHttpsEps,
+                LogThreatEps = LogThreatEps,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
                 WhitelistConcurrency = WhitelistConcurrency
@@ -634,7 +625,8 @@ namespace SimulatorApp.ViewModels
             if (RegTimeoutMs < 500) return (false, "单次超时不能低于 500ms");
             if (LogClientCount <= 0) return (false, "LogClientCount 必须大于 0");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
-            if (LogMessagesPerSecondPerClient < 0) return (false, "LogMessagesPerSecondPerClient 不能为负数");
+            if (LogHttpsEps < 0) return (false, "HTTPS EPS 不能为负数");
+            if (LogThreatEps < 0) return (false, "威胁检测 EPS 不能为负数");
             if (WhitelistClientCount <= 0) return (false, "WhitelistClientCount 必须大于 0");
             if (WhitelistConcurrency <= 0) return (false, "WhitelistConcurrency 必须大于 0");
             
@@ -693,6 +685,9 @@ namespace SimulatorApp.ViewModels
             return list.Count == 0 ? new[] { "Default" } : list.ToArray();
         }
 
+        private static bool IsThreatCategoryByName(string category) =>
+            category.StartsWith("威胁检测-", System.StringComparison.Ordinal);
+
         private async Task StartLogSendAsync()
         {
             try
@@ -707,81 +702,107 @@ namespace SimulatorApp.ViewModels
                 await SaveConfigAsync().ConfigureAwait(false);
                 _logCts = new CancellationTokenSource();
 
-                var tcp = new TcpSender();
-                var udp = new UdpSender();
-                var worker = new LogWorker(tcp, udp);
                 var cats = GetSelectedCategories();
+                var threatCats = cats.Where(IsThreatCategoryByName).ToArray();
+                var httpsCats  = cats.Where(c => !IsThreatCategoryByName(c)).ToArray();
+
+                var totalHttps  = httpsCats.Length  > 0 ? (long)LogClientCount * LogMessagesPerClient : 0;
+                var totalThreat = threatCats.Length > 0 ? (long)LogClientCount * LogMessagesPerClient : 0;
 
                 RunOnUi(() =>
                 {
-                    LogTotalMessages = 0;
+                    LogTotalMessages = (int)(totalHttps + totalThreat);
                     LogSuccess = 0;
-                    LogFailed = 0;
-                    AppendStatus($"开始日志发送：客户端数={LogClientCount} 每客户端总条数={LogMessagesPerClient} 每秒条数={LogMessagesPerSecondPerClient} 分类={cats.Length}");
+                    LogFailed  = 0;
 
-                    // 多IP模式启动诊断日志
-                    if (IsLogMultiIpMode)
-                    {
-                        var allTokens = string.IsNullOrWhiteSpace(LogLocalIps)
-                            ? System.Array.Empty<string>()
-                            : LogLocalIps.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                        var validIps   = allTokens.Where(s => System.Net.IPAddress.TryParse(s, out _)).ToArray();
-                        var invalidIps = allTokens.Where(s => !System.Net.IPAddress.TryParse(s, out _)).ToArray();
-                        if (validIps.Length > 0)
-                            AppendStatus($"多IP模式：有效IP {validIps.Length} 个 → {string.Join(", ", validIps)}");
-                        else
-                            AppendStatus("⚠ 多IP模式已勾选，但未输入有效IP，将回退到单IP模式");
-                        if (invalidIps.Length > 0)
-                            AppendStatus($"⚠ 无法解析的IP（已忽略）：{string.Join(", ", invalidIps)}");
-                    }
-                    else if (IsLogStressMode)
-                    {
-                        AppendStatus("压测模式（连接池复用），此模式不受端口池限制。");
-                    }
-                    else
-                    {
-                        AppendStatus("默认短连接模式，每条日志新建独立 TLS 连接。");
-                    }
+                    var httpsDesc  = httpsCats.Length  > 0 ? $"HTTPS({httpsCats.Length}种, {LogHttpsEps} EPS/客户端)" : "";
+                    var threatDesc = threatCats.Length > 0 ? $"威胁检测TCP({threatCats.Length}种, {LogThreatEps} EPS/客户端)" : "";
+                    var channels = string.Join(" + ",
+                        new[] { httpsDesc, threatDesc }.Where(s => s.Length > 0));
+                    AppendStatus($"开始日志发送：客户端数={LogClientCount} 每客户端条数={LogMessagesPerClient} 通道=[{channels}]");
                 });
 
                 _ = Task.Run(async () =>
                 {
-                    var progress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
+                    if (httpsCats.Length == 0 && threatCats.Length == 0)
+                    {
+                        RunOnUi(() => AppendStatus("⚠ 未选择任何日志分类，请至少选择一个分类"));
+                        return;
+                    }
+
+                    // 两个通道各自维护 success/fail 计数，合并上报 UI
+                    int httpsOk = 0, httpsFail = 0;
+                    int threatOk = 0, threatFail = 0;
+
+                    void ReportCombined()
                     {
                         RunOnUi(() =>
                         {
-                            LogTotalMessages = s.TotalMessages;
-                            LogSuccess = s.Success;
-                            LogFailed = s.Failed;
-                            // 最终汇报：多IP分布摘要
-                            if (s.MultiIpSummary != null)
-                                AppendStatus(s.MultiIpSummary);
+                            LogSuccess = httpsOk  + threatOk;
+                            LogFailed  = httpsFail + threatFail;
                         });
-                    });
+                    }
 
-                    await worker.StartAsync(
-                        messagesPerClient: LogMessagesPerClient,
-                        messagesPerSecondPerClient: LogMessagesPerSecondPerClient <= 0 ? null : LogMessagesPerSecondPerClient,
-                        maxClients: LogClientCount,
-                        categories: cats,
-                        useLogServer: UseLogServer,
-                        platformHost: PlatformHost,
-                        platformPort: PlatformPort,
-                        logHost: LogHost,
-                        logPort: LogPort,
-                        concurrency: LogConcurrency,
-                        stressMode: IsLogStressMode,
-                        localIps: (IsLogMultiIpMode && !string.IsNullOrWhiteSpace(LogLocalIps))
-                            ? LogLocalIps.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries)
-                            : null,
-                        ct: _logCts.Token,
-                        progress: progress).ConfigureAwait(false);
-                    
-                    // 任务完成后记录最终结果（最后一次 progress.Report 含 MultiIpSummary）
-                    RunOnUi(() =>
+                    var workerTasks = new List<Task>();
+
+                    // ── HTTPS 通道（短连接，EPS ≤100）──────────────────────────
+                    if (httpsCats.Length > 0)
                     {
-                        AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}");
-                    });
+                        var httpsWorker = new LogWorker(new TcpSender(), new UdpSender());
+                        var httpsProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
+                        {
+                            System.Threading.Interlocked.Exchange(ref httpsOk,   s.Success);
+                            System.Threading.Interlocked.Exchange(ref httpsFail, s.Failed);
+                            ReportCombined();
+                        });
+                        workerTasks.Add(httpsWorker.StartAsync(
+                            messagesPerClient:          LogMessagesPerClient,
+                            messagesPerSecondPerClient: LogHttpsEps  <= 0 ? null : (int?)LogHttpsEps,
+                            maxClients:                 LogClientCount,
+                            categories:                 httpsCats,
+                            useLogServer:               UseLogServer,
+                            platformHost:               PlatformHost,
+                            platformPort:               PlatformPort,
+                            logHost:                    LogHost,
+                            logPort:                    LogPort,
+                            concurrency:                1,
+                            stressMode:                 false,
+                            localIps:                   null,
+                            ct:                         _logCts.Token,
+                            progress:                   httpsProgress));
+                    }
+
+                    // ── 威胁检测 TCP 长连接通道（EPS 可达 6000）────────────────
+                    if (threatCats.Length > 0)
+                    {
+                        var threatWorker = new LogWorker(new TcpSender(), new UdpSender());
+                        var threatProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
+                        {
+                            System.Threading.Interlocked.Exchange(ref threatOk,   s.Success);
+                            System.Threading.Interlocked.Exchange(ref threatFail, s.Failed);
+                            ReportCombined();
+                        });
+                        workerTasks.Add(threatWorker.StartAsync(
+                            messagesPerClient:          LogMessagesPerClient,
+                            messagesPerSecondPerClient: LogThreatEps <= 0 ? null : (int?)LogThreatEps,
+                            maxClients:                 LogClientCount,
+                            categories:                 threatCats,
+                            useLogServer:               UseLogServer,
+                            platformHost:               PlatformHost,
+                            platformPort:               PlatformPort,
+                            logHost:                    LogHost,
+                            logPort:                    LogPort,
+                            concurrency:                1,
+                            stressMode:                 false,
+                            localIps:                   null,
+                            ct:                         _logCts.Token,
+                            progress:                   threatProgress));
+                    }
+
+                    await Task.WhenAll(workerTasks).ConfigureAwait(false);
+
+                    RunOnUi(() =>
+                        AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}"));
                 });
             }
             catch (Exception ex)

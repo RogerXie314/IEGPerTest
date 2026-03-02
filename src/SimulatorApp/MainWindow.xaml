@@ -335,7 +335,6 @@
                             <DockPanel LastChildFill="False" Margin="0,0,0,0">
                                 <TextBlock DockPanel.Dock="Left" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center">
                                     日志发送设置
-                                    <Run FontSize="11" FontWeight="Normal" Foreground="#888">（默认短连接）</Run>
                                 </TextBlock>
                                 <Button DockPanel.Dock="Right" Width="100" Height="20"
                                         FontSize="11" Foreground="White" Padding="4,0"
@@ -344,9 +343,6 @@
                             </DockPanel>
                             <Grid Margin="0,8,0,0">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -365,74 +361,25 @@
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">每客户端总条数：</TextBlock>
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">每客户端每秒条数：</TextBlock>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LogMessagesPerSecondPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
-
-                                <!-- 并发连接数（压测模式下生效） -->
-                                <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsLogStressMode}" Value="False">
-                                                    <Setter Property="Opacity" Value="0.45"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <TextBlock VerticalAlignment="Center">并发连接数：</TextBlock>
-                                    <Border Background="#1976D2" CornerRadius="8" Width="16" Height="16"
-                                            VerticalAlignment="Center" Margin="4,0,0,0" Cursor="Help">
-                                        <TextBlock Text="i" Foreground="White" FontSize="11" FontWeight="Bold"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock.ToolTip>
-                                                <ToolTip>
-                                                    <StackPanel MaxWidth="320">
-                                                        <TextBlock FontWeight="Bold" Margin="0,0,0,4">压测模式：并发连接数</TextBlock>
-                                                        <TextBlock TextWrapping="Wrap">压测模式下同时向平台保持的最大 HTTPS 连接数，同时也是信号量门控容量。</TextBlock>
-                                                        <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold">最大 EPS = 并发数 × (1000 / 平均响应ms)</TextBlock>
-                                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#555">示例（局域网 20ms 响应）：</TextBlock>
-                                                        <TextBlock Margin="8,2,0,0" Foreground="#555">50 并发 → 2500 EPS</TextBlock>
-                                                        <TextBlock Margin="8,2,0,0" Foreground="#555">200 并发 → 10000 EPS</TextBlock>
-                                                        <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="Gray" FontStyle="Italic">仅在压测模式下生效，模拟模式忽略此项。</TextBlock>
-                                                    </StackPanel>
-                                                </ToolTip>
-                                            </TextBlock.ToolTip>
-                                        </TextBlock>
-                                    </Border>
+                                <!-- HTTPS 短连接速率 -->
+                                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock VerticalAlignment="Center">HTTPS 每客户端每秒：</TextBlock>
                                 </StackPanel>
-                                <TextBox Grid.Row="3" Grid.Column="1"
-                                         Text="{Binding LogConcurrency, Mode=TwoWay}"
-                                         Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
-                                         IsEnabled="{Binding IsLogStressMode}" />
+                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="8,2,0,2">
+                                    <TextBox Text="{Binding LogHttpsEps, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" />
+                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="6,0,0,0">（平台规格 ≤100 EPS）</TextBlock>
+                                </StackPanel>
 
-                                <!-- 压测模式开关 -->
-                                <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                          Margin="0,6,0,0" IsChecked="{Binding IsLogStressMode, Mode=TwoWay}">
-                                    <CheckBox.ToolTip>
-                                        <ToolTip>
-                                            <StackPanel MaxWidth="340">
-                                                <TextBlock FontWeight="Bold" Margin="0,0,0,4">日志发送模式对比</TextBlock>
-                                                <TextBlock FontWeight="SemiBold">■ 模拟模式（默认，不勾选）</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">每条日志新建独立 TLS 连接，完全对齐原始客户端行为。适合验证行为兼容性，建议 ≤100 EPS。</TextBlock>
-                                                <TextBlock FontWeight="SemiBold">■ 压测模式（勾选）</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#333">HTTPS 连接复用 + 信号量门控，可突破短连接端口限制，适合测试平台 HTTPS 通道吞吐。</TextBlock>
-                                                <Separator Margin="0,4,0,4"/>
-                                                <TextBlock FontWeight="SemiBold" Foreground="#7A5800">■ 威胁检测分类始终使用 TCP 长连接</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="8,2,0,4" Foreground="#555">无论此开关状态，威胁检测（5种事件）均通过 TCP 持久连接 + PtProtocol 发送，平台规格6000 EPS，不受短连接端口池限制。</TextBlock>
-                                            </StackPanel>
-                                        </ToolTip>
-                                    </CheckBox.ToolTip>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock VerticalAlignment="Center">压测模式<Run FontSize="11" Foreground="#888">（连接池复用）</Run></TextBlock>
-                                        <Border Background="#1976D2" CornerRadius="8" Width="16" Height="16"
-                                                VerticalAlignment="Center" Margin="5,0,0,0" Cursor="Help">
-                                            <TextBlock Text="i" Foreground="White" FontSize="11" FontWeight="Bold"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                    </StackPanel>
-                                </CheckBox>
+                                <!-- 威胁检测 TCP 长连接速率 -->
+                                <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock VerticalAlignment="Center">威胁检测 每客户端每秒：</TextBlock>
+                                </StackPanel>
+                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="8,2,0,2">
+                                    <TextBox Text="{Binding LogThreatEps, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" />
+                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="6,0,0,0">（TCP长连接，规格 6000 EPS）</TextBlock>
+                                </StackPanel>
 
-                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -442,50 +389,9 @@
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="Gray" Text="(按 Clients.log 前 N 个客户端)" />
-
-                                <!-- 多IP模式开关 -->
-                                <CheckBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
-                                          Margin="0,10,0,0" IsChecked="{Binding IsLogMultiIpMode, Mode=TwoWay}">
-                                    <CheckBox.ToolTip>
-                                        <ToolTip>
-                                            <StackPanel MaxWidth="340">
-                                                <TextBlock FontWeight="Bold" Margin="0,0,0,4">多IP模式</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Foreground="#333">给网卡绑定多个本地 IP 后，每个 IP 拥有独立的端口池。短连接时轮转绑定各 IP，理论 EPS = N 个 IP × 单IP上限。</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold">示例：3 个 IP = 3 × 546 ≈ 1638 EPS</TextBlock>
-                                                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#555">配置方法：Windows → 网络设置 → TCP/IPv4 属性 → 高级 → 添加多个 IP 地址。</TextBlock>
-                                            </StackPanel>
-                                        </ToolTip>
-                                    </CheckBox.ToolTip>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock VerticalAlignment="Center">多IP模式（短连接EPS扩容）</TextBlock>
-                                        <Border Background="#1976D2" CornerRadius="8" Width="16" Height="16"
-                                                VerticalAlignment="Center" Margin="5,0,0,0" Cursor="Help">
-                                            <TextBlock Text="i" Foreground="White" FontSize="11" FontWeight="Bold"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                    </StackPanel>
-                                </CheckBox>
-
-                                <!-- 本地 IP 列表输入 -->
-                                <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,4,0,2">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsLogMultiIpMode}" Value="False">
-                                                    <Setter Property="Opacity" Value="0.45"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <DockPanel LastChildFill="True">
-                                        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,4,0">IP 列表：</TextBlock>
-                                        <TextBox Text="{Binding LogLocalIps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsEnabled="{Binding IsLogMultiIpMode}"
-                                                 HorizontalAlignment="Stretch" />
-                                    </DockPanel>
-                                    <TextBlock FontSize="10" Foreground="#999" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="280">逗号分隔，如：192.168.1.10,192.168.1.11</TextBlock>
-                                </StackPanel>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                                           Foreground="Gray" FontSize="11"
+                                           Text="按 Clients.log 前 N 个客户端；HTTPS 与威胁检测 TCP 通道并发发送" />
                             </Grid>
                         </StackPanel>
                     </Border>

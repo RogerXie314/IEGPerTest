@@ -23,7 +23,10 @@ namespace SimulatorLib.Persistence
 
         public int LogClientCount { get; set; } = 5;
         public int LogMessagesPerClient { get; set; } = 50;
-        public int LogMessagesPerSecondPerClient { get; set; } = 10;
+        /// <summary>HTTPS 短连接日志：每客户端每秒条数（平台规格 ≤100 EPS）</summary>
+        public int LogHttpsEps { get; set; } = 10;
+        /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
+        public int LogThreatEps { get; set; } = 100;
 
         public int RegConcurrency { get; set; } = 20;
         public int RegRetryIntervalSec { get; set; } = 30;
@@ -32,11 +35,6 @@ namespace SimulatorLib.Persistence
         public string WhitelistFilePath { get; set; } = string.Empty;
         public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;
-
-        public int LogConcurrency { get; set; } = 50;
-        public bool LogStressMode { get; set; } = false;
-        public bool LogMultiIpMode { get; set; } = false;
-        public string LogLocalIps { get; set; } = string.Empty;
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 

@@ -19,7 +19,7 @@ namespace SimulatorApp
         private void ShowTcpDiag_Click(object sender, RoutedEventArgs e)
         {
             var vm  = (ViewModels.MainViewModel)DataContext;
-            var win = new TcpDiagWindow(vm.IsLogMultiIpMode, vm.LogLocalIps) { Owner = this };
+            var win = new TcpDiagWindow() { Owner = this };
             win.ShowDialog();
         }
     }
