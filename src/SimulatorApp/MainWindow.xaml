@@ -354,9 +354,9 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" MinWidth="90" />
+                                    <ColumnDefinition Width="Auto" MinWidth="70" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" MinWidth="42" />
+                                    <ColumnDefinition Width="Auto" MinWidth="32" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -373,7 +373,7 @@
                                 </TextBlock>
                                 <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
                                 <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding LogHttpsClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" Margin="6,2,0,2" />
-                                <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0">每秒：</TextBlock>
+                                <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="4,0,0,0">每秒：</TextBlock>
                                 <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding LogHttpsEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
                                 <TextBlock Grid.Row="2" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">条</TextBlock>
 
@@ -384,7 +384,7 @@
                                 </TextBlock>
                                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
                                 <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding LogThreatClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" Margin="6,2,0,2" />
-                                <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0">每秒：</TextBlock>
+                                <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="4,0,0,0">每秒：</TextBlock>
                                 <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
                                 <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">条</TextBlock>
 
