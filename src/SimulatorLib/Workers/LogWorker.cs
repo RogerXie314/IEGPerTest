@@ -55,13 +55,11 @@ namespace SimulatorLib.Workers
         private int _httpsDebugCount = 0;
 
         // 失败 HTTPS 响应详情日志（不受 MaxDebugHttps 限制，单独写入 logsend-failures-https-*.log）
-        private const int MaxHttpsFail = 5000;
-        private int _httpsFailCount = 0;
+        // 按文件大小限制：单个失败日志文件最大 50 MB，超出后停止追加（防止磁盘撑爆）
+        private const long MaxFailLogBytes = 50L * 1024 * 1024; // 50 MB
 
         // 失败追踪：记录每个日志分类的失败次数，输出到 logsend-failures-YYYYMMDD.log
         private readonly ConcurrentDictionary<string, int> _failByCategory = new();
-        private int _failDebugCount = 0;
-        private const int MaxFailDebug = 500;
 
         public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null)
         {
@@ -598,17 +596,16 @@ namespace SimulatorLib.Workers
 
         /// <summary>
         /// 记录HTTPS失败响应详情（状态码+响应体），写入 logsend-failures-https-YYYYMMDD.log。
-        /// 不受 MaxDebugHttps 限制，最多写 MaxHttpsFail 条。
+        /// 不受 MaxDebugHttps 限制，按文件大小限制（最大 50 MB）。
         /// </summary>
         private void WriteHttpsFailureDetail(string category, string host, int port, string path, int statusCode, string respBody)
         {
-            var n = Interlocked.Increment(ref _httpsFailCount);
-            if (n > MaxHttpsFail) return;
             try
             {
                 var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
                 Directory.CreateDirectory(logDir);
                 var logPath = Path.Combine(logDir, $"logsend-failures-https-{DateTime.UtcNow:yyyyMMdd}.log");
+                if (File.Exists(logPath) && new FileInfo(logPath).Length >= MaxFailLogBytes) return;
                 var preview = respBody ?? string.Empty;
                 if (preview.Length > 500) preview = preview.Substring(0, 500);
                 preview = preview.Replace("\r", "\\r").Replace("\n", "\\n");
@@ -647,14 +644,12 @@ namespace SimulatorLib.Workers
         {
             _failByCategory.AddOrUpdate(category, 1, (_, v) => v + 1);
 
-            var n = Interlocked.Increment(ref _failDebugCount);
-            if (n > MaxFailDebug) return;
-
             try
             {
                 var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
                 Directory.CreateDirectory(logDir);
                 var logPath = Path.Combine(logDir, $"logsend-failures-{DateTime.UtcNow:yyyyMMdd}.log");
+                if (File.Exists(logPath) && new FileInfo(logPath).Length >= MaxFailLogBytes) return;
                 var line = $"{DateTime.UtcNow:o} FAIL category={category} reason={reason}";
                 File.AppendAllText(logPath, line + Environment.NewLine);
             }
