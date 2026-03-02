@@ -350,45 +350,45 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" MinWidth="90" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" MinWidth="42" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
                                 <!-- 共享：每客户端总条数 -->
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">每客户端总条数：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding LogMessagesPerClient, Mode=TwoWay}" Width="80" HorizontalAlignment="Left" Margin="6,2,0,2" />
 
                                 <!-- HTTPS 短连接通道 -->
-                                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                           FontWeight="SemiBold" FontSize="12" Foreground="#1976D2" Margin="0,10,0,4">
-                                    HTTPS 短连接
-                                    <Run FontSize="11" FontWeight="Normal" Foreground="#888">（平台规格 ≤100 EPS）</Run>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6"
+                                           FontWeight="SemiBold" FontSize="12" Foreground="#1976D2" Margin="0,10,0,3">
+                                    HTTPS 短连接<Run FontSize="11" FontWeight="Normal" Foreground="#888">（≤100 EPS）</Run>
                                 </TextBlock>
-                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">客户端个数：</TextBlock>
-                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="8,2,0,2">
-                                    <TextBox Text="{Binding LogHttpsClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" />
-                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="10,0,0,0">每秒：</TextBlock>
-                                    <TextBox Text="{Binding LogHttpsEps, Mode=TwoWay}" Width="50" Margin="4,0,0,0" HorizontalAlignment="Left" />
-                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="4,0,0,0">条/秒/客户端</TextBlock>
-                                </StackPanel>
+                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
+                                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding LogHttpsClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" Margin="6,2,0,2" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0">每秒：</TextBlock>
+                                <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding LogHttpsEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
+                                <TextBlock Grid.Row="2" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">条</TextBlock>
 
                                 <!-- 威胁检测 TCP 长连接通道 -->
-                                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-                                           FontWeight="SemiBold" FontSize="12" Foreground="#B8860B" Margin="0,10,0,4">
-                                    威胁检测 TCP 长连接
-                                    <Run FontSize="11" FontWeight="Normal" Foreground="#888">（平台规格 6000 EPS）</Run>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="6"
+                                           FontWeight="SemiBold" FontSize="12" Foreground="#B8860B" Margin="0,10,0,3">
+                                    威胁检测 TCP 长连接<Run FontSize="11" FontWeight="Normal" Foreground="#888">（6000 EPS）</Run>
                                 </TextBlock>
-                                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">客户端个数：</TextBlock>
-                                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="8,2,0,2">
-                                    <TextBox Text="{Binding LogThreatClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" />
-                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="10,0,0,0">每秒：</TextBlock>
-                                    <TextBox Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" Margin="4,0,0,0" HorizontalAlignment="Left" />
-                                    <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="4,0,0,0">条/秒/客户端</TextBlock>
-                                </StackPanel>
+                                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
+                                <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding LogThreatClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" Margin="6,2,0,2" />
+                                <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0">每秒：</TextBlock>
+                                <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
+                                <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">条</TextBlock>
 
-                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -398,7 +398,7 @@
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
                                            Foreground="Gray" FontSize="11"
                                            Text="按 Clients.log 前 N 个客户端；两通道并发独立发送" />
                             </Grid>
