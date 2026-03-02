@@ -630,11 +630,6 @@ namespace SimulatorApp.ViewModels
             if (RegRetryIntervalSec < 0) return (false, "轮间隔不能为负数");
             if (RegTimeoutMs < 500) return (false, "单次超时不能低于 500ms");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
-            if (LogHttpsClientCount < 0) return (false, "HTTPS 客户端数不能为负数");
-            if (LogHttpsEps < 0) return (false, "HTTPS EPS 不能为负数");
-            if (LogThreatClientCount < 0) return (false, "威胁检测客户端数不能为负数");
-            if (LogThreatEps < 0) return (false, "威胁检测 EPS 不能为负数");
-            if (LogHttpsClientCount == 0 && LogThreatClientCount == 0) return (false, "HTTPS 和威胁检测客户端数不能同时为 0");
             if (WhitelistClientCount <= 0) return (false, "WhitelistClientCount 必须大于 0");
             if (WhitelistConcurrency <= 0) return (false, "WhitelistConcurrency 必须大于 0");
             
@@ -734,7 +729,7 @@ namespace SimulatorApp.ViewModels
                 {
                     if ((httpsCats.Length == 0 || LogHttpsClientCount <= 0) && (threatCats.Length == 0 || LogThreatClientCount <= 0))
                     {
-                        RunOnUi(() => AppendStatus("⚠ 未选择日志分类或客户端数为0，无可发送的通道"));
+                        RunOnUi(() => AppendStatus("⚠ HTTPS 和威胁检测通道均未起用（客户端数均为0）"));
                         return;
                     }
 
