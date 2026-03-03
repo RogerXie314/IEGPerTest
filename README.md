@@ -198,6 +198,8 @@ artifacts/                   # 发布产物输出
 
 ## 📝 重要说明
 
+- **默认开发分支：`main`**（即原 `feature/v4-whitelist-policy-taskpanel`，所有新功能在此分支开发）
+- 如需在 GitHub 上设置 `main` 为默认分支：Settings → Branches → Default branch → 改为 `main`
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
 - 修改代码后需重新执行 `publish` 脚本更新 exe
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
