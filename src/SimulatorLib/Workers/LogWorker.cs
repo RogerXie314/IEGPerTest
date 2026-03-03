@@ -934,17 +934,28 @@ namespace SimulatorLib.Workers
             var hbStream = _streamRegistry?.TryGet(clientId);
             if (hbStream != null)
             {
+                // 加写锁：防止与 HeartbeatWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
+                bool lockAcq = await _streamRegistry!.AcquireWriteLockAsync(clientId, 2000, ct).ConfigureAwait(false);
                 try
                 {
-                    using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    cts2.CancelAfter(2000);
-                    await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
-                    await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
-                    return true;
+                    // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
+                    hbStream = _streamRegistry.TryGet(clientId);
+                    if (hbStream != null && lockAcq)
+                    {
+                        using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        cts2.CancelAfter(2000);
+                        await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
+                        await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
+                        return true;
+                    }
                 }
                 catch
                 {
                     // 心跳流已断开，降级走独立 TCP 连接路径
+                }
+                finally
+                {
+                    _streamRegistry?.ReleaseWriteLock(clientId, lockAcq);
                 }
             }
 

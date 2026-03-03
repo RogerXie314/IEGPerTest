@@ -230,8 +230,20 @@ namespace SimulatorLib.Workers
 
                             using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                             sendCts.CancelAfter(5000);
-                            await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
-                            await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
+
+                            // 加写锁：防止与 LogWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
+                            bool lockAcq = _streamRegistry != null
+                                ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, sendCts.Token).ConfigureAwait(false)
+                                : true; // 无 registry 时不需要额外锁
+                            try
+                            {
+                                await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
+                                await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                _streamRegistry?.ReleaseWriteLock(c.ClientId, lockAcq);
+                            }
 
                             lastResult[idx] = 1;
                             lastReason[idx] = Reason.Ok;
