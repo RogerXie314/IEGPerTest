@@ -30,9 +30,7 @@ namespace SimulatorLib.Workers
         private readonly string _host;
         private readonly int    _port;
 
-        // 策略结果接口中 CMDTYPE 固定值（接口文档：CMDTYPE=150）
-        private const int  CmdTypePolicy  = 150;
-        private const uint CmdHeartbeat   = 1;
+        private const uint CmdHeartbeat = 1;
 
         /// <summary>统计：收到策略数量</summary>
         public int ReceivedCount => _receivedCount;
@@ -102,7 +100,6 @@ namespace SimulatorLib.Workers
                 // 校验 PT Magic
                 if (data[offset] != (byte)'P' || data[offset + 1] != (byte)'T')
                 {
-                    // 非法数据，跳过 1 字节继续
                     offset++;
                     continue;
                 }
@@ -113,14 +110,28 @@ namespace SimulatorLib.Workers
 
                 if (data.Length - offset < totalLen) break; // 包不完整，等待更多数据
 
-                // 读取 cmdId (offset+32, uint32 big-endian)
-                uint cmdId = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset + 32, 4));
+                // 读取 PT 头中的 cmdId（用于判断是否是心跳：心跳 cmdId=1）
+                uint headerCmdId = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset + 32, 4));
 
-                if (cmdId != CmdHeartbeat && cmdId != 0)
+                if (headerCmdId != CmdHeartbeat && headerCmdId != 0)
                 {
-                    // 非心跳的下行命令 → 视为策略推送，通过 HTTPS 上报结果
-                    Interlocked.Increment(ref _receivedCount);
-                    await HandlePolicyCommandAsync(clientId, cmdId, ct).ConfigureAwait(false);
+                    // 非心跳下行命令 → 解包 PT 体，从 JSON 里读真实的 CMDTYPE/CMDID。
+                    // 原项目 WLHeartBeat::parseCmd 就是解析包体 JSON 中的 CMDTYPE/CMDID，
+                    // 再由 sendExecResult 将同样的 CMDTYPE/CMDID 回报给平台。
+                    try
+                    {
+                        var packet   = data.AsSpan(offset, totalLen).ToArray();
+                        var bodyJson = PtProtocol.Unpack(packet);
+                        var jsonText = Encoding.UTF8.GetString(bodyJson);
+
+                        // 平台下发 JSON 格式：[{"ComputerID":"...","CMDTYPE":150,"CMDID":247,...}]
+                        if (TryParsePolicyCmdIds(jsonText, out int cmdType, out int cmdId))
+                        {
+                            Interlocked.Increment(ref _receivedCount);
+                            await HandlePolicyCommandAsync(clientId, cmdType, cmdId, ct).ConfigureAwait(false);
+                        }
+                    }
+                    catch { /* 解包失败：跳过此包，不影响主流程 */ }
                 }
 
                 offset += totalLen;
@@ -132,9 +143,35 @@ namespace SimulatorLib.Workers
             if (remaining.Length > 0) buf.Write(remaining, 0, remaining.Length);
         }
 
+        /// <summary>
+        /// 从平台下发的策略 JSON 中解析 CMDTYPE 和 CMDID。
+        /// 格式：[{"ComputerID":"...","CMDTYPE":150,"CMDID":247,"CMDContent":{...}}]
+        /// </summary>
+        private static bool TryParsePolicyCmdIds(string json, out int cmdType, out int cmdId)
+        {
+            cmdType = 0;
+            cmdId   = 0;
+            try
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(json);
+                var arr = doc.RootElement;
+                if (arr.ValueKind != System.Text.Json.JsonValueKind.Array || arr.GetArrayLength() == 0)
+                    return false;
+                var first = arr[0];
+                if (!first.TryGetProperty("CMDTYPE", out var ct) ||
+                    !first.TryGetProperty("CMDID",   out var ci))
+                    return false;
+                cmdType = ct.GetInt32();
+                cmdId   = ci.GetInt32();
+                return true;
+            }
+            catch { return false; }
+        }
+
         private async Task HandlePolicyCommandAsync(
             string clientId,
-            uint cmdId,
+            int cmdType,
+            int cmdId,
             CancellationToken ct)
         {
             try
@@ -144,9 +181,10 @@ namespace SimulatorLib.Workers
                 lock (_rng) { delay = _rng.Next(500, 2001); }
                 await Task.Delay(delay, ct).ConfigureAwait(false);
 
-                // 通过 HTTPS POST 向平台 /USM/clientResult.do 上报执行结果
-                // 接口文档：CMDTYPE=150, CMDID=<策略命令字>, CMDVER=1, CMDContent.RESULT="SUC"
-                var resultJson = BuildPolicyResultJson(clientId, (int)cmdId, success: true);
+                // 通过 HTTPS POST 向平台 /USM/clientResult.do 上报执行结果。
+                // CMDTYPE 和 CMDID 直接使用平台下发包体 JSON 里的值，原样回报，
+                // 与原始 C++ sendExecResult(CMDID, nDealResult) 保持一致。
+                var resultJson = BuildPolicyResultJson(clientId, cmdType, cmdId, success: true);
                 var resultUrl  = new Uri($"https://{_host}:{_port}/USM/clientResult.do");
 
                 using var content = new StringContent(resultJson, Encoding.UTF8, "application/json");
@@ -161,19 +199,19 @@ namespace SimulatorLib.Workers
         }
 
         /// <summary>
-        /// 构建策略执行结果 JSON。
-        /// 接口文档示例（/USM/clientResult.do）：
-        /// [{"ComputerID":"FEFOEACD","CMDTYPE":150,"CMDID":247,"CMDVER":1,
+        /// 构建策略执行结果 JSON，CMDTYPE/CMDID 直接使用从平台下发包解析出的值，
+        /// 与原始 C++ Result_GetJsonByDealResult 的字段对齐：
+        /// [{"ComputerID":"...","CMDTYPE":150,"CMDID":247,"CMDVER":1,
         ///   "CMDContent":{"RESULT":"SUC","REASON":""}}]
         /// </summary>
-        private static string BuildPolicyResultJson(string clientId, int cmdId, bool success)
+        private static string BuildPolicyResultJson(string clientId, int cmdType, int cmdId, bool success)
         {
             var root = new JsonArray
             {
                 new JsonObject
                 {
                     ["ComputerID"] = clientId,
-                    ["CMDTYPE"]    = CmdTypePolicy,   // 150：策略类命令固定值
+                    ["CMDTYPE"]    = cmdType,
                     ["CMDID"]      = cmdId,
                     ["CMDVER"]     = 1,
                     ["CMDContent"] = new JsonObject
