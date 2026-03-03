@@ -524,6 +524,13 @@ namespace SimulatorApp.ViewModels
         {
             try
             {
+                // 防重入：相同任务只允许一个实例运行
+                if (_hbCts != null && !_hbCts.IsCancellationRequested)
+                {
+                    RunOnUi(() => AppendStatus("⚠ 心跳任务已在运行，请先点击【停止】再重新开始"));
+                    return;
+                }
+
                 var (ok, reason) = ValidateInputs();
                 if (!ok)
                 {
@@ -765,6 +772,13 @@ namespace SimulatorApp.ViewModels
         {
             try
             {
+                // 防重入：相同任务只允许一个实例运行
+                if (_logCts != null && !_logCts.IsCancellationRequested)
+                {
+                    RunOnUi(() => AppendStatus("⚠ 日志发送任务已在运行，请先点击【结束任务】再重新开始"));
+                    return;
+                }
+
                 var (ok, reason) = ValidateInputs();
                 if (!ok)
                 {
@@ -922,6 +936,13 @@ namespace SimulatorApp.ViewModels
         {
             try
             {
+                // 防重入：相同任务只允许一个实例运行
+                if (_uploadCts != null && !_uploadCts.IsCancellationRequested)
+                {
+                    RunOnUi(() => AppendStatus("⚠ 白名单上传任务已在运行，请先点击【结束任务】再重新开始"));
+                    return;
+                }
+
                 var (ok, reason) = ValidateInputs();
                 if (!ok)
                 {

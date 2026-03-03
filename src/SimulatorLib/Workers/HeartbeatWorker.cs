@@ -113,6 +113,9 @@ namespace SimulatorLib.Workers
                     NetworkStream? stream = null;
                     bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
                     long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
+                    // 重连保护时间戳：不早于此时间发起新连接，由 ServerClosed/SessionStale 写入，step 1 读取
+                    // 用 long[] 包装，使其可被 drain Task（不同线程）安全写入（Interlocked）
+                    var reconnectNotBefore = new long[1]; // [0] = Unix ms，0 表示无限制
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -125,6 +128,20 @@ namespace SimulatorLib.Workers
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             Interlocked.Exchange(ref lastReplyTimeMs[idx], 0L); // 重建连接时清零回包时间戳
+
+                            // 重连保护：等待 reconnectNotBefore 所规定的最早时刻，
+                            // 避免平台尚未清理旧 session 就收到同一 ComputerID 的新连接请求。
+                            {
+                                long nb  = Interlocked.Read(ref reconnectNotBefore[0]);
+                                long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                if (nb > now)
+                                {
+                                    int waitMs = (int)Math.Min(nb - now, 30_000);
+                                    try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                                Interlocked.Exchange(ref reconnectNotBefore[0], 0L); // 已等待，清零
+                            }
 
                             try
                             {
@@ -163,6 +180,9 @@ namespace SimulatorLib.Workers
                                             {
                                                 alive = false;
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
+                                                // 设置重连保护：等待一个心跳周期后才允许重连
+                                                Interlocked.Exchange(ref reconnectNotBefore[0],
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
                                             }
                                             // 只要收到任何数据就更新回包时间（ProcessStreamAsync 内部不更新，此处统一更新）
                                             Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -175,7 +195,15 @@ namespace SimulatorLib.Workers
                                             while (!ct.IsCancellationRequested)
                                             {
                                                 int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
-                                                if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; }
+                                                if (n == 0)
+                                                {
+                                                    alive = false;
+                                                    lastReason[capturedIdx] = Reason.ServerClosed;
+                                                    // 设置重连保护：等待一个心跳周期后才允许重连
+                                                    Interlocked.Exchange(ref reconnectNotBefore[0],
+                                                        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
+                                                    break;
+                                                }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
                                                     DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                             }
@@ -190,10 +218,9 @@ namespace SimulatorLib.Workers
                                 // ConnectAsync 3s 超时（CancelAfter 触发）
                                 lastResult[idx]  = 0;
                                 lastReason[idx]  = Reason.ConnectTimeout;
-                                // 抖动上限 min(intervalMs/2, 5000)：避免大量客户端同时重连冲击服务端，
-                                // 同时不超过 5s，保证断线后能快速恢复，不依赖 intervalMs 的长短。
+                                // 抖动：3s基础 + 随机量，避免多客户端同时重试冲击服务端
                                 int jitter;
-                                lock (_rng) { jitter = _rng.Next(0, Math.Min(intervalMs / 2, 5000)); }
+                                lock (_rng) { jitter = _rng.Next(3000, Math.Max(3001, Math.Min(intervalMs / 2, 10_000))); }
                                 try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -202,9 +229,9 @@ namespace SimulatorLib.Workers
                             {
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
-                                // 连接失败：随机抖动后重试（同上限 5s）
+                                // 连接失败：同上，3s基础抖动后重试
                                 int jitter;
-                                lock (_rng) { jitter = _rng.Next(0, Math.Min(intervalMs / 2, 5000)); }
+                                lock (_rng) { jitter = _rng.Next(3000, Math.Max(3001, Math.Min(intervalMs / 2, 10_000))); }
                                 try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -273,8 +300,11 @@ namespace SimulatorLib.Workers
                                 alive  = false;
                                 Interlocked.Exchange(ref connectedFlags[idx], 0);
                                 lastResult[idx] = 0;
-                                lastReason[idx] = Reason.SessionStale; // 平台静默踢人：区别于服务端主动关闭 FIN
-                                // 不需要额外延迟，连接阶段会自行带拖动
+                                lastReason[idx] = Reason.SessionStale;
+                                // 设置重连保护：再等一个心跳周期后才重连，
+                                // 给平台充足时间清理旧 session，避免重复建连请求
+                                Interlocked.Exchange(ref reconnectNotBefore[0],
+                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
                             }
                         }
                     }
