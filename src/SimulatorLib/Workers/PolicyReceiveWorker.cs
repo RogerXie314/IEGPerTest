@@ -1,6 +1,6 @@
 using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -13,33 +13,45 @@ namespace SimulatorLib.Workers
     /// <summary>
     /// 策略下发接收与回包处理。
     /// 平台通过已建立的 TCP 长连接（心跳连接）向客户端推送策略命令，
-    /// 客户端（本工具）须按协议回包，平台才显示"策略已生效"。
+    /// 客户端（本工具）须解析命令后，通过 HTTPS POST 向平台的
+    /// /USM/clientResult.do 上报执行结果，平台才会更新下发状态为"已发送/成功"。
     ///
     /// 使用方式：
     ///   在 HeartbeatWorker 的 drain 循环中调用 ProcessStreamAsync，
-    ///   它会持续读取并解析 PT 包，识别下行策略命令后自动回包。
+    ///   它会持续读取并解析 PT 包，识别下行策略命令后自动通过 HTTPS 上报结果。
     /// </summary>
     public class PolicyReceiveWorker
     {
         private static readonly Random _rng = new();
 
-        // 已知平台侧推送策略的 cmdId 范围（可按实际协议扩展）
-        // 0x65 = 101：策略下发（参考原始 C++ WLMainControl 推送命令字）
-        // 0x66 = 102：白名单下发
-        // 0x67 = 103：黑名单下发
-        // 0+   ：凡非心跳（cmdId!=1）的下行命令一律视为策略，均回包
-        private const uint CmdHeartbeat = 1;
+        // 共享 HttpClient（忽略证书：平台常用自签名证书）
+        private static readonly HttpClient _http = CreateHttpClient();
+
+        private readonly string _host;
+        private readonly int    _port;
+
+        // 策略结果接口中 CMDTYPE 固定值（接口文档：CMDTYPE=150）
+        private const int  CmdTypePolicy  = 150;
+        private const uint CmdHeartbeat   = 1;
 
         /// <summary>统计：收到策略数量</summary>
         public int ReceivedCount => _receivedCount;
         private int _receivedCount;
 
-        /// <summary>统计：已回包数量</summary>
+        /// <summary>统计：已回包数量（HTTPS POST 成功）</summary>
         public int RepliedCount => _repliedCount;
         private int _repliedCount;
 
+        /// <param name="host">平台 HTTPS 主机（与心跳 TCP 主机相同）</param>
+        /// <param name="port">平台 HTTPS 端口（通常 8441）</param>
+        public PolicyReceiveWorker(string host, int port)
+        {
+            _host = host;
+            _port = port;
+        }
+
         /// <summary>
-        /// 流式读取并处理 TCP 流上的下行 PT 包，遇到策略命令时自动回包。
+        /// 流式读取并处理 TCP 流上的下行 PT 包，遇到策略命令时通过 HTTPS 上报结果。
         /// 返回 false 表示连接已关闭（n==0），返回 true 表示因取消而退出。
         /// </summary>
         public async Task<bool> ProcessStreamAsync(
@@ -62,7 +74,7 @@ namespace SimulatorLib.Workers
                     accumulated.Write(buf, 0, n);
 
                     // 尝试从 accumulated 中解析完整的 PT 包
-                    await TryProcessPackets(accumulated, stream, clientId, deviceId, ct).ConfigureAwait(false);
+                    await TryProcessPackets(accumulated, clientId, ct).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException) { }
@@ -75,9 +87,7 @@ namespace SimulatorLib.Workers
 
         private async Task TryProcessPackets(
             System.IO.MemoryStream buf,
-            NetworkStream stream,
             string clientId,
-            uint deviceId,
             CancellationToken ct)
         {
             buf.Position = 0;
@@ -108,9 +118,9 @@ namespace SimulatorLib.Workers
 
                 if (cmdId != CmdHeartbeat && cmdId != 0)
                 {
-                    // 非心跳的下行命令 → 视为策略推送，需要回包
+                    // 非心跳的下行命令 → 视为策略推送，通过 HTTPS 上报结果
                     Interlocked.Increment(ref _receivedCount);
-                    await HandlePolicyCommandAsync(stream, clientId, deviceId, cmdId, ct).ConfigureAwait(false);
+                    await HandlePolicyCommandAsync(clientId, cmdId, ct).ConfigureAwait(false);
                 }
 
                 offset += totalLen;
@@ -123,9 +133,7 @@ namespace SimulatorLib.Workers
         }
 
         private async Task HandlePolicyCommandAsync(
-            NetworkStream stream,
             string clientId,
-            uint deviceId,
             uint cmdId,
             CancellationToken ct)
         {
@@ -136,36 +144,56 @@ namespace SimulatorLib.Workers
                 lock (_rng) { delay = _rng.Next(500, 2001); }
                 await Task.Delay(delay, ct).ConfigureAwait(false);
 
-                // 构建 Result 回包：告知平台策略已应用（dealResult=0 表示成功）
-                var resultPayload = BuildPolicyResultJson(clientId, cmdId, dealResult: 0);
-                var resultBytes   = Encoding.UTF8.GetBytes(resultPayload);
-                var packet        = PtProtocol.Pack(resultBytes, cmdId: cmdId, deviceId: deviceId);
+                // 通过 HTTPS POST 向平台 /USM/clientResult.do 上报执行结果
+                // 接口文档：CMDTYPE=150, CMDID=<策略命令字>, CMDVER=1, CMDContent.RESULT="SUC"
+                var resultJson = BuildPolicyResultJson(clientId, (int)cmdId, success: true);
+                var resultUrl  = new Uri($"https://{_host}:{_port}/USM/clientResult.do");
 
-                using var writeCts = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(ct);
-                writeCts.CancelAfter(5000);
-                await stream.WriteAsync(packet, 0, packet.Length, writeCts.Token).ConfigureAwait(false);
-                await stream.FlushAsync(writeCts.Token).ConfigureAwait(false);
+                using var content = new StringContent(resultJson, Encoding.UTF8, "application/json");
+                using var cts     = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(8000);
+                using var resp = await _http.PostAsync(resultUrl, content, cts.Token).ConfigureAwait(false);
 
-                Interlocked.Increment(ref _repliedCount);
+                if (resp.IsSuccessStatusCode)
+                    Interlocked.Increment(ref _repliedCount);
             }
             catch { /* 回包失败不影响主流程 */ }
         }
 
-        private static string BuildPolicyResultJson(string clientId, uint cmdId, int dealResult)
+        /// <summary>
+        /// 构建策略执行结果 JSON。
+        /// 接口文档示例（/USM/clientResult.do）：
+        /// [{"ComputerID":"FEFOEACD","CMDTYPE":150,"CMDID":247,"CMDVER":1,
+        ///   "CMDContent":{"RESULT":"SUC","REASON":""}}]
+        /// </summary>
+        private static string BuildPolicyResultJson(string clientId, int cmdId, bool success)
         {
-            // 参考 UsmRegistrationJsonBuilder.BuildClientResultJson 的结构
             var root = new JsonArray
             {
                 new JsonObject
                 {
                     ["ComputerID"] = clientId,
-                    ["CMDTYPE"]    = 0x01,
-                    ["CMDID"]      = (int)cmdId,
-                    ["DealResult"] = dealResult,
-                    ["Timestamp"]  = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    ["CMDTYPE"]    = CmdTypePolicy,   // 150：策略类命令固定值
+                    ["CMDID"]      = cmdId,
+                    ["CMDVER"]     = 1,
+                    ["CMDContent"] = new JsonObject
+                    {
+                        ["RESULT"] = success ? "SUC" : "FAIL",
+                        ["REASON"] = ""
+                    }
                 }
             };
             return root.ToJsonString() + "\n";
+        }
+
+        private static HttpClient CreateHttpClient()
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+            return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
         }
     }
 }

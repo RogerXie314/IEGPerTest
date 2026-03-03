@@ -427,8 +427,9 @@
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="150" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="200" MinHeight="100" />
+                    <RowDefinition Height="5" />
+                    <RowDefinition Height="*" MinHeight="80" />
                 </Grid.RowDefinitions>
 
                 <!-- 任务与状态：2×2 网格，节省纵向空间 -->
@@ -545,7 +546,7 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="120" />
+                            <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4">任务面板</TextBlock>
                         <DataGrid Grid.Row="1"
@@ -582,8 +583,14 @@
                     </Grid>
                 </Border>
 
+                <!-- 任务面板与日志区分隔线（可拖动调整高度） -->
+                <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch" Background="#D0D0D0"
+                              ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                              ShowsPreview="True" />
+
                 <!-- 日志区域 -->
-                <Border Grid.Row="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FFF" Margin="0,0,0,0">
+                <Border Grid.Row="3" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FFF" Margin="0,0,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

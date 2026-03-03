@@ -536,7 +536,7 @@ namespace SimulatorApp.ViewModels
                 _lastHbLogTime = DateTime.Now; // 启动时重置节流，避免连接建立期间的瞬态离线误报
                 var tcp = new TcpSender();
                 var udp = new UdpSender();
-                _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker() : null;
+                _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
                 var hb = new HeartbeatWorker(tcp, udp, _policyWorker);
                 var hbTaskRec = AddTaskRecord("心跳", RegCount, HbInterval / 1000);
                 RunOnUi(() => AppendStatus("开始心跳任务" +
