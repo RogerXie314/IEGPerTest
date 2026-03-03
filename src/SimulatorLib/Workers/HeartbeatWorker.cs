@@ -15,17 +15,18 @@ namespace SimulatorLib.Workers
 {
     /// <summary>
     /// 心跳 Worker：每个客户端独占一个 Task + TcpClient，无共享，无锁。
-    /// 实现逻辑与原始 C++ 完全对齐：
-    ///   - 长连接，写失败立即 Dispose，下轮重连（原始 CloseSocket  CreateSocket）
+    /// 实现逻辑与原始 C++ 完全对齐（参考 WLTcpConnect.cpp / WLHeartBeat.cpp）：
+    ///   - 长连接，写失败立即 Dispose，下轮重连（对应原始 CloseSocket → CreateSocket）
     ///   - 不依赖 Connected 属性（不可靠），不用 Poll（时序不稳）
     ///   - 开启 TCP KeepAlive，由 OS 自动探测网络层死连接
-    ///   - 重连时加随机抖动，避免大量连接同时断开后同时重连形成冲击波
+    ///   - 连接超时 2s（对应原始 stcTime.tv_sec = 2）
+    ///   - 连接失败/超时：等待一个心跳周期 intervalMs 后重试（原始靠定时器间隔天然节流）
+    ///   - 无额外 jitter / reconnectNotBefore 机制——心跳间隔本身就是重连节奏
     /// </summary>
     public class HeartbeatWorker
     {
         private readonly IUdpSender? _udpSender;
         private readonly PolicyReceiveWorker? _policyWorker;
-        private static readonly Random _rng = new();
 
         public HeartbeatWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, PolicyReceiveWorker? policyWorker = null)
         {
@@ -113,9 +114,6 @@ namespace SimulatorLib.Workers
                     NetworkStream? stream = null;
                     bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
                     long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
-                    // 重连保护时间戳：不早于此时间发起新连接，由 ServerClosed/SessionStale 写入，step 1 读取
-                    // 用 long[] 包装，使其可被 drain Task（不同线程）安全写入（Interlocked）
-                    var reconnectNotBefore = new long[1]; // [0] = Unix ms，0 表示无限制
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -129,20 +127,6 @@ namespace SimulatorLib.Workers
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             Interlocked.Exchange(ref lastReplyTimeMs[idx], 0L); // 重建连接时清零回包时间戳
 
-                            // 重连保护：等待 reconnectNotBefore 所规定的最早时刻，
-                            // 避免平台尚未清理旧 session 就收到同一 ComputerID 的新连接请求。
-                            {
-                                long nb  = Interlocked.Read(ref reconnectNotBefore[0]);
-                                long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                                if (nb > now)
-                                {
-                                    int waitMs = (int)Math.Min(nb - now, 30_000);
-                                    try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { return; }
-                                }
-                                Interlocked.Exchange(ref reconnectNotBefore[0], 0L); // 已等待，清零
-                            }
-
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
@@ -150,7 +134,7 @@ namespace SimulatorLib.Workers
                                 newTcp.Client.SetSocketOption(
                                     SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                                 using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                connCts.CancelAfter(3000);
+                                connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
                                 await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
 
                                 tcp    = newTcp;
@@ -180,9 +164,6 @@ namespace SimulatorLib.Workers
                                             {
                                                 alive = false;
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
-                                                // 设置重连保护：等待一个心跳周期后才允许重连
-                                                Interlocked.Exchange(ref reconnectNotBefore[0],
-                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
                                             }
                                             // 只要收到任何数据就更新回包时间（ProcessStreamAsync 内部不更新，此处统一更新）
                                             Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -199,9 +180,6 @@ namespace SimulatorLib.Workers
                                                 {
                                                     alive = false;
                                                     lastReason[capturedIdx] = Reason.ServerClosed;
-                                                    // 设置重连保护：等待一个心跳周期后才允许重连
-                                                    Interlocked.Exchange(ref reconnectNotBefore[0],
-                                                        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
                                                     break;
                                                 }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -215,24 +193,20 @@ namespace SimulatorLib.Workers
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                             catch (OperationCanceledException)
                             {
-                                // ConnectAsync 3s 超时（CancelAfter 触发）
+                                // ConnectAsync 2s 超时（CancelAfter 触发）
+                                // 对应原始：connect timeout → 下一个心跳周期重试，节奏由 intervalMs 控制
                                 lastResult[idx]  = 0;
                                 lastReason[idx]  = Reason.ConnectTimeout;
-                                // 抖动：3s基础 + 随机量，避免多客户端同时重试冲击服务端
-                                int jitter;
-                                lock (_rng) { jitter = _rng.Next(3000, Math.Max(3001, Math.Min(intervalMs / 2, 10_000))); }
-                                try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
+                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
                             }
                             catch
                             {
+                                // 连接被拒绝 / 网络不通：等一个心跳周期后重试（与原始行为一致）
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
-                                // 连接失败：同上，3s基础抖动后重试
-                                int jitter;
-                                lock (_rng) { jitter = _rng.Next(3000, Math.Max(3001, Math.Min(intervalMs / 2, 10_000))); }
-                                try { await Task.Delay(jitter, ct).ConfigureAwait(false); }
+                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
                             }
@@ -301,10 +275,6 @@ namespace SimulatorLib.Workers
                                 Interlocked.Exchange(ref connectedFlags[idx], 0);
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.SessionStale;
-                                // 设置重连保护：再等一个心跳周期后才重连，
-                                // 给平台充足时间清理旧 session，避免重复建连请求
-                                Interlocked.Exchange(ref reconnectNotBefore[0],
-                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Math.Max(5000L, intervalMs));
                             }
                         }
                     }
