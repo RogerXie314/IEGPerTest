@@ -796,6 +796,11 @@ namespace SimulatorApp.ViewModels
                 var totalHttps  = (httpsCats.Length  > 0 && LogHttpsClientCount  > 0) ? (long)LogHttpsClientCount  * LogMessagesPerClient : 0;
                 var totalThreat = (threatCats.Length > 0 && LogThreatClientCount > 0) ? (long)LogThreatClientCount * LogMessagesPerClient : 0;
 
+                // 创建任务面板记录（客户数取两个通道之和，间隔=0 表示一次性任务）
+                int logDisplayClients = (httpsCats.Length  > 0 && LogHttpsClientCount  > 0 ? LogHttpsClientCount  : 0)
+                                      + (threatCats.Length > 0 && LogThreatClientCount > 0 ? LogThreatClientCount : 0);
+                var logTaskRec = AddTaskRecord("日志发送", logDisplayClients, 0);
+
                 RunOnUi(() =>
                 {
                     LogTotalMessages = (int)(totalHttps + totalThreat);
@@ -814,10 +819,11 @@ namespace SimulatorApp.ViewModels
                     if ((httpsCats.Length == 0 || LogHttpsClientCount <= 0) && (threatCats.Length == 0 || LogThreatClientCount <= 0))
                     {
                         RunOnUi(() => AppendStatus("⚠ HTTPS 和威胁检测通道均未起用（客户端数均为0）"));
+                        logTaskRec.MarkStopped();
                         return;
                     }
 
-                    // 两个通道各自维护 success/fail 计数，合并上报 UI
+                    // 两个通道各自维护 success/fail 计数，合并上报 UI 和任务面板
                     int httpsOk = 0, httpsFail = 0;
                     int threatOk = 0, threatFail = 0;
 
@@ -827,6 +833,8 @@ namespace SimulatorApp.ViewModels
                         {
                             LogSuccess = httpsOk  + threatOk;
                             LogFailed  = httpsFail + threatFail;
+                            logTaskRec.SuccessCount = LogSuccess;
+                            logTaskRec.FailCount    = LogFailed;
                         });
                     }
 
@@ -888,8 +896,14 @@ namespace SimulatorApp.ViewModels
                             progress:                   threatProgress));
                     }
 
-                    await Task.WhenAll(workerTasks).ConfigureAwait(false);
-
+                    try
+                    {
+                        await Task.WhenAll(workerTasks).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        logTaskRec.MarkStopped();
+                    }
                     RunOnUi(() =>
                         AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}"));
                 });
