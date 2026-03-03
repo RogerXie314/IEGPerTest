@@ -558,13 +558,16 @@ namespace SimulatorApp.ViewModels
                             // 仅在出现异常时输出日志（全部正常则静默）；同一异常状态下每 30s 最多一条，避免刷屏。
                             {
                                 int offline = s.Total - s.Connected;
-                                int silentDrop = s.Connected - s.ServerReplied; // TCP在线但平台无回包
-                                bool hasSilentDrop = silentDrop > 0 && s.ServerReplied > 0;
-                                bool hasOffline    = offline > 0;
-                                bool hasReasons    = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
+                                // 注意：不再单独判断 silentDrop（TCP在线但无回包）。
+                                // 原因：silentDrop = Connected - ServerReplied，启动时多客户端连接时差、
+                                // 或 90s 窗口边界时，必然有客户端暂时无回包，造成大量误报。
+                                // session stale 检测（HeartbeatWorker 内）已自动处理平台静默踢人并重连，
+                                // 重连时 RsnSessionStale 会短暂出现，由下面的 hasReasons 体现。
+                                bool hasOffline = offline > 0;
+                                bool hasReasons = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
                                                      s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
                                                      s.RsnWriteFailed  > 0;
-                                bool hasIssue = hasOffline || hasSilentDrop || hasReasons;
+                                bool hasIssue = hasOffline || hasReasons;
 
                                 if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
                                 {
@@ -578,12 +581,9 @@ namespace SimulatorApp.ViewModels
                                     string reasonStr = reasons.Count > 0
                                         ? "  离线原因: " + string.Join(", ", reasons)
                                         : string.Empty;
-                                    string silentStr = hasSilentDrop
-                                        ? $"  ⚠ TCP在线但无回包:{silentDrop}(平台静默踢出/session超时)"
-                                        : string.Empty;
                                     AppendStatus(
                                         $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
-                                        silentStr + reasonStr);
+                                        reasonStr);
                                 }
                             }
                         });
