@@ -141,6 +141,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="LabelCol" />
@@ -168,7 +169,12 @@
                                 <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
                                 <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding RegRetryIntervalSec, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Button Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Width="120" Margin="0,8,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
+                                <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center">客户端版本：</TextBlock>
+                                <ComboBox Grid.Row="7" Grid.Column="1" Width="170" HorizontalAlignment="Left" Margin="8,2,0,2"
+                                          ItemsSource="{Binding ClientVersionList}"
+                                          SelectedItem="{Binding RegClientVersion, Mode=TwoWay}" />
+
+                                <Button Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Width="120" Margin="0,8,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -263,6 +269,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -272,7 +279,12 @@
                                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">间隔 (ms)：</TextBlock>
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding HbInterval, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">策略接收：</TextBlock>
+                                <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding EnablePolicyReceive, Mode=TwoWay}"
+                                          VerticalAlignment="Center" Margin="8,3,0,3"
+                                          ToolTip="开启后心跳连接中的策略下发将被解析并自动回包" />
+
+                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -305,6 +317,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -317,7 +330,11 @@
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">并发度：</TextBlock>
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding WhitelistCycleIntervalSec, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
+                                         ToolTip="每轮随机上传后等待的秒数（默认900=15分钟）" />
+
+                                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -410,6 +427,7 @@
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="150" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
@@ -481,6 +499,12 @@
                                     <TextBlock Text=" / " Margin="2,0" />
                                     <TextBlock Text="{Binding HbUdpFail}" Foreground="Red" />
                                 </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Width="90" FontWeight="SemiBold" Foreground="#7B68EE">策略收到/回包：</TextBlock>
+                                    <TextBlock Text="{Binding PolicyReceived}" Foreground="#7B68EE" />
+                                    <TextBlock Text=" / " Margin="2,0" Foreground="Gray"/>
+                                    <TextBlock Text="{Binding PolicyReplied}" Foreground="MediumPurple" />
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- 日志发送统计 -->
@@ -516,8 +540,50 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 任务面板 DataGrid -->
+                <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="8" Background="#F7F7FF" Margin="0,0,0,6">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="120" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4">任务面板</TextBlock>
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding TaskRecords}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserSortColumns="True"
+                                  RowHeight="24"
+                                  FontSize="12"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID"         Binding="{Binding Id}"          Width="36" />
+                                <DataGridTextColumn Header="任务类型"   Binding="{Binding TaskType}"     Width="80" />
+                                <DataGridTextColumn Header="开始时间"   Binding="{Binding StartTime, StringFormat=HH:mm:ss}" Width="70" />
+                                <DataGridTextColumn Header="客户端数"   Binding="{Binding ClientCount}"  Width="68" />
+                                <DataGridTextColumn Header="间隔"       Binding="{Binding IntervalText}" Width="56" />
+                                <DataGridTextColumn Header="状态"       Binding="{Binding StatusText}"   Width="56">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{Binding StatusColor}" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="成功"       Binding="{Binding SuccessCount}" Width="48" />
+                                <DataGridTextColumn Header="失败"       Binding="{Binding FailCount}"    Width="48" />
+                                <DataGridTextColumn Header="耗时"       Binding="{Binding DurationText}" Width="60" />
+                                <DataGridTextColumn Header="详情"       Binding="{Binding Detail}"       Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
                 <!-- 日志区域 -->
-                <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FFF" Margin="0,0,0,0">
+                <Border Grid.Row="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FFF" Margin="0,0,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

@@ -24,11 +24,13 @@ namespace SimulatorLib.Workers
     public class HeartbeatWorker
     {
         private readonly IUdpSender? _udpSender;
+        private readonly PolicyReceiveWorker? _policyWorker;
         private static readonly Random _rng = new();
 
-        public HeartbeatWorker(INetworkSender tcpSender, IUdpSender? udpSender = null)
+        public HeartbeatWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, PolicyReceiveWorker? policyWorker = null)
         {
-            _udpSender = udpSender;
+            _udpSender   = udpSender;
+            _policyWorker = policyWorker;
         }
 
         /// <summary>
@@ -140,23 +142,43 @@ namespace SimulatorLib.Workers
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
 
-                                // 后台 drain：读取并丢弃服务端推送（对应原始 C++ HeartBeatRecvThread）。
-                                // 当服务端主动关闭连接时（n==0），置 alive=false，
-                                // 主循环下一轮检测到后会重连。
+                                // 后台 drain：读取服务端推送（对应原始 C++ HeartBeatRecvThread）。
+                                // 若配置了 PolicyReceiveWorker，则解析下行命令并回包；
+                                // 否则仅丢弃数据并记录回包时间戳。
                                 var drainStream  = stream;
                                 var capturedIdx  = idx;
+                                var capturedC    = c;
+                                var capturedPolicyWorker = _policyWorker;
                                 _ = Task.Run(async () =>
                                 {
-                                    var buf = new byte[4096];
                                     try
                                     {
-                                        while (!ct.IsCancellationRequested)
+                                        if (capturedPolicyWorker != null)
                                         {
-                                            int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
-                                            if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; } // 服务端 FIN
-                                            // n > 0：服务端有数据返回。记录回包时间戳，统计时以滚动窗口判断是否连续在回包。
+                                            // 带策略解析的接收模式：ProcessStreamAsync 内部会记录回包时间戳
+                                            bool serverAlive = await capturedPolicyWorker.ProcessStreamAsync(
+                                                drainStream, capturedC.ClientId, capturedC.DeviceId, ct)
+                                                .ConfigureAwait(false);
+                                            if (!serverAlive)
+                                            {
+                                                alive = false;
+                                                lastReason[capturedIdx] = Reason.ServerClosed;
+                                            }
+                                            // 只要收到任何数据就更新回包时间（ProcessStreamAsync 内部不更新，此处统一更新）
                                             Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
                                                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        }
+                                        else
+                                        {
+                                            // 原始 drain 模式：仅读取并丢弃，记录时间戳
+                                            var buf = new byte[4096];
+                                            while (!ct.IsCancellationRequested)
+                                            {
+                                                int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
+                                                if (n == 0) { alive = false; lastReason[capturedIdx] = Reason.ServerClosed; break; }
+                                                Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                            }
                                         }
                                     }
                                     catch { alive = false; }

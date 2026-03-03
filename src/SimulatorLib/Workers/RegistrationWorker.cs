@@ -32,6 +32,7 @@ namespace SimulatorLib.Workers
             string startIp = "192.168.0.1", string host = "localhost", int port = 8441,
             int concurrency = 20, int retry = 3, int timeoutMs = 3000,
             int retryIntervalMs = 30000,
+            string clientVersion = "V300R011C01B030",
             IProgress<RegistrationRoundProgress>? roundProgress = null,
             CancellationToken ct = default)
         {
@@ -89,7 +90,7 @@ namespace SimulatorLib.Workers
                                 proxying: 0,
                                 licenseRecycle: false,
                                 clientType: 0,
-                                clientVersion: "V300R011C01B030");
+                                clientVersion: clientVersion);
 
                             bool ok = false;
                             uint deviceId = 0;

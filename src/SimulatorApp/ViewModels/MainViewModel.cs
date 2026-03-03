@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using SimulatorLib.Models;
 using SimulatorLib.Network;
 using SimulatorLib.Workers;
 using SimulatorLib.Persistence;
@@ -84,10 +86,23 @@ namespace SimulatorApp.ViewModels
         private string _whitelistFilePath = string.Empty;
         private int _whitelistClientCount = 5;
         private int _whitelistConcurrency = 4;
+        private int _whitelistCycleIntervalSec = 900; // 15分钟
         private int _uploadTotal;
         private int _uploadSuccess;
         private int _uploadFailed;
         private string _statusLog = string.Empty;
+
+        // 客户端版本（注册时影响平台功能可用性）
+        private string _regClientVersion = "V300R011C01B030";
+
+        // 策略下发接收统计
+        private int _policyReceived;
+        private int _policyReplied;
+        private PolicyReceiveWorker? _policyWorker;
+        private bool _enablePolicyReceive = true;
+
+        // 任务面板
+        public ObservableCollection<TaskRecord> TaskRecords { get; } = new();
         private int _hbTotal;
         private int _hbConnected;
         private int _hbTcpOk;
@@ -190,9 +205,32 @@ namespace SimulatorApp.ViewModels
         public string WhitelistFilePath { get => _whitelistFilePath; set { _whitelistFilePath = value; OnProp(); } }
         public int WhitelistClientCount { get => _whitelistClientCount; set { _whitelistClientCount = value; OnProp(); } }
         public int WhitelistConcurrency { get => _whitelistConcurrency; set { _whitelistConcurrency = value; OnProp(); } }
+        public int WhitelistCycleIntervalSec { get => _whitelistCycleIntervalSec; set { _whitelistCycleIntervalSec = value; OnProp(); } }
         public int UploadTotal { get => _uploadTotal; set { _uploadTotal = value; OnProp(); } }
         public int UploadSuccess { get => _uploadSuccess; set { _uploadSuccess = value; OnProp(); } }
         public int UploadFailed { get => _uploadFailed; set { _uploadFailed = value; OnProp(); } }
+
+        // 注册版本
+        public string RegClientVersion
+        {
+            get => _regClientVersion;
+            set { _regClientVersion = value; OnProp(); }
+        }
+        /// <summary>注册版本下拉列表（用于 ComboBox）</summary>
+        public IReadOnlyList<string> ClientVersionList { get; } = new[]
+        {
+            "V300R011C01B030",  // 新版（当前）
+            "V300R006C02B090"   // 老版（支持白名单上传）
+        };
+
+        // 策略接收
+        public bool EnablePolicyReceive
+        {
+            get => _enablePolicyReceive;
+            set { _enablePolicyReceive = value; OnProp(); }
+        }
+        public int PolicyReceived { get => _policyReceived; set { _policyReceived = value; OnProp(); } }
+        public int PolicyReplied  { get => _policyReplied;  set { _policyReplied  = value; OnProp(); } }
 
         public string StatusLog { get => _statusLog; set { _statusLog = value; OnProp(); } }
 
@@ -237,6 +275,14 @@ namespace SimulatorApp.ViewModels
             StartWhitelistUploadCommand = new RelayCommand(async _ => await StartWhitelistUploadAsync());
             StopWhitelistUploadCommand = new RelayCommand(_ => StopWhitelistUpload());
             _ = LoadConfigAsync();
+        }
+
+        /// <summary>向任务面板追加一条记录（线程安全，自动切换到 UI 线程）。</summary>
+        private TaskRecord AddTaskRecord(string type, int clientCount, int intervalSec = 0)
+        {
+            var r = new TaskRecord(type, clientCount, intervalSec);
+            RunOnUi(() => TaskRecords.Add(r));
+            return r;
         }
 
         private void OnProp([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
@@ -427,6 +473,7 @@ namespace SimulatorApp.ViewModels
                     startIp: RegStartIp, host: PlatformHost, port: PlatformPort,
                     concurrency: RegConcurrency, retry: 3, timeoutMs: RegTimeoutMs,
                     retryIntervalMs: RegRetryIntervalSec * 1000,
+                    clientVersion: RegClientVersion,
                     roundProgress: new Progress<SimulatorLib.Workers.RegistrationRoundProgress>(p =>
                     {
                         RunOnUi(() =>
@@ -489,8 +536,11 @@ namespace SimulatorApp.ViewModels
                 _lastHbLogTime = DateTime.Now; // 启动时重置节流，避免连接建立期间的瞬态离线误报
                 var tcp = new TcpSender();
                 var udp = new UdpSender();
-                var hb = new HeartbeatWorker(tcp, udp);
-                RunOnUi(() => AppendStatus("开始心跳任务..."));
+                _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker() : null;
+                var hb = new HeartbeatWorker(tcp, udp, _policyWorker);
+                var hbTaskRec = AddTaskRecord("心跳", RegCount, HbInterval / 1000);
+                RunOnUi(() => AppendStatus("开始心跳任务" +
+                    (EnablePolicyReceive ? "（策略接收已开启）" : string.Empty) + "..."));
                 _ = Task.Run(async () =>
                 {
                     var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
@@ -539,7 +589,27 @@ namespace SimulatorApp.ViewModels
                         });
                     });
                     await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
-                    // 注意：心跳是持续运行的，不需要记录“完成”日志
+                    // 心跳结束（用户停止）
+                    hbTaskRec.MarkStopped();
+                });
+                // 定时将策略接收统计同步到 UI
+                _ = Task.Run(async () =>
+                {
+                    while (_hbCts != null && !_hbCts.IsCancellationRequested)
+                    {
+                        if (_policyWorker != null)
+                        {
+                            RunOnUi(() =>
+                            {
+                                PolicyReceived = _policyWorker.ReceivedCount;
+                                PolicyReplied  = _policyWorker.RepliedCount;
+                                if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
+                                    hbTaskRec.Detail = $"策略收到:{PolicyReceived} 已回包:{PolicyReplied}";
+                            });
+                        }
+                        try { await Task.Delay(2000, _hbCts.Token).ConfigureAwait(false); }
+                        catch { break; }
+                    }
                 });
             }
             catch (Exception ex)
@@ -866,42 +936,66 @@ namespace SimulatorApp.ViewModels
                 }
 
                 await SaveConfigAsync().ConfigureAwait(false);
+
+                // 取消上一次任务（重新 AddTask = 重置已上传集合）
+                _uploadCts?.Cancel();
                 _uploadCts = new CancellationTokenSource();
-                var tcp = new TcpSender();
+                var tcp    = new TcpSender();
                 var worker = new WhitelistUploadWorker(tcp);
+
+                // 创建任务面板记录
+                var taskRec = AddTaskRecord("白名单上传", WhitelistClientCount, WhitelistCycleIntervalSec);
 
                 RunOnUi(() =>
                 {
                     UploadTotal = 0;
                     UploadSuccess = 0;
                     UploadFailed = 0;
-                    AppendStatus($"开始白名单上传：文件={System.IO.Path.GetFileName(WhitelistFilePath)} 客户端数={WhitelistClientCount} 并发={WhitelistConcurrency}");
+                    AppendStatus($"开始白名单上传（随机轮转）：文件={System.IO.Path.GetFileName(WhitelistFilePath)}" +
+                                 $" 每轮客户端数={WhitelistClientCount} 并发={WhitelistConcurrency}" +
+                                 $" 轮间隔={WhitelistCycleIntervalSec}s");
                 });
 
                 _ = Task.Run(async () =>
                 {
-                    var progress = new Progress<SimulatorLib.Workers.UploadStats>(s =>
+                    try
                     {
-                        RunOnUi(() =>
+                        // 订阅 TaskRecord 属性变化，同步更新 UI 统计数值
+                        taskRec.PropertyChanged += (_, e) =>
                         {
-                            UploadTotal = s.Total;
-                            UploadSuccess = s.Success;
-                            UploadFailed = s.Failed;
-                            // 只更新状态数值，不记录日志（避免频繁滚动）
-                        });
-                    });
+                            if (e.PropertyName == nameof(TaskRecord.SuccessCount) ||
+                                e.PropertyName == nameof(TaskRecord.FailCount))
+                            {
+                                RunOnUi(() =>
+                                {
+                                    UploadSuccess = taskRec.SuccessCount;
+                                    UploadFailed  = taskRec.FailCount;
+                                    UploadTotal   = taskRec.SuccessCount + taskRec.FailCount;
+                                });
+                            }
+                            if (e.PropertyName == nameof(TaskRecord.Detail))
+                                RunOnUi(() => AppendStatus("[白名单] " + taskRec.Detail));
+                        };
 
-                    await worker.StartAsync(
-                        filePath: WhitelistFilePath,
-                        clientCount: WhitelistClientCount,
-                        platformHost: PlatformHost,
-                        platformPort: PlatformPort,
-                        concurrency: WhitelistConcurrency,
-                        ct: _uploadCts.Token,
-                        progress: progress).ConfigureAwait(false);
-                    
-                    // 任务完成后记录最终结果
-                    RunOnUi(() => AppendStatus($"白名单上传完成: 总数={UploadTotal} 成功={UploadSuccess} 失败={UploadFailed}"));
+                        await worker.RunRotatingAsync(
+                            filePath:        WhitelistFilePath,
+                            clientCount:     WhitelistClientCount,
+                            platformHost:    PlatformHost,
+                            platformPort:    PlatformPort,
+                            concurrency:     WhitelistConcurrency,
+                            cycleIntervalMs: WhitelistCycleIntervalSec * 1000,
+                            record:          taskRec,
+                            ct:              _uploadCts.Token).ConfigureAwait(false);
+
+                        RunOnUi(() => AppendStatus(
+                            $"白名单上传结束: 成功={taskRec.SuccessCount} 失败={taskRec.FailCount} 状态={taskRec.StatusText}"));
+                    }
+                    catch (Exception ex)
+                    {
+                        taskRec.Detail = "异常: " + ex.Message;
+                        taskRec.Status = SimulatorLib.Models.TaskStatus.Error;
+                        RunOnUi(() => AppendStatus("白名单上传异常: " + ex.Message));
+                    }
                 });
             }
             catch (Exception ex)

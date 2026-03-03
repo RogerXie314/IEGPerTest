@@ -3,7 +3,7 @@ using System.Net;
 
 namespace SimulatorLib.Models
 {
-    public enum TaskStatus { Running, Completed, Failed, Stopped }
+    public enum TaskStatus { Running, Completed, Failed, Stopped, Error }
 
     public class TaskModel
     {
