@@ -156,18 +156,18 @@ namespace SimulatorLib.Workers
                                     {
                                         if (capturedPolicyWorker != null)
                                         {
-                                            // 带策略解析的接收模式：ProcessStreamAsync 内部会记录回包时间戳
+                                            // 带策略解析的接收模式：每次 ReadAsync 收到数据时，通过回调实时更新回包时间戳
                                             bool serverAlive = await capturedPolicyWorker.ProcessStreamAsync(
-                                                drainStream, capturedC.ClientId, capturedC.DeviceId, ct)
+                                                drainStream, capturedC.ClientId, capturedC.DeviceId, ct,
+                                                onDataReceived: () => Interlocked.Exchange(
+                                                    ref lastReplyTimeMs[capturedIdx],
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()))
                                                 .ConfigureAwait(false);
                                             if (!serverAlive)
                                             {
                                                 alive = false;
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
                                             }
-                                            // 只要收到任何数据就更新回包时间（ProcessStreamAsync 内部不更新，此处统一更新）
-                                            Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
-                                                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                         }
                                         else
                                         {

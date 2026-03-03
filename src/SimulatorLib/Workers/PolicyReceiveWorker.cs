@@ -52,11 +52,16 @@ namespace SimulatorLib.Workers
         /// 流式读取并处理 TCP 流上的下行 PT 包，遇到策略命令时通过 HTTPS 上报结果。
         /// 返回 false 表示连接已关闭（n==0），返回 true 表示因取消而退出。
         /// </summary>
+        /// <param name="onDataReceived">
+        /// 每次 ReadAsync 成功读到数据时触发的回调（可为 null）。
+        /// 调用方（HeartbeatWorker）用此更新 lastReplyTimeMs，以便准确统计平台回包数。
+        /// </param>
         public async Task<bool> ProcessStreamAsync(
             NetworkStream stream,
             string clientId,
             uint deviceId,
-            CancellationToken ct)
+            CancellationToken ct,
+            Action? onDataReceived = null)
         {
             // 用于累积不完整 TCP 片段的缓冲区
             var buf = new byte[65536];
@@ -68,6 +73,9 @@ namespace SimulatorLib.Workers
                 {
                     int n = await stream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
                     if (n == 0) return false; // 服务端 FIN
+
+                    // 每次收到数据立即通知调用方（用于更新回包时间戳，保证统计准确）
+                    onDataReceived?.Invoke();
 
                     accumulated.Write(buf, 0, n);
 
