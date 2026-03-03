@@ -99,6 +99,7 @@ namespace SimulatorApp.ViewModels
         private int _policyReceived;
         private int _policyReplied;
         private PolicyReceiveWorker? _policyWorker;
+        private HeartbeatStreamRegistry? _hbStreamRegistry;   // 共享心跳流注册表
         private bool _enablePolicyReceive = true;
 
         // 任务面板
@@ -544,7 +545,8 @@ namespace SimulatorApp.ViewModels
                 var tcp = new TcpSender();
                 var udp = new UdpSender();
                 _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
-                var hb = new HeartbeatWorker(tcp, udp, _policyWorker);
+                _hbStreamRegistry = new HeartbeatStreamRegistry();
+                var hb = new HeartbeatWorker(tcp, udp, _policyWorker, _hbStreamRegistry);
                 var hbTaskRec = AddTaskRecord("心跳", RegCount, HbInterval / 1000);
                 RunOnUi(() => AppendStatus("开始心跳任务" +
                     (EnablePolicyReceive ? "（策略接收已开启）" : string.Empty) + "..."));
@@ -844,7 +846,7 @@ namespace SimulatorApp.ViewModels
                     // 客户端数=0 表示禁用此通道
                     if (httpsCats.Length > 0 && LogHttpsClientCount > 0)
                     {
-                        var httpsWorker = new LogWorker(new TcpSender(), new UdpSender());
+                        var httpsWorker = new LogWorker(new TcpSender(), new UdpSender(), _hbStreamRegistry);
                         var httpsProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
                         {
                             System.Threading.Interlocked.Exchange(ref httpsOk,   s.Success);
@@ -872,7 +874,7 @@ namespace SimulatorApp.ViewModels
                     // 客户端数=0 表示禁用此通道
                     if (threatCats.Length > 0 && LogThreatClientCount > 0)
                     {
-                        var threatWorker = new LogWorker(new TcpSender(), new UdpSender());
+                        var threatWorker = new LogWorker(new TcpSender(), new UdpSender(), _hbStreamRegistry);
                         var threatProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
                         {
                             System.Threading.Interlocked.Exchange(ref threatOk,   s.Success);

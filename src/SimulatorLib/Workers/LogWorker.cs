@@ -61,10 +61,14 @@ namespace SimulatorLib.Workers
         // 失败追踪：记录每个日志分类的失败次数，输出到 logsend-failures-YYYYMMDD.log
         private readonly ConcurrentDictionary<string, int> _failByCategory = new();
 
-        public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null)
+        // 共享心跳流注册表（对齐原项目 SetWLTcpConnectInstance 复用同一 TCP 连接）
+        private readonly HeartbeatStreamRegistry? _streamRegistry;
+
+        public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, HeartbeatStreamRegistry? streamRegistry = null)
         {
             _tcpSender = tcpSender;
             _udpSender = udpSender;
+            _streamRegistry = streamRegistry;
         }
 
         /// <summary>
@@ -924,6 +928,26 @@ namespace SimulatorLib.Workers
 
         private async Task<bool> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
         {
+            // 优先复用心跳已建立的 TCP stream（对齐原项目 SetWLTcpConnectInstance：
+            // WLData.cpp 始终使用与心跳相同的 CWLTcpConnect 实例发送威胁检测日志，
+            // 避免同一 ComputerID 出现两条 TCP 连接被平台踢掉心跳的问题）
+            var hbStream = _streamRegistry?.TryGet(clientId);
+            if (hbStream != null)
+            {
+                try
+                {
+                    using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    cts2.CancelAfter(2000);
+                    await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
+                    await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
+                    return true;
+                }
+                catch
+                {
+                    // 心跳流已断开，降级走独立 TCP 连接路径
+                }
+            }
+
             // external: SendData失败 -> CloseSocket -> CreateSocket -> 重发
             if (await SendLogTcpOnceAsync(clientId, host, port, payload, ct).ConfigureAwait(false))
             {

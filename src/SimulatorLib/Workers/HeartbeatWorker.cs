@@ -27,11 +27,13 @@ namespace SimulatorLib.Workers
     {
         private readonly IUdpSender? _udpSender;
         private readonly PolicyReceiveWorker? _policyWorker;
+        private readonly HeartbeatStreamRegistry? _streamRegistry;
 
-        public HeartbeatWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, PolicyReceiveWorker? policyWorker = null)
+        public HeartbeatWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, PolicyReceiveWorker? policyWorker = null, HeartbeatStreamRegistry? streamRegistry = null)
         {
-            _udpSender   = udpSender;
-            _policyWorker = policyWorker;
+            _udpSender      = udpSender;
+            _policyWorker   = policyWorker;
+            _streamRegistry = streamRegistry;
         }
 
         /// <summary>
@@ -142,14 +144,17 @@ namespace SimulatorLib.Workers
                                 alive  = true;
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
+                                // 注册到共享表，供威胁检测 LogWorker 复用此 stream（对齐原项目 SetWLTcpConnectInstance）
+                                _streamRegistry?.Register(c.ClientId, stream);
 
                                 // 后台 drain：读取服务端推送（对应原始 C++ HeartBeatRecvThread）。
                                 // 若配置了 PolicyReceiveWorker，则解析下行命令并回包；
                                 // 否则仅丢弃数据并记录回包时间戳。
-                                var drainStream  = stream;
-                                var capturedIdx  = idx;
-                                var capturedC    = c;
+                                var drainStream      = stream;
+                                var capturedIdx      = idx;
+                                var capturedC        = c;
                                 var capturedPolicyWorker = _policyWorker;
+                                var capturedRegistry = _streamRegistry;
                                 _ = Task.Run(async () =>
                                 {
                                     try
@@ -167,6 +172,7 @@ namespace SimulatorLib.Workers
                                             {
                                                 alive = false;
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
+                                                capturedRegistry?.Unregister(capturedC.ClientId);
                                             }
                                         }
                                         else
@@ -180,6 +186,7 @@ namespace SimulatorLib.Workers
                                                 {
                                                     alive = false;
                                                     lastReason[capturedIdx] = Reason.ServerClosed;
+                                                    capturedRegistry?.Unregister(capturedC.ClientId);
                                                     break;
                                                 }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -187,7 +194,7 @@ namespace SimulatorLib.Workers
                                             }
                                         }
                                     }
-                                    catch { alive = false; }
+                                    catch { alive = false; capturedRegistry?.Unregister(capturedC.ClientId); }
                                 }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
@@ -246,6 +253,7 @@ namespace SimulatorLib.Workers
                             stream = null;
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
+                            _streamRegistry?.Unregister(c.ClientId);
                             lastResult[idx] = 0;
                             lastReason[idx] = Reason.WriteFailed;
                         }
@@ -275,6 +283,7 @@ namespace SimulatorLib.Workers
                                 Interlocked.Exchange(ref connectedFlags[idx], 0);
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.SessionStale;
+                                _streamRegistry?.Unregister(c.ClientId);
                             }
                         }
                     }
