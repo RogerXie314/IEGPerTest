@@ -5,8 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
+using Renci.SshNet;
 using SimulatorLib.Persistence;
 
 namespace SimulatorApp
@@ -16,6 +18,7 @@ namespace SimulatorApp
         private readonly bool _multiIpMode;
         private readonly int  _ipCount;
         private readonly ViewModels.MainViewModel? _vm;
+        private string _sshOutputDir = "";
 
         public TcpDiagWindow(bool multiIpMode = false, string localIps = "", ViewModels.MainViewModel? vm = null)
         {
@@ -23,6 +26,7 @@ namespace SimulatorApp
             _multiIpMode = multiIpMode;
             _ipCount = multiIpMode ? CountValidIps(localIps) : 1;
             _vm = vm;
+            Loaded += Window_Loaded;
             RefreshData();
         }
 
@@ -339,5 +343,162 @@ namespace SimulatorApp
                 : System.Windows.Media.Brushes.DarkOrange;
             TxtOptimizeStatus.Visibility = Visibility.Visible;
         }
-    }
+
+        // ═════════════════════════════════════════════════════
+        // SSH 日志收集
+        // ═════════════════════════════════════════════════════
+
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var cfg = await AppConfig.LoadAsync().ConfigureAwait(true);
+                TxtSshHost.Text    = !string.IsNullOrEmpty(cfg.PlatformHost) ? cfg.PlatformHost : "192.168.125.20";
+                TxtSshPort.Text    = cfg.SshPort > 0 ? cfg.SshPort.ToString() : "22";
+                TxtSshUser.Text    = !string.IsNullOrEmpty(cfg.SshUser) ? cfg.SshUser : "root";
+                PbSshPassword.Password = cfg.SshPassword;
+                TxtSshLogPath.Text = !string.IsNullOrEmpty(cfg.SshLogPath) ? cfg.SshLogPath : "/root/logs";
+            }
+            catch { /* 加载失败时保留默认值 */ }
+        }
+
+        private async void BtnCollectLogs_Click(object sender, RoutedEventArgs e)
+        {
+            string host          = TxtSshHost.Text.Trim();
+            string user          = TxtSshUser.Text.Trim();
+            string password      = PbSshPassword.Password;
+            string remoteLogPath = TxtSshLogPath.Text.Trim();
+            if (!int.TryParse(TxtSshPort.Text,    out int sshPort))    sshPort    = 22;
+            if (!int.TryParse(TxtSshMinutes.Text, out int minutes)) minutes = 90;
+
+            if (string.IsNullOrEmpty(host)) { AppendSshLog("❌ 请填写平台主机地址"); return; }
+            if (string.IsNullOrEmpty(user)) { AppendSshLog("❌ 请填写 SSH 用户名");   return; }
+
+            BtnCollectLogs.IsEnabled            = false;
+            BtnOpenOutputDir.Visibility         = Visibility.Collapsed;
+            TxtSshProgress.Text                 = "收集中…";
+            TxtSshLog.Text                      = "";
+
+            // 保存 SSH 配置
+            try
+            {
+                var cfg = await AppConfig.LoadAsync().ConfigureAwait(true);
+                cfg.SshPort     = sshPort;
+                cfg.SshUser     = user;
+                cfg.SshPassword = password;
+                cfg.SshLogPath  = remoteLogPath;
+                await AppConfig.SaveAsync(cfg).ConfigureAwait(true);
+            }
+            catch { /* non-fatal */ }
+
+            var cutoff = DateTime.Now.AddMinutes(-minutes);
+            _sshOutputDir = Path.Combine(AppContext.BaseDirectory,
+                $"debug_collect_{DateTime.Now:yyyyMMdd_HHmmss}");
+            Directory.CreateDirectory(_sshOutputDir);
+
+            AppendSshLog($"输出目录：{_sshOutputDir}");
+            AppendSshLog($"采集范围：{cutoff:HH:mm:ss} 之后再修改的文件");
+            AppendSshLog("");
+
+            int remoteCount = 0, localCount = 0;
+
+            await Task.Run(() =>
+            {
+                // ── 1. SSH 收集平台日志 ──────────────────────────────
+                try
+                {
+                    AppendSshLog($"正在连接 SSH {user}@{host}:{sshPort} …");
+                    var authMethod = new PasswordAuthenticationMethod(user, password);
+                    var connInfo   = new ConnectionInfo(host, sshPort, user, authMethod);
+                    connInfo.Timeout = TimeSpan.FromSeconds(15);
+
+                    using var sftp = new SftpClient(connInfo);
+                    sftp.Connect();
+                    AppendSshLog("✅ SSH 连接成功");
+
+                    var remoteFiles = sftp.ListDirectory(remoteLogPath)
+                        .Where(f => !f.IsDirectory && f.LastWriteTime >= cutoff)
+                        .OrderBy(f => f.LastWriteTime)
+                        .ToList();
+
+                    AppendSshLog($"目录 {remoteLogPath}：共 {remoteFiles.Count} 个文件在范围内");
+
+                    foreach (var f in remoteFiles)
+                    {
+                        var localFile = Path.Combine(_sshOutputDir, f.Name);
+                        AppendSshLog($"  ↓ {f.Name}  ({f.Length / 1024.0:F1} KB)");
+                        using var fs = File.OpenWrite(localFile);
+                        sftp.DownloadFile(f.FullName, fs);
+                        remoteCount++;
+                    }
+
+                    sftp.Disconnect();
+                    AppendSshLog($"✅ 平台日志：{remoteCount} 个文件下载完成");
+                }
+                catch (Exception ex)
+                {
+                    AppendSshLog($"❌ SSH 错误：{ex.Message}");
+                    AppendSshLog("提示：平台日志跳过，本地日志正常备份。");
+                }
+                AppendSshLog("");
+
+                // ── 2. 备份本地日志 ────────────────────────────────
+                AppendSshLog("本地调试日志备份…");
+
+                // heartbeat_monitor 日志
+                try
+                {
+                    foreach (var f in Directory.GetFiles(AppContext.BaseDirectory, "heartbeat_monitor_*.log")
+                        .Where(f => File.GetCreationTime(f) >= cutoff))
+                    {
+                        var dst = Path.Combine(_sshOutputDir, Path.GetFileName(f));
+                        File.Copy(f, dst, true);
+                        AppendSshLog($"  ✓ local: {Path.GetFileName(f)}");
+                        localCount++;
+                    }
+                }
+                catch (Exception ex) { AppendSshLog($"  ⚠ heartbeat log: {ex.Message}"); }
+
+                // logsend-packets 日志
+                try
+                {
+                    var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                    if (Directory.Exists(logDir))
+                    {
+                        foreach (var f in Directory.GetFiles(logDir, "logsend-packets-*.log")
+                            .Where(f => File.GetLastWriteTime(f) >= cutoff))
+                        {
+                            var dst = Path.Combine(_sshOutputDir, Path.GetFileName(f));
+                            File.Copy(f, dst, true);
+                            AppendSshLog($"  ✓ local: {Path.GetFileName(f)}");
+                            localCount++;
+                        }
+                    }
+                }
+                catch (Exception ex) { AppendSshLog($"  ⚠ logsend log: {ex.Message}"); }
+
+                AppendSshLog($"✅ 本地日志：{localCount} 个文件");
+            });
+
+            TxtSshProgress.Text         = $"完成！平台 {remoteCount} 个  +  本地 {localCount} 个";
+            BtnCollectLogs.IsEnabled    = true;
+            BtnOpenOutputDir.Visibility = Visibility.Visible;
+        }
+
+        private void BtnOpenOutputDir_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_sshOutputDir) && Directory.Exists(_sshOutputDir))
+                Process.Start(new ProcessStartInfo { FileName = _sshOutputDir, UseShellExecute = true });
+        }
+
+        private void AppendSshLog(string text)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => AppendSshLog(text)));
+                return;
+            }
+            TxtSshLog.Text += text + "\n";
+            SshLogScroll.ScrollToEnd();
+        }    }
 }

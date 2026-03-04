@@ -5,7 +5,7 @@
         Width="660"
         SizeToContent="Height"
         MinHeight="300"
-        MaxHeight="700"
+        MaxHeight="950"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -315,8 +315,79 @@
             </StackPanel>
         </Border>
 
-        <!-- ── 底部按钮 ── -->
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+        <!-- ── 平台日志收集 (SSH) ── -->
+        <Border Grid.Row="6" Style="{StaticResource SectionBorder}">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center">▸ 平台日志收集 (SSH) </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#999" VerticalAlignment="Center">自动将平台 /root/logs + 本地调试日志集中到一个目录</TextBlock>
+                </DockPanel>
+
+                <!-- SSH 参数行 -->
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="45"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Row0: Host / Port / LogPath -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">平台主机：</TextBlock>
+                    <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TxtSshHost" Height="22" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">端口：</TextBlock>
+                    <TextBox   Grid.Row="0" Grid.Column="4" x:Name="TxtSshPort" Height="22" Text="22" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Row="0" Grid.Column="6" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">日志目录：</TextBlock>
+                    <TextBox   Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="4" x:Name="TxtSshLogPath" Height="22" Text="/root/logs" VerticalContentAlignment="Center" Padding="4,0"/>
+
+                    <!-- Row2: User / Password / 采集范围 -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">用户名：</TextBlock>
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TxtSshUser" Height="22" Text="root" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">密码：</TextBlock>
+                    <PasswordBox Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="3" x:Name="PbSshPassword" Height="22" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="7" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">采集（分钟前）：</TextBlock>
+                    <TextBox   Grid.Row="2" Grid.Column="8" Grid.ColumnSpan="3" x:Name="TxtSshMinutes" Height="22" Text="90" VerticalContentAlignment="Center" Padding="4,0" Width="45" HorizontalAlignment="Left"/>
+                </Grid>
+
+                <!-- 按鈕行 -->
+                <DockPanel Margin="0,4,0,6">
+                    <Button DockPanel.Dock="Left" x:Name="BtnCollectLogs" Height="28" Padding="14,0"
+                            Background="#00897B" BorderBrush="#00695C"
+                            Click="BtnCollectLogs_Click">📦 开始收集日志</Button>
+                    <Button DockPanel.Dock="Left" x:Name="BtnOpenOutputDir" Height="28" Padding="10,0"
+                            Background="#546E7A" BorderBrush="#37474F"
+                            Margin="8,0,0,0" Visibility="Collapsed"
+                            Click="BtnOpenOutputDir_Click">📂 打开输出目录</Button>
+                    <TextBlock x:Name="TxtSshProgress" DockPanel.Dock="Left"
+                               Margin="12,0,0,0" VerticalAlignment="Center"
+                               FontSize="11" Foreground="#666"/>
+                </DockPanel>
+
+                <!-- 状态日志区 -->
+                <ScrollViewer x:Name="SshLogScroll" Height="100" VerticalScrollBarVisibility="Auto"
+                              Background="#1E1E1E" Margin="0,0,0,2">
+                    <TextBlock x:Name="TxtSshLog" Foreground="#CCCCCC" FontFamily="Consolas"
+                               FontSize="11" TextWrapping="Wrap" Padding="6,4"
+                               xml:space="preserve"/>
+                </ScrollViewer>
+                <TextBlock FontSize="10" Foreground="#AAA" Margin="0,2,0,0">密码明文保存在 config.json，仅供内网开发调试使用。</TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- ── 底部按鈕 ── -->
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
             <Button Width="80" Height="30" Margin="0,0,8,0" Click="BtnRefresh_Click">刷新</Button>
             <Button Width="60" Height="30" Background="#888" BorderBrush="#666" Click="BtnClose_Click">关闭</Button>
         </StackPanel>

@@ -39,6 +39,16 @@ namespace SimulatorLib.Persistence
         public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;
 
+        // ── SSH 日志收集 ────────────────────────────────────────────────────
+        /// <summary>SSH 连接用户名（默认 root）</summary>
+        public string SshUser { get; set; } = "root";
+        /// <summary>SSH 密码（明文保存，仅供开发调试使用）</summary>
+        public string SshPassword { get; set; } = "";
+        /// <summary>SSH 端口（默认 22）</summary>
+        public int SshPort { get; set; } = 22;
+        /// <summary>平台日志目录（默认 /root/logs）</summary>
+        public string SshLogPath { get; set; } = "/root/logs";
+
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 
         public static async Task<AppConfig> LoadAsync()
