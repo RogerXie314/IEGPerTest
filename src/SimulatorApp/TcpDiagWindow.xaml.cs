@@ -639,17 +639,80 @@ namespace SimulatorApp
                 }
                 catch (Exception ex) { AppendSshLog($"  ⚠ Clients.log: {ex.Message}"); }
 
-                // ── 3. 写时间偏差说明文件 ───────────────────────────────────
+                // 2d. config.json 快照（SshPassword 脱敏，保留全部业务配置）
                 try
                 {
-                    string note = "# 日志收集说明\n" +
-                        $"收集时刻（本机）: {localNow:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"本机截止时间:     {localCutoff:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"平台时间偏差:     {(offsetSec >= 0 ? "+" : "")}{offsetSec} 秒（本机 - 平台）\n" +
-                        $"平台侧截止时间:   {localCutoff.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}\n\n" +
-                        "分析时间线时请注意：平台日志时间戳 + 偏差秒数 ≈ 本机时间。\n";
-                    File.WriteAllText(Path.Combine(_sshOutputDir, "_时间偏差说明.txt"), note,
-                        System.Text.Encoding.UTF8);
+                    var cfgPath = Path.Combine(AppContext.BaseDirectory, "config.json");
+                    if (File.Exists(cfgPath))
+                    {
+                        var cfgJson = File.ReadAllText(cfgPath);
+                        var cfgObj  = JsonSerializer.Deserialize<AppConfig>(cfgJson);
+                        if (cfgObj != null)
+                        {
+                            cfgObj.SshPassword = cfgObj.SshPassword.Length > 0
+                                ? "***（已脱敏）" : "";
+                            var redacted = JsonSerializer.Serialize(cfgObj,
+                                new JsonSerializerOptions { WriteIndented = true });
+                            File.WriteAllText(
+                                Path.Combine(_sshOutputDir, "config_snapshot.json"),
+                                redacted, System.Text.Encoding.UTF8);
+                            AppendSshLog("  ✓ config_snapshot.json（平台地址/注册网段/客户端前缀等，密码已脱敏）");
+                            localCount++;
+                        }
+                    }
+                }
+                catch (Exception ex) { AppendSshLog($"  ⚠ config_snapshot.json: {ex.Message}"); }
+
+                // ── 3. 写说明文件（时间偏差 + 测试环境摘要）───────────────────────────────────
+                try
+                {
+                    // 读 config 补充测试环境信息（复用已解析的 cfgObj 不可用时回退到重新读取）
+                    AppConfig? cfgSnap = null;
+                    try
+                    {
+                        var cfgPath2 = Path.Combine(AppContext.BaseDirectory, "config.json");
+                        if (File.Exists(cfgPath2))
+                            cfgSnap = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(cfgPath2));
+                    }
+                    catch { /* 读取失败就不写环境摘要 */ }
+
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine("# 日志收集说明");
+                    sb.AppendLine();
+                    sb.AppendLine("## 时间信息");
+                    sb.AppendLine($"  收集时刻（本机）: {localNow:yyyy-MM-dd HH:mm:ss}");
+                    sb.AppendLine($"  本机截止时间:     {localCutoff:yyyy-MM-dd HH:mm:ss}");
+                    sb.AppendLine($"  平台时间偏差:     {(offsetSec >= 0 ? "+" : "")}{offsetSec} 秒（本机 - 平台）");
+                    sb.AppendLine($"  平台侧截止时间:   {localCutoff.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}");
+                    sb.AppendLine();
+                    sb.AppendLine("  注：分析时间线时，平台日志时间戳 + 偏差秒数 ≈ 本机时间。");
+                    sb.AppendLine();
+
+                    if (cfgSnap != null)
+                    {
+                        sb.AppendLine("## 测试环境配置（来自 config.json）");
+                        sb.AppendLine($"  平台地址:         {cfgSnap.PlatformHost}:{cfgSnap.PlatformPort}");
+                        if (cfgSnap.UseLogServer)
+                            sb.AppendLine($"  日志服务器:       {cfgSnap.LogHost}:{cfgSnap.LogPort}（已启用）");
+                        else
+                            sb.AppendLine($"  日志服务器:       未启用");
+                        sb.AppendLine();
+                        sb.AppendLine($"  客户端 OS 类型:   {cfgSnap.ClientOsType}");
+                        sb.AppendLine($"  客户端名称前缀:   {cfgSnap.RegClientPrefix}");
+                        sb.AppendLine($"  注册起始序号:     {cfgSnap.RegStartIndex}");
+                        sb.AppendLine($"  注册起始 IP:      {cfgSnap.RegStartIp}");
+                        sb.AppendLine($"  注册客户端数:     {cfgSnap.RegCount}");
+                        sb.AppendLine($"  心跳间隔:         {cfgSnap.HeartbeatIntervalMs / 1000} 秒");
+                        sb.AppendLine();
+                        sb.AppendLine($"  日志发送 HTTPS:   客户端 {cfgSnap.LogHttpsClientCount} 个  ×  {cfgSnap.LogHttpsEps} EPS  ×  {cfgSnap.LogMessagesPerClient} 条");
+                        sb.AppendLine($"  日志发送威胁检测: 客户端 {cfgSnap.LogThreatClientCount} 个  ×  {cfgSnap.LogThreatEps} EPS  ×  {cfgSnap.LogMessagesPerClient} 条");
+                        sb.AppendLine();
+                        sb.AppendLine($"  SSH 日志路径:     {cfgSnap.SshLogPath}");
+                        sb.AppendLine($"  SSH 大文件阈值:   {cfgSnap.SshSizeThresholdMb} MB");
+                    }
+
+                    File.WriteAllText(Path.Combine(_sshOutputDir, "_收集说明.txt"),
+                        sb.ToString(), System.Text.Encoding.UTF8);
                 }
                 catch { /* non-fatal */ }
 
