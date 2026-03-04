@@ -459,7 +459,7 @@ namespace SimulatorApp
                     // ── 1b. 计算平台侧截止时间（修正偏差）─────────────────────
                     // 平台时间 = 本机时间 - offsetSec
                     var remoteCutoff       = localCutoff.AddSeconds(-offsetSec);
-                    long remoteCutoffEpoch = new DateTimeOffset(remoteCutoff, TimeSpan.Zero).ToUnixTimeSeconds();
+                    long remoteCutoffEpoch = new DateTimeOffset(remoteCutoff).ToUnixTimeSeconds();
                     string remoteCutoffStr = remoteCutoff.ToString("yyyy-MM-dd HH:mm:ss");
                     AppendSshLog($"平台截止：{remoteCutoffStr}");
                     AppendSshLog("");
