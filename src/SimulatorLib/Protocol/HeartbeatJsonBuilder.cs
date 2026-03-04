@@ -22,7 +22,8 @@ namespace SimulatorLib.Protocol
         private static ulong? _lastKernel;
         private static ulong? _lastUser;
 
-        public static string BuildV3R7C02(string computerId, string domainName, string computerIp, string computerMac)
+        public static string BuildV3R7C02(string computerId, string domainName, string computerIp, string computerMac,
+            string? osVersion = null)
         {
             int cpu = GetCpuUsagePercent();
             int mem = GetMemoryUsagePercent();
@@ -43,7 +44,7 @@ namespace SimulatorLib.Protocol
             {
                 ["dwCPU"] = cpu,
                 ["dwMem"] = mem,
-                ["WindowsVersion"] = GetWindowsVersionName(),
+                ["WindowsVersion"] = osVersion ?? GetWindowsVersionName(),
                 // 原项目在调用 HeartBeat_GetJson_FromV3R7C02 时传了空字符串
                 ["ComputerName"] = "",
                 ["ComputerIP"] = computerIp,

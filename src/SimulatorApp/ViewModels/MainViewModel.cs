@@ -92,8 +92,15 @@ namespace SimulatorApp.ViewModels
         private int _uploadFailed;
         private string _statusLog = string.Empty;
 
-        // 客户端版本（注册时影响平台功能可用性）
-        private string _regClientVersion = "V300R011C01B030";
+        // 操作系统类型和客户端版本（注册时影响平台功能可用性）
+        private string _osType = "Windows"; // "Windows" 或 "Linux"
+        private string _regClientVersion = "V300R011C01B090";
+        private List<string> _clientVersionList = new()
+        {
+            "V300R011C01B090",   // Windows 当前版本
+            "V300R011C01B030",   // Windows 旧版
+            "V300R006C02B090",   // 老版（支持白名单上传）
+        };
 
         // 策略下发接收统计
         private int _policyReceived;
@@ -215,14 +222,54 @@ namespace SimulatorApp.ViewModels
         public string RegClientVersion
         {
             get => _regClientVersion;
-            set { _regClientVersion = value; OnProp(); }
+            set { _regClientVersion = value; OnProp(); OnProp(nameof(OsInfoText)); }
         }
-        /// <summary>注册版本下拉列表（用于 ComboBox）</summary>
-        public IReadOnlyList<string> ClientVersionList { get; } = new[]
+        /// <summary>注册版本下拉列表（随操作系统类型切换而变化）</summary>
+        public IReadOnlyList<string> ClientVersionList => _clientVersionList;
+
+        // 操作系统类型切换
+        public bool IsOsWindows
         {
-            "V300R011C01B030",  // 新版（当前）
-            "V300R006C02B090"   // 老版（支持白名单上传）
-        };
+            get => _osType == "Windows";
+            set { if (value && _osType != "Windows") { _osType = "Windows"; OnOsTypeChanged(); } }
+        }
+        public bool IsOsLinux
+        {
+            get => _osType == "Linux";
+            set { if (value && _osType != "Linux") { _osType = "Linux"; OnOsTypeChanged(); } }
+        }
+        /// <summary>注册时填入 WindowsVersion 字段的实际值</summary>
+        public string RegWindowsVersion =>
+            _osType == "Linux" ? "Linux centos7" : SimulatorLib.Protocol.OsInfo.GetWindowsVersionName();
+        /// <summary>在 UI 上显示当前 OS 信息的提示文本</summary>
+        public string OsInfoText =>
+            _osType == "Linux"
+            ? $"OS: Linux centos7   版本: {RegClientVersion}"
+            : $"OS: {SimulatorLib.Protocol.OsInfo.GetWindowsVersionName()}   版本: {RegClientVersion}";
+
+        private void OnOsTypeChanged()
+        {
+            if (_osType == "Linux")
+            {
+                _clientVersionList = new List<string> { "V300R011C11B060-Redhat7.x-x64" };
+                _regClientVersion  = "V300R011C11B060-Redhat7.x-x64";
+            }
+            else
+            {
+                _clientVersionList = new List<string>
+                {
+                    "V300R011C01B090",
+                    "V300R011C01B030",
+                    "V300R006C02B090",
+                };
+                _regClientVersion  = "V300R011C01B090";
+            }
+            OnProp(nameof(ClientVersionList));
+            OnProp(nameof(RegClientVersion));
+            OnProp(nameof(IsOsWindows));
+            OnProp(nameof(IsOsLinux));
+            OnProp(nameof(OsInfoText));
+        }
 
         // 策略接收
         public bool EnablePolicyReceive
@@ -318,6 +365,13 @@ namespace SimulatorApp.ViewModels
                 WhitelistClientCount = cfg.WhitelistClientCount;
                 WhitelistConcurrency = cfg.WhitelistConcurrency;
 
+                // 操作系统类型（加载后触发版本列表更新）
+                if (!string.IsNullOrEmpty(cfg.ClientOsType) && cfg.ClientOsType != _osType)
+                {
+                    _osType = cfg.ClientOsType;
+                    OnOsTypeChanged();
+                }
+
                 AppendStatus("配置已加载");
                 ApplyProjectTypeSelection(); // 按当前项目类型（默认IEG）恢复日志分类勾选
             });
@@ -347,7 +401,8 @@ namespace SimulatorApp.ViewModels
                 LogThreatEps = LogThreatEps,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
-                WhitelistConcurrency = WhitelistConcurrency
+                WhitelistConcurrency = WhitelistConcurrency,
+                ClientOsType = _osType,
             };
             await AppConfig.SaveAsync(cfg).ConfigureAwait(false);
             RunOnUi(() => AppendStatus("配置已保存"));
@@ -475,6 +530,7 @@ namespace SimulatorApp.ViewModels
                     concurrency: RegConcurrency, retry: 3, timeoutMs: RegTimeoutMs,
                     retryIntervalMs: RegRetryIntervalSec * 1000,
                     clientVersion: RegClientVersion,
+                    windowsVersion: RegWindowsVersion,
                     roundProgress: new Progress<SimulatorLib.Workers.RegistrationRoundProgress>(p =>
                     {
                         RunOnUi(() =>
@@ -598,7 +654,8 @@ namespace SimulatorApp.ViewModels
                             }
                         });
                     });
-                    await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress).ConfigureAwait(false);
+                    await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
+                        osVersion: _osType == "Linux" ? "Linux centos7" : null).ConfigureAwait(false);
                     // 心跳结束（用户停止）
                     hbTaskRec.MarkStopped();
                 });
@@ -665,7 +722,8 @@ namespace SimulatorApp.ViewModels
                         platformHost: PlatformHost,
                         platformPort: PlatformPort,
                         ct: _httpsCts.Token,
-                        progress: progress).ConfigureAwait(false);
+                        progress: progress,
+                        osVersion: _osType == "Linux" ? "Linux centos7" : null).ConfigureAwait(false);
                 });
             }
             catch (Exception ex)

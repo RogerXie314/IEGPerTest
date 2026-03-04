@@ -74,7 +74,8 @@ namespace SimulatorLib.Workers
             int logPort,
             int concurrency,
             CancellationToken ct,
-            IProgress<HeartbeatStats>? progress = null)
+            IProgress<HeartbeatStats>? progress = null,
+            string? osVersion = null)
         {
             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             if (clients.Count == 0) return;
@@ -231,7 +232,7 @@ namespace SimulatorLib.Workers
                         {
                             var domainName = GetDomainNameSafe();
                             var mac        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
-                            var json       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName, c.IP, mac);
+                            var json       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName, c.IP, mac, osVersion);
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
@@ -467,7 +468,8 @@ namespace SimulatorLib.Workers
             string platformHost,
             int platformPort,
             CancellationToken ct,
-            IProgress<HeartbeatStats>? progress = null)
+            IProgress<HeartbeatStats>? progress = null,
+            string? osVersion = null)
         {
             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             if (clients.Count == 0) return;
@@ -511,7 +513,7 @@ namespace SimulatorLib.Workers
                             var domainName = GetDomainNameSafe();
                             var mac        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
                             var json       = HeartbeatJsonBuilder.BuildV3R7C02(
-                                                c.ClientId, domainName, c.IP, mac);
+                                                c.ClientId, domainName, c.IP, mac, osVersion);
 
                             using var content = new StringContent(
                                 json, Encoding.UTF8, "application/json");

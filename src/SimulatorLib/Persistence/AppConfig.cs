@@ -40,6 +40,8 @@ namespace SimulatorLib.Persistence
         public int WhitelistConcurrency { get; set; } = 4;
 
         // ── SSH 日志收集 ────────────────────────────────────────────────────
+        /// <summary>模拟客户端的操作系统类型："Windows" 或 "Linux"</summary>
+        public string ClientOsType { get; set; } = "Windows";
         /// <summary>SSH 登录用户名（Ubuntu 通常为 sysadmin，再 sudo 提权）</summary>
         public string SshUser { get; set; } = "sysadmin";
         /// <summary>SSH 密码（明文保存，仅供开发调试使用）</summary>
