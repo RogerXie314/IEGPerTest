@@ -80,13 +80,14 @@
         </Grid.RowDefinitions>
 
         <!-- ── 标题栏 ── -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock DockPanel.Dock="Left" FontSize="16" FontWeight="Bold" Foreground="#3A3A5C" VerticalAlignment="Center">连接参数诊断</TextBlock>
-            <TextBlock DockPanel.Dock="Right" x:Name="TxtSampleTime" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,0,0"/>
-            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,4,0">采样时刻：</TextBlock>
-            <Button DockPanel.Dock="Right" Height="24" FontSize="11" Padding="10,0" Margin="0,0,12,0"
-                    Background="#7B5EA7" BorderBrush="#5C3D8F"
-                    Click="BtnPortAdvanced_Click">🔧 端口 &amp; EPS</Button>
+        <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="True">
+            <!-- 右侧元素先占位，标题最后填满剩余 -->
+            <Button DockPanel.Dock="Right" Height="26" FontSize="11" Padding="10,0" Margin="10,0,0,0"
+                    Background="#6D4C9F" BorderBrush="#512DA8"
+                    Click="BtnPortAdvanced_Click">⚙ 端口 &amp; EPS</Button>
+            <TextBlock DockPanel.Dock="Right" x:Name="TxtSampleTime" FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="#BBB" VerticalAlignment="Center" Margin="0,0,4,0">采样：</TextBlock>
+            <TextBlock FontSize="15" FontWeight="Bold" Foreground="#3A3A5C" VerticalAlignment="Center">连接状态诊断</TextBlock>
         </DockPanel>
 
         <!-- ── 内容区（可滚动）── -->
@@ -96,7 +97,10 @@
         <!-- ── 当前连接状态 ── -->
         <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
-                <TextBlock Style="{StaticResource SectionTitle}">▸ 当前连接状态</TextBlock>
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0">▸ 当前连接状态</TextBlock>
+                    <TextBlock DockPanel.Dock="Right" FontSize="10" Foreground="#999" VerticalAlignment="Center">动态端口占用情况实时报告</TextBlock>
+                </DockPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -108,32 +112,36 @@
                     <!-- ESTABLISHED -->
                     <Border Grid.Column="0" Background="#EAF6EA" CornerRadius="5" Padding="10,8" Margin="0,0,6,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="ESTABLISHED" FontSize="10" Foreground="#555" HorizontalAlignment="Center"/>
+                            <TextBlock Text="已建立" FontSize="10" Foreground="#2E7D32" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                             <TextBlock x:Name="TxtEstablished" FontSize="22" FontWeight="Bold" Foreground="#2E7D32" HorizontalAlignment="Center"/>
+                            <TextBlock Text="ESTABLISHED" FontSize="9" Foreground="#AAA" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- TIME_WAIT -->
                     <Border Grid.Column="1" Background="#FFF3E0" CornerRadius="5" Padding="10,8" Margin="0,0,6,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="TIME_WAIT" FontSize="10" Foreground="#555" HorizontalAlignment="Center"/>
+                            <TextBlock Text="等待关闭" FontSize="10" Foreground="#E65100" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                             <TextBlock x:Name="TxtTimeWaitCount" FontSize="22" FontWeight="Bold" Foreground="#E65100" HorizontalAlignment="Center"/>
+                            <TextBlock Text="TIME_WAIT" FontSize="9" Foreground="#AAA" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 其他状态 -->
                     <Border Grid.Column="2" Background="#F3F3F3" CornerRadius="5" Padding="10,8" Margin="0,0,6,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="其他状态" FontSize="10" Foreground="#555" HorizontalAlignment="Center"/>
+                            <TextBlock Text="其他状态" FontSize="10" Foreground="#666" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                             <TextBlock x:Name="TxtOtherCount" FontSize="22" FontWeight="Bold" Foreground="#888" HorizontalAlignment="Center"/>
+                            <TextBlock Text="SYN / FIN / …" FontSize="9" Foreground="#AAA" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 端口占用 -->
                     <Border Grid.Column="3" Background="#EEF2FF" CornerRadius="5" Padding="10,8">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="端口占用" FontSize="10" Foreground="#555" HorizontalAlignment="Center"/>
+                            <TextBlock Text="端口占用" FontSize="10" Foreground="#3949AB" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                             <TextBlock x:Name="TxtPortsUsed" FontSize="13" FontWeight="Bold" Foreground="#3949AB" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                            <TextBlock Text="已用 / 总可用" FontSize="9" Foreground="#AAA" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -141,11 +149,13 @@
                 <!-- 端口占用进度条 -->
                 <Grid Margin="0,10,0,0">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <ProgressBar x:Name="TxtPortUsageBar" Grid.Column="0" Height="10" Minimum="0" Maximum="100" Foreground="#4A90E2" Background="#E0E0E0"/>
-                    <TextBlock x:Name="TxtPortUsageLabel" Grid.Column="1" Margin="8,0,0,0" FontSize="11" Foreground="#555" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="端口利用率" FontSize="10" Foreground="#888" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ProgressBar x:Name="TxtPortUsageBar" Grid.Column="1" Height="8" Minimum="0" Maximum="100" Foreground="#4A90E2" Background="#E0E0E0"/>
+                    <TextBlock x:Name="TxtPortUsageLabel" Grid.Column="2" Margin="8,0,0,0" FontSize="11" Foreground="#555" VerticalAlignment="Center"/>
                 </Grid>
             </StackPanel>
         </Border>
@@ -200,10 +210,10 @@
         <!-- ── 平台日志收集 (SSH) ── -->
         <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
-                <DockPanel Margin="0,0,0,8">
-                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center">▸ 平台日志收集 (SSH) </TextBlock>
-                    <TextBlock FontSize="11" Foreground="#999" VerticalAlignment="Center">自动将平台 /root/logs + 本地调试日志集中到一个目录</TextBlock>
-                </DockPanel>
+                <StackPanel Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,2">▸ 平台日志收集  <Run FontSize="11" Foreground="#999">(SSH)</Run></TextBlock>
+                    <TextBlock FontSize="11" Foreground="#AAA">自动将平台 /root/logs + 本地调试日志打包到本机指定目录</TextBlock>
+                </StackPanel>
 
                 <!-- SSH 参数行 -->
                 <Grid Margin="0,0,0,6">
@@ -250,10 +260,11 @@
                     <!-- Row6: 采集时间段 -->
                     <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">采集时间段：</TextBlock>
                     <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="7" Orientation="Horizontal">
+                        <TextBlock Text="开始" FontSize="11" Foreground="#888" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <TextBox x:Name="TxtSshTimeFrom" Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0">
                             <TextBox.ToolTip>格式：yyyy-MM-dd HH:mm</TextBox.ToolTip>
                         </TextBox>
-                        <TextBlock VerticalAlignment="Center" Margin="6,0" FontSize="13">～</TextBlock>
+                        <TextBlock Text="结束" FontSize="11" Foreground="#888" VerticalAlignment="Center" Margin="10,0,4,0"/>
                         <TextBox x:Name="TxtSshTimeTo"   Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0">
                             <TextBox.ToolTip>格式：yyyy-MM-dd HH:mm</TextBox.ToolTip>
                         </TextBox>
@@ -261,11 +272,11 @@
                 </Grid>
 
                 <!-- 按鈕行 -->
-                <DockPanel Margin="0,4,0,6">
-                    <Button DockPanel.Dock="Left" x:Name="BtnCollectLogs" Height="28" Padding="14,0"
+                <DockPanel Margin="0,6,0,6">
+                    <Button DockPanel.Dock="Left" x:Name="BtnCollectLogs" Height="30" Padding="16,0"
                             Background="#00897B" BorderBrush="#00695C"
                             Click="BtnCollectLogs_Click">📦 开始收集日志</Button>
-                    <Button DockPanel.Dock="Left" x:Name="BtnOpenOutputDir" Height="28" Padding="10,0"
+                    <Button DockPanel.Dock="Left" x:Name="BtnOpenOutputDir" Height="30" Padding="12,0"
                             Background="#546E7A" BorderBrush="#37474F"
                             Margin="8,0,0,0" Visibility="Collapsed"
                             Click="BtnOpenOutputDir_Click">📂 打开输出目录</Button>
@@ -282,10 +293,11 @@
         </ScrollViewer>
 
         <!-- ── 底部按鈕 ── -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
-            <Button Width="80" Height="30" Margin="0,0,8,0" Click="BtnRefresh_Click">刷新</Button>
-            <Button Width="60" Height="30" Background="#888" BorderBrush="#666" Click="BtnClose_Click">关闭</Button>
-        </StackPanel>
+        <DockPanel Grid.Row="2" Margin="0,6,0,0">
+            <Button DockPanel.Dock="Right" Width="64" Height="30" Background="#888" BorderBrush="#666" Click="BtnClose_Click">关闭</Button>
+            <Button DockPanel.Dock="Right" Width="84" Height="30" Margin="0,0,8,0" Click="BtnRefresh_Click">↻ 刷新</Button>
+            <TextBlock DockPanel.Dock="Left" FontSize="10" Foreground="#CCC" VerticalAlignment="Center">点击⚙ 端口 &amp; EPS 可查看端口范围 / 理论 EPS / 参数优化</TextBlock>
+        </DockPanel>
 
     </Grid>
 </Window>
