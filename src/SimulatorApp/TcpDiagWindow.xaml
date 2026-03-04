@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="连接参数诊断"
         Width="660"
-        SizeToContent="Height"
-        MinHeight="300"
-        MaxHeight="950"
+        Height="820"
+        MinHeight="400"
+        MaxHeight="960"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -75,12 +75,7 @@
     <Grid Margin="14,12,14,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -91,8 +86,12 @@
             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="#999" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,4,0">采样时刻：</TextBlock>
         </DockPanel>
 
+        <!-- ── 内容区（可滚动）── -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,2,0">
+            <StackPanel>
+
         <!-- ── 系统 TCP 配置 ── -->
-        <Border Grid.Row="1" Style="{StaticResource SectionBorder}">
+        <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
                 <TextBlock Style="{StaticResource SectionTitle}">▸ 系统 TCP 配置</TextBlock>
                 <Grid>
@@ -115,7 +114,7 @@
         </Border>
 
         <!-- ── 当前连接状态 ── -->
-        <Border Grid.Row="2" Style="{StaticResource SectionBorder}">
+        <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
                 <TextBlock Style="{StaticResource SectionTitle}">▸ 当前连接状态</TextBlock>
                 <Grid>
@@ -172,7 +171,7 @@
         </Border>
 
         <!-- ── 心跳 / 日志连接参数 ── -->
-        <Border x:Name="ConnParamsPanel" Grid.Row="3" Style="{StaticResource SectionBorder}" Visibility="Collapsed">
+        <Border x:Name="ConnParamsPanel" Style="{StaticResource SectionBorder}" Visibility="Collapsed">
             <StackPanel>
                 <TextBlock Style="{StaticResource SectionTitle}">▸ 心跳 / 日志连接参数</TextBlock>
                 <Grid>
@@ -219,7 +218,7 @@
         </Border>
 
         <!-- ── 理论 EPS 估算 ── -->
-        <Border Grid.Row="4" Style="{StaticResource SectionBorder}">
+        <Border Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -260,7 +259,7 @@
         </Border>
 
         <!-- ── 参数优化 ── -->
-        <Border Grid.Row="5" Style="{StaticResource SectionBorder}">
+        <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
                 <DockPanel Margin="0,0,0,8">
                     <Button DockPanel.Dock="Right" Height="24" FontSize="11" Padding="10,0"
@@ -316,7 +315,7 @@
         </Border>
 
         <!-- ── 平台日志收集 (SSH) ── -->
-        <Border Grid.Row="6" Style="{StaticResource SectionBorder}">
+        <Border Style="{StaticResource SectionBorder}">
             <StackPanel>
                 <DockPanel Margin="0,0,0,8">
                     <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center">▸ 平台日志收集 (SSH) </TextBlock>
@@ -368,10 +367,13 @@
                     <!-- Row6: 采集时间段 -->
                     <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">采集时间段：</TextBlock>
                     <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="7" Orientation="Horizontal">
-                        <TextBox x:Name="TxtSshTimeFrom" Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0"/>
+                        <TextBox x:Name="TxtSshTimeFrom" Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0">
+                            <TextBox.ToolTip>格式：yyyy-MM-dd HH:mm</TextBox.ToolTip>
+                        </TextBox>
                         <TextBlock VerticalAlignment="Center" Margin="6,0" FontSize="13">～</TextBlock>
-                        <TextBox x:Name="TxtSshTimeTo"   Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0"/>
-                        <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" FontSize="11" Foreground="#999">格式：yyyy-MM-dd HH:mm</TextBlock>
+                        <TextBox x:Name="TxtSshTimeTo"   Height="22" Width="135" VerticalContentAlignment="Center" Padding="4,0">
+                            <TextBox.ToolTip>格式：yyyy-MM-dd HH:mm</TextBox.ToolTip>
+                        </TextBox>
                     </StackPanel>
                 </Grid>
 
@@ -393,8 +395,11 @@
             </StackPanel>
         </Border>
 
+            </StackPanel>
+        </ScrollViewer>
+
         <!-- ── 底部按鈕 ── -->
-        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
             <Button Width="80" Height="30" Margin="0,0,8,0" Click="BtnRefresh_Click">刷新</Button>
             <Button Width="60" Height="30" Background="#888" BorderBrush="#666" Click="BtnClose_Click">关闭</Button>
         </StackPanel>
