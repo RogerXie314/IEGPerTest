@@ -380,13 +380,6 @@
                                FontSize="11" Foreground="#666"/>
                 </DockPanel>
 
-                <!-- 状态日志区 -->
-                <ScrollViewer x:Name="SshLogScroll" Height="100" VerticalScrollBarVisibility="Auto"
-                              Background="#1E1E1E" Margin="0,0,0,2">
-                    <TextBlock x:Name="TxtSshLog" Foreground="#CCCCCC" FontFamily="Consolas"
-                               FontSize="11" TextWrapping="Wrap" Padding="6,4"
-                               xml:space="preserve"/>
-                </ScrollViewer>
                 <TextBlock FontSize="10" Foreground="#AAA" Margin="0,2,0,0">密码明文保存在 config.json，仅供内网开发调试使用。</TextBlock>
             </StackPanel>
         </Border>

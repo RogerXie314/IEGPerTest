@@ -19,6 +19,7 @@ namespace SimulatorApp
         private readonly int  _ipCount;
         private readonly ViewModels.MainViewModel? _vm;
         private string _sshOutputDir = "";
+        private SshLogWindow? _sshLogWindow;
 
         public TcpDiagWindow(bool multiIpMode = false, string localIps = "", ViewModels.MainViewModel? vm = null)
         {
@@ -381,9 +382,16 @@ namespace SimulatorApp
             BtnCollectLogs.IsEnabled    = false;
             BtnOpenOutputDir.Visibility = Visibility.Collapsed;
             TxtSshProgress.Text         = "收集中…";
-            TxtSshLog.Text              = "";
             TxtTimeSkew.Text            = "检测中…";
             TxtTimeSkew.Foreground      = System.Windows.Media.Brushes.DarkOrange;
+
+            // 打开 / 显示 SSH 日志子窗口
+            if (_sshLogWindow == null || !_sshLogWindow.IsLoaded)
+                _sshLogWindow = new SshLogWindow { Owner = this };
+            _sshLogWindow.Clear();
+            _sshLogWindow.SetStatus("收集中…");
+            _sshLogWindow.SetOutputDir("");
+            _sshLogWindow.ShowAndActivate();
 
             // 保存配置
             try
@@ -578,6 +586,8 @@ namespace SimulatorApp
             TxtSshProgress.Text         = $"完成！平台 {remoteCount} 个  +  本地 {localCount} 个";
             BtnCollectLogs.IsEnabled    = true;
             BtnOpenOutputDir.Visibility = Visibility.Visible;
+            _sshLogWindow?.SetStatus($"完成！平台 {remoteCount} 个 + 本地 {localCount} 个");
+            _sshLogWindow?.SetOutputDir(_sshOutputDir);
         }
 
         /// <summary>通过 SSH exec channel 运行命令，返回 stdout</summary>
@@ -607,12 +617,6 @@ namespace SimulatorApp
 
         private void AppendSshLog(string text)
         {
-            if (!Dispatcher.CheckAccess())
-            {
-                Dispatcher.BeginInvoke(new Action(() => AppendSshLog(text)));
-                return;
-            }
-            TxtSshLog.Text += text + "\n";
-            SshLogScroll.ScrollToEnd();
+            _sshLogWindow?.AppendLine(text);
         }    }
 }

@@ -74,8 +74,8 @@
                     <ColumnDefinition Width="2*" MinWidth="220" />
                 </Grid.ColumnDefinitions>
 
-                <!-- 服务器设置（跨两列） -->
-                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
+                <!-- 服务器设置 -->
+                <Border Grid.Row="0" Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,6,10">
                         <StackPanel>
                             <TextBlock FontWeight="SemiBold" FontSize="14">服务器设置</TextBlock>
                             <Grid Margin="0,8,0,0">
@@ -119,6 +119,25 @@
                                 </Grid>
                             </Grid>
                         </StackPanel>
+                </Border>
+
+                <!-- 客户端操作系统（跨列右侧，与服务器设置同排） -->
+                <Border Grid.Row="0" Grid.Column="1" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" FontSize="14">客户端操作系统</TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,6">
+                            <RadioButton Content="Windows" GroupName="OsType"
+                                         IsChecked="{Binding IsOsWindows, Mode=TwoWay}"
+                                         VerticalAlignment="Center" FontSize="13"/>
+                            <RadioButton Content="Linux (CentOS 7)" GroupName="OsType"
+                                         IsChecked="{Binding IsOsLinux, Mode=TwoWay}"
+                                         VerticalAlignment="Center" FontSize="13" Margin="20,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding OsInfoText}" FontSize="11" Foreground="#555"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock FontSize="10" Foreground="#999" Margin="0,4,0,0"
+                                   Text="Linux 心跳自动使用 HTTPS（已支持）；切换 OS 将更新版本号下拉列表"/>
+                    </StackPanel>
                 </Border>
 
                 <!-- 左列：注册设置 / 项目类型+日志分类（占满剩余高度，不再挤压） -->
@@ -260,27 +279,9 @@
                     </Border>
                 </Grid>
 
-                <!-- 右列：操作系统类型 / 心跳设置 / 白名单上传设置 / 日志发送设置 -->
+                <!-- 右列：心跳设置 / 白名单上传设置 / 日志发送设置 -->
                 <DockPanel Grid.Row="1" Grid.Column="1" Margin="6,0,0,0" LastChildFill="True">
 
-                    <!-- 操作系统类型 -->
-                    <Border DockPanel.Dock="Top" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold" FontSize="14">客户端操作系统</TextBlock>
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,6">
-                                <RadioButton Content="Windows" GroupName="OsType"
-                                             IsChecked="{Binding IsOsWindows, Mode=TwoWay}"
-                                             VerticalAlignment="Center" FontSize="13"/>
-                                <RadioButton Content="Linux (CentOS 7)" GroupName="OsType"
-                                             IsChecked="{Binding IsOsLinux, Mode=TwoWay}"
-                                             VerticalAlignment="Center" FontSize="13" Margin="20,0,0,0"/>
-                            </StackPanel>
-                            <TextBlock Text="{Binding OsInfoText}" FontSize="11" Foreground="#555"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock FontSize="10" Foreground="#999" Margin="0,4,0,0"
-                                       Text="Linux 心跳自动使用 HTTPS（已支持）；切换 OS 将更新版本号下拉列表"/>
-                        </StackPanel>
-                    </Border>
                     <Border DockPanel.Dock="Top" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock FontWeight="SemiBold" FontSize="14">心跳设置</TextBlock>
