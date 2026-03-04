@@ -357,10 +357,8 @@ namespace SimulatorLib.Workers
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
                     sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
                     sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢出则数量偏高");
-                    if (rLockBusy > 0)
-                    {
-                        sb.AppendLine($"  ⚠ 写锁竞争(LockBusy):{rLockBusy} 次 — 心跳被跳过但连接有效，日志速率过高时出现");
-                    }
+                    // 始终输出 LockBusy（0也输出），方便确认"fix没有副作用"
+                    sb.AppendLine($"  锁竞争跳过(LockBusy):{rLockBusy}{(rLockBusy > 0 ? " ⚠ 心跳被跳过但连接有效，属正常" : " ✓")}");
                     if (offline > 0)
                     {
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}  平台踢session:{rSessionStale}");
