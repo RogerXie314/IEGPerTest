@@ -477,64 +477,104 @@ namespace SimulatorApp
                     AppendSshLog($"平台截止：{remoteCutoffStr}");
                     AppendSshLog("");
 
-                    // ── 1d. 建临时目录，find -newer 定位范围内的文件 ────────
-                    string tmpBase = $"/tmp/dbg_{localNow:yyyyMMddHHmmss}";
+                    // ── 1d. 建临时目录，find -newer 递归定位范围内的文件 ────────
+                    string tmpBase       = $"/tmp/dbg_{localNow:yyyyMMddHHmmss}";
+                    string remoteLogRoot = remoteLogPath.TrimEnd('/');
                     SshRunAsRoot(ssh, password, $"mkdir -p {tmpBase}");
                     SshRunAsRoot(ssh, password, $"touch -d @{remoteCutoffEpoch} {tmpBase}/.ts_marker");
+                    // 不加 -maxdepth，递归搜索所有子目录下的文件
                     string findOut = SshRunAsRoot(ssh, password,
-                        $"find {remoteLogPath} -maxdepth 1 -type f -newer {tmpBase}/.ts_marker 2>/dev/null");
+                        $"find {remoteLogRoot} -type f -newer {tmpBase}/.ts_marker 2>/dev/null");
 
                     var remoteFiles = findOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                         .Select(s => s.Trim()).Where(s => s.StartsWith("/"))
                         .OrderBy(s => s).ToList();
 
-                    AppendSshLog($"目录 {remoteLogPath}：{remoteFiles.Count} 个文件在时间范围内");
+                    AppendSshLog($"目录 {remoteLogRoot}（含子目录）：{remoteFiles.Count} 个文件在时间范围内");
 
-                    // ── 1e. 逐文件：小文件直接复制，大文件 awk 过滤 ────────
+                    // ── 1e. 逐文件：小文件直接复制，大文件 awk 过滤（保留子目录结构）────────
                     sftp.Connect();
                     foreach (var remoteFile in remoteFiles)
                     {
-                        string fname   = Path.GetFileName(remoteFile);
-                        string tmpFile = $"{tmpBase}/{fname}";
-
-                        long fileSize = 0;
-                        string wcOut = SshRunAsRoot(ssh, password, $"wc -c < {remoteFile} 2>/dev/null").Trim();
-                        long.TryParse(wcOut.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0], out fileSize);
-
-                        if (fileSize <= threshBytes)
-                        {
-                            // 小文件：root cp → chmod 644 → SFTP 下载
-                            AppendSshLog($"  ↓ {fname}  ({fileSize / 1024.0:F0} KB) 直接下载");
-                            SshRunAsRoot(ssh, password, $"cp {remoteFile} {tmpFile} && chmod 644 {tmpFile}");
-                        }
-                        else
-                        {
-                            // 大文件：root awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
-                            AppendSshLog($"  🔍 {fname}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 ≥ {remoteCutoffStr}");
-                            // awk: 遇到 [YYYY-MM-DD 开头行提取前19字符为时间戳；在范围内则打印（包括后续续行）
-                            string awkCmd = $"awk -v cutoff='{remoteCutoffStr}' " +
-                                @"'/^\[20[0-9][0-9]-[0-9][0-9]-/{ts=substr($0,2,19); keep=(ts>=cutoff)} keep{print}' " +
-                                $"{remoteFile} > {tmpFile} && chmod 644 {tmpFile}";
-                            SshRunAsRoot(ssh, password, awkCmd);
-                        }
-
-                        // 通过 SFTP 下载 /tmp 中的文件
+                        // 每个文件独立 try-catch，单文件失败不影响其他文件
                         try
                         {
-                            var localDst = Path.Combine(_sshOutputDir, fname);
+                            // 计算相对路径（保留子目录层级），用于本地存储和 tmp 镜像
+                            string relPath = remoteFile.StartsWith(remoteLogRoot + "/")
+                                ? remoteFile.Substring(remoteLogRoot.Length + 1)
+                                : Path.GetFileName(remoteFile);
+                            string tmpFile    = $"{tmpBase}/{relPath}";
+                            string tmpFileDir = tmpFile.Contains('/') ? tmpFile[..tmpFile.LastIndexOf('/')] : tmpBase;
+
+                            // 在 /tmp 中建立镜像子目录
+                            SshRunAsRoot(ssh, password, $"mkdir -p {tmpFileDir}");
+
+                            long fileSize = 0;
+                            string wcOut = SshRunAsRoot(ssh, password, $"wc -c < {remoteFile} 2>/dev/null").Trim();
+                            long.TryParse(wcOut.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0], out fileSize);
+
+                            if (fileSize <= threshBytes)
+                            {
+                                // 小文件：root cp → chmod 644 → SFTP 下载
+                                AppendSshLog($"  ↓ {relPath}  ({fileSize / 1024.0:F0} KB) 直接下载");
+                                SshRunAsRoot(ssh, password, $"cp {remoteFile} {tmpFile} && chmod 644 {tmpFile}");
+                            }
+                            else
+                            {
+                                // 大文件：root awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
+                                AppendSshLog($"  🔍 {relPath}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 ≥ {remoteCutoffStr}");
+                                string awkCmd = $"awk -v cutoff='{remoteCutoffStr}' " +
+                                    @"'/^\[20[0-9][0-9]-[0-9][0-9]-/{ts=substr($0,2,19); keep=(ts>=cutoff)} keep{print}' " +
+                                    $"{remoteFile} > {tmpFile} && chmod 644 {tmpFile}";
+                                SshRunAsRoot(ssh, password, awkCmd);
+                            }
+
+                            // 通过 SFTP 下载，本地保留相同子目录结构
+                            var localDst = Path.Combine(_sshOutputDir,
+                                relPath.Replace('/', Path.DirectorySeparatorChar));
+                            Directory.CreateDirectory(Path.GetDirectoryName(localDst)!);
                             using var fs = File.OpenWrite(localDst);
                             sftp.DownloadFile(tmpFile, fs);
                             long localSize = new FileInfo(localDst).Length;
                             AppendSshLog($"     → 已下载 {localSize / 1024.0:F0} KB");
                             remoteCount++;
                         }
-                        catch (Exception exDl) { AppendSshLog($"     ⚠ 下载失败: {exDl.Message}"); }
+                        catch (Exception exFile)
+                        {
+                            AppendSshLog($"  ⚠ {Path.GetFileName(remoteFile)} 跳过: {exFile.Message}");
+                        }
                     }
+
+                    // ── 1f. /var/log/messages（系统级 socket / fd 错误）────────────
+                    try
+                    {
+                        AppendSshLog("\n收集 /var/log/messages…");
+                        string msgSrc = "/var/log/messages";
+                        string msgTmp = $"{tmpBase}/_messages";
+                        // messages 时间戳格式 "Mar  4 18:00:01" 无年份，无法精确过滤，直接 cp 整个文件
+                        string cpOut = SshRunAsRoot(ssh, password,
+                            $"cp {msgSrc} {msgTmp} 2>/dev/null && chmod 644 {msgTmp} && echo OK");
+                        if (cpOut.Contains("OK"))
+                        {
+                            var localMsg = Path.Combine(_sshOutputDir, "var_log_messages");
+                            using var fsMsg = File.OpenWrite(localMsg);
+                            sftp.DownloadFile(msgTmp, fsMsg);
+                            long msgSize = new FileInfo(localMsg).Length;
+                            AppendSshLog($"  ↓ var_log_messages  ({msgSize / 1024.0 / 1024.0:F1} MB)");
+                            remoteCount++;
+                        }
+                        else
+                        {
+                            AppendSshLog("  ⚠ /var/log/messages 不存在或无权限，已跳过");
+                        }
+                    }
+                    catch (Exception exMsg) { AppendSshLog($"  ⚠ /var/log/messages: {exMsg.Message}"); }
 
                     sftp.Disconnect();
 
-                    // ── 1f. 清理临时目录 ──────────────────────────────────
-                    SshRunAsRoot(ssh, password, $"rm -rf {tmpBase}");
+                    // ── 1g. 清理临时目录 ──────────────────────────────────
+                    try { SshRunAsRoot(ssh, password, $"rm -rf {tmpBase}"); }
+                    catch { /* 清理失败不影响结果 */ }
                     ssh.Disconnect();
                     AppendSshLog($"\n✅ 平台日志收集完成：{remoteCount} 个文件");
                 }
@@ -553,6 +593,8 @@ namespace SimulatorApp
 
                 // ── 2. 备份本地调试日志（按本机时间）──────────────────────────
                 AppendSshLog("本地调试日志备份…");
+
+                // 2a. exe 目录下的 heartbeat_monitor_*.log
                 try
                 {
                     foreach (var f in Directory.GetFiles(AppContext.BaseDirectory, "heartbeat_monitor_*.log")
@@ -565,19 +607,37 @@ namespace SimulatorApp
                 }
                 catch (Exception ex) { AppendSshLog($"  ⚠ heartbeat log: {ex.Message}"); }
 
+                // 2b. logs/ 子目录下所有 *.log（logsend / logsend-packets / logsend-failures 等）
                 try
                 {
                     var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
                     if (Directory.Exists(logDir))
-                        foreach (var f in Directory.GetFiles(logDir, "logsend-packets-*.log")
+                    {
+                        var localLogsDst = Path.Combine(_sshOutputDir, "logs");
+                        Directory.CreateDirectory(localLogsDst);
+                        foreach (var f in Directory.GetFiles(logDir, "*.log")
                             .Where(f => File.GetLastWriteTime(f) >= localCutoff))
                         {
-                            File.Copy(f, Path.Combine(_sshOutputDir, Path.GetFileName(f)), true);
-                            AppendSshLog($"  ✓ {Path.GetFileName(f)}");
+                            File.Copy(f, Path.Combine(localLogsDst, Path.GetFileName(f)), true);
+                            AppendSshLog($"  ✓ logs/{Path.GetFileName(f)}");
                             localCount++;
                         }
+                    }
                 }
-                catch (Exception ex) { AppendSshLog($"  ⚠ logsend log: {ex.Message}"); }
+                catch (Exception ex) { AppendSshLog($"  ⚠ logs/: {ex.Message}"); }
+
+                // 2c. Clients.log（注册结果/CMDID，不按时间过滤，直接快照）
+                try
+                {
+                    var clientsLog = Path.Combine(AppContext.BaseDirectory, "Clients.log");
+                    if (File.Exists(clientsLog))
+                    {
+                        File.Copy(clientsLog, Path.Combine(_sshOutputDir, "Clients.log"), true);
+                        AppendSshLog("  ✓ Clients.log（注册快照）");
+                        localCount++;
+                    }
+                }
+                catch (Exception ex) { AppendSshLog($"  ⚠ Clients.log: {ex.Message}"); }
 
                 // ── 3. 写时间偏差说明文件 ───────────────────────────────────
                 try
