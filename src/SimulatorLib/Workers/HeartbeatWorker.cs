@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -94,6 +95,9 @@ namespace SimulatorLib.Workers
             // lastReason[i]: 最近一次断线/失败原因（见 Reason 常量）
             var lastReason = new int[clients.Count];
 
+            // 事件驱动日志队列：断连发生时立即入队，监控任务异步写文件（不等下次轮询）
+            var eventQueue = new ConcurrentQueue<string>();
+
             // 错峰启动：在 spreadMs 内均匀错开首次连接
             int spreadMs = Math.Min(intervalMs, 3000);
 
@@ -174,6 +178,7 @@ namespace SimulatorLib.Workers
                                                 alive = false;
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
                                                 capturedRegistry?.Unregister(capturedC.ClientId);
+                                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(PolicyDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
                                             }
                                         }
                                         else
@@ -188,6 +193,7 @@ namespace SimulatorLib.Workers
                                                     alive = false;
                                                     lastReason[capturedIdx] = Reason.ServerClosed;
                                                     capturedRegistry?.Unregister(capturedC.ClientId);
+                                                    eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(RawDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
                                                     break;
                                                 }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -281,6 +287,7 @@ namespace SimulatorLib.Workers
                             _streamRegistry?.Unregister(c.ClientId);
                             lastResult[idx] = 0;
                             lastReason[idx] = Reason.WriteFailed;
+                            eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
                         }
 
                         // 等待下一个心跳周期
@@ -309,6 +316,7 @@ namespace SimulatorLib.Workers
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.SessionStale;
                                 _streamRegistry?.Unregister(c.ClientId);
+                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{(Interlocked.Read(ref lastReplyTimeMs[idx]) > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(Interlocked.Read(ref lastReplyTimeMs[idx])).LocalDateTime.ToString("HH:mm:ss") : "从未")} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
                             }
                         }
                     }
@@ -318,11 +326,14 @@ namespace SimulatorLib.Workers
             }
 
             // 监控日志：定时写文件，记录离线数量与断线原因分布（供开发分析）
-            int monitorIntervalMs = Math.Max(60_000, intervalMs * 10);
+            // 间隔：max(30s, intervalMs)，确保即使心跳间隔30s、测试刚开始3分钟内也能捕获异常
+            int monitorIntervalMs = Math.Max(30_000, intervalMs);
             var monitorFile = Path.Combine(AppContext.BaseDirectory,
                 $"heartbeat_monitor_{DateTime.Now:yyyyMMdd_HHmmss}.log");
             var monitorTask = Task.Run(async () =>
             {
+                int prevReplied = -1; // 上一周期的回包数，用于检测骤降
+                int prevConn    = -1;
                 while (!ct.IsCancellationRequested)
                 {
                     try { await Task.Delay(monitorIntervalMs, ct).ConfigureAwait(false); }
@@ -353,10 +364,29 @@ namespace SimulatorLib.Workers
                     }
                     int offline = total - conn;
 
+                    // 平台回包率骤降检测
+                    int silentNow  = conn - replied; // 已连接但未回包数量
+                    int silentPrev = prevConn >= 0 ? (prevConn - prevReplied) : -1;
+                    string replyTrend = "";
+                    if (prevReplied >= 0 && conn > 0)
+                    {
+                        int drop = prevReplied - replied; // 回包数下降量（正数=下降）
+                        if (drop >= 10)
+                            replyTrend = $" ⚠⚠ 回包骤降{drop}(上周期:{prevReplied}→本周期:{replied})";
+                        else if (drop > 0)
+                            replyTrend = $" ↓{drop}(上周期:{prevReplied})";
+                        else if (drop < 0)
+                            replyTrend = $" ↑{-drop}(上周期:{prevReplied})";
+                    }
+
                     var sb = new StringBuilder();
+                    // 先输出累积的事件驱动断连记录
+                    while (eventQueue.TryDequeue(out var ev))
+                        sb.AppendLine(ev);
+
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
                     sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
-                    sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢出则数量偏高");
+                    sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}{replyTrend}  TCP连接中但未回包:{silentNow}{(silentPrev >= 0 ? $"(上周期:{silentPrev})" : "")}←平台静默踢出则数量偏高");
                     // 始终输出 LockBusy（0也输出），方便确认"fix没有副作用"
                     sb.AppendLine($"  锁竞争跳过(LockBusy):{rLockBusy}{(rLockBusy > 0 ? " ⚠ 心跳被跳过但连接有效，属正常" : " ✓")}");
                     if (offline > 0)
@@ -364,6 +394,9 @@ namespace SimulatorLib.Workers
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}  平台踢session:{rSessionStale}");
                     }
                     sb.AppendLine();
+
+                    prevReplied = replied;
+                    prevConn    = conn;
 
                     try { await File.AppendAllTextAsync(monitorFile, sb.ToString(), ct).ConfigureAwait(false); }
                     catch { /* 写文件失败不影响主流程 */ }
