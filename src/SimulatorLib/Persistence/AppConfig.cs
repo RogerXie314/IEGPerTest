@@ -40,14 +40,16 @@ namespace SimulatorLib.Persistence
         public int WhitelistConcurrency { get; set; } = 4;
 
         // ── SSH 日志收集 ────────────────────────────────────────────────────
-        /// <summary>SSH 连接用户名（默认 root）</summary>
-        public string SshUser { get; set; } = "root";
+        /// <summary>SSH 登录用户名（Ubuntu 通常为 sysadmin，再 sudo 提权）</summary>
+        public string SshUser { get; set; } = "sysadmin";
         /// <summary>SSH 密码（明文保存，仅供开发调试使用）</summary>
         public string SshPassword { get; set; } = "";
         /// <summary>SSH 端口（默认 22）</summary>
         public int SshPort { get; set; } = 22;
         /// <summary>平台日志目录（默认 /root/logs）</summary>
         public string SshLogPath { get; set; } = "/root/logs";
+        /// <summary>直接下载的文件大小上限(MB)，超过则在服务端 awk 过滤后再下载</summary>
+        public int SshSizeThresholdMb { get; set; } = 50;
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 

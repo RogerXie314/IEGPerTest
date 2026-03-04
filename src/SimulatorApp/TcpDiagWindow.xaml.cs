@@ -353,11 +353,12 @@ namespace SimulatorApp
             try
             {
                 var cfg = await AppConfig.LoadAsync().ConfigureAwait(true);
-                TxtSshHost.Text    = !string.IsNullOrEmpty(cfg.PlatformHost) ? cfg.PlatformHost : "192.168.125.20";
-                TxtSshPort.Text    = cfg.SshPort > 0 ? cfg.SshPort.ToString() : "22";
-                TxtSshUser.Text    = !string.IsNullOrEmpty(cfg.SshUser) ? cfg.SshUser : "root";
+                TxtSshHost.Text        = !string.IsNullOrEmpty(cfg.PlatformHost) ? cfg.PlatformHost : "192.168.125.20";
+                TxtSshPort.Text        = cfg.SshPort > 0 ? cfg.SshPort.ToString() : "22";
+                TxtSshUser.Text        = !string.IsNullOrEmpty(cfg.SshUser) ? cfg.SshUser : "sysadmin";
                 PbSshPassword.Password = cfg.SshPassword;
-                TxtSshLogPath.Text = !string.IsNullOrEmpty(cfg.SshLogPath) ? cfg.SshLogPath : "/root/logs";
+                TxtSshLogPath.Text     = !string.IsNullOrEmpty(cfg.SshLogPath) ? cfg.SshLogPath : "/root/logs";
+                TxtSshThreshold.Text   = cfg.SshSizeThresholdMb > 0 ? cfg.SshSizeThresholdMb.ToString() : "50";
             }
             catch { /* 加载失败时保留默认值 */ }
         }
@@ -368,114 +369,208 @@ namespace SimulatorApp
             string user          = TxtSshUser.Text.Trim();
             string password      = PbSshPassword.Password;
             string remoteLogPath = TxtSshLogPath.Text.Trim();
-            if (!int.TryParse(TxtSshPort.Text,    out int sshPort))    sshPort    = 22;
-            if (!int.TryParse(TxtSshMinutes.Text, out int minutes)) minutes = 90;
+            if (!int.TryParse(TxtSshPort.Text,      out int sshPort))  sshPort  = 22;
+            if (!int.TryParse(TxtSshMinutes.Text,   out int minutes))  minutes  = 90;
+            if (!int.TryParse(TxtSshThreshold.Text, out int threshMb)) threshMb = 50;
+            long threshBytes = (long)threshMb * 1024 * 1024;
 
-            if (string.IsNullOrEmpty(host)) { AppendSshLog("❌ 请填写平台主机地址"); return; }
-            if (string.IsNullOrEmpty(user)) { AppendSshLog("❌ 请填写 SSH 用户名");   return; }
+            if (string.IsNullOrEmpty(host))     { AppendSshLog("❌ 请填写平台主机地址"); return; }
+            if (string.IsNullOrEmpty(user))     { AppendSshLog("❌ 请填写 SSH 用户名");   return; }
+            if (string.IsNullOrEmpty(password)) { AppendSshLog("❌ 请填写密码（sudo 提权需要密码）"); return; }
 
-            BtnCollectLogs.IsEnabled            = false;
-            BtnOpenOutputDir.Visibility         = Visibility.Collapsed;
-            TxtSshProgress.Text                 = "收集中…";
-            TxtSshLog.Text                      = "";
+            BtnCollectLogs.IsEnabled    = false;
+            BtnOpenOutputDir.Visibility = Visibility.Collapsed;
+            TxtSshProgress.Text         = "收集中…";
+            TxtSshLog.Text              = "";
+            TxtTimeSkew.Text            = "检测中…";
+            TxtTimeSkew.Foreground      = System.Windows.Media.Brushes.DarkOrange;
 
-            // 保存 SSH 配置
+            // 保存配置
             try
             {
                 var cfg = await AppConfig.LoadAsync().ConfigureAwait(true);
-                cfg.SshPort     = sshPort;
-                cfg.SshUser     = user;
-                cfg.SshPassword = password;
-                cfg.SshLogPath  = remoteLogPath;
+                cfg.SshPort            = sshPort;
+                cfg.SshUser            = user;
+                cfg.SshPassword        = password;
+                cfg.SshLogPath         = remoteLogPath;
+                cfg.SshSizeThresholdMb = threshMb;
                 await AppConfig.SaveAsync(cfg).ConfigureAwait(true);
             }
             catch { /* non-fatal */ }
 
-            var cutoff = DateTime.Now.AddMinutes(-minutes);
-            _sshOutputDir = Path.Combine(AppContext.BaseDirectory,
-                $"debug_collect_{DateTime.Now:yyyyMMdd_HHmmss}");
+            var localNow    = DateTime.Now;
+            var localCutoff = localNow.AddMinutes(-minutes);
+            _sshOutputDir   = Path.Combine(AppContext.BaseDirectory, $"debug_collect_{localNow:yyyyMMdd_HHmmss}");
             Directory.CreateDirectory(_sshOutputDir);
 
             AppendSshLog($"输出目录：{_sshOutputDir}");
-            AppendSshLog($"采集范围：{cutoff:HH:mm:ss} 之后再修改的文件");
+            AppendSshLog($"本机截止时间：{localCutoff:yyyy-MM-dd HH:mm:ss}");
             AppendSshLog("");
 
             int remoteCount = 0, localCount = 0;
+            long offsetSec = 0;
 
             await Task.Run(() =>
             {
-                // ── 1. SSH 收集平台日志 ──────────────────────────────
+                // ── 1. SSH 收集平台日志 ────────────────────────────────────────
                 try
                 {
-                    AppendSshLog($"正在连接 SSH {user}@{host}:{sshPort} …");
-                    var authMethod = new PasswordAuthenticationMethod(user, password);
-                    var connInfo   = new ConnectionInfo(host, sshPort, user, authMethod);
-                    connInfo.Timeout = TimeSpan.FromSeconds(15);
+                    AppendSshLog($"正在连接 {user}@{host}:{sshPort} …");
+                    var auth     = new PasswordAuthenticationMethod(user, password);
+                    var connInfo = new ConnectionInfo(host, sshPort, user, auth) { Timeout = TimeSpan.FromSeconds(15) };
 
+                    using var ssh  = new SshClient(connInfo);
                     using var sftp = new SftpClient(connInfo);
-                    sftp.Connect();
+                    ssh.Connect();
                     AppendSshLog("✅ SSH 连接成功");
 
-                    var remoteFiles = sftp.ListDirectory(remoteLogPath)
-                        .Where(f => !f.IsDirectory && f.LastWriteTime >= cutoff)
-                        .OrderBy(f => f.LastWriteTime)
-                        .ToList();
-
-                    AppendSshLog($"目录 {remoteLogPath}：共 {remoteFiles.Count} 个文件在范围内");
-
-                    foreach (var f in remoteFiles)
+                    // ── 1a. 检测时间偏差（RTT 半程补偿）──────────────────────
+                    long t0 = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    string remoteEpochStr = SshRun(ssh, "date +%s").Trim();
+                    long t1 = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    string skewDesc = "（检测失败）";
+                    var skewFg = System.Windows.Media.Brushes.Gray;
+                    if (long.TryParse(remoteEpochStr, out long remoteEpoch))
                     {
-                        var localFile = Path.Combine(_sshOutputDir, f.Name);
-                        AppendSshLog($"  ↓ {f.Name}  ({f.Length / 1024.0:F1} KB)");
-                        using var fs = File.OpenWrite(localFile);
-                        sftp.DownloadFile(f.FullName, fs);
-                        remoteCount++;
+                        long localEpoch = (t0 + t1) / 2;
+                        offsetSec = localEpoch - remoteEpoch;  // 正 = 本机超前平台
+                        skewDesc = offsetSec == 0 ? "无偏差"
+                            : $"{(offsetSec > 0 ? "+" : "")}{offsetSec}s（本机{(offsetSec > 0 ? "超前" : "落后")}平台）";
+                        skewFg = Math.Abs(offsetSec) > 30
+                            ? System.Windows.Media.Brushes.DarkRed
+                            : System.Windows.Media.Brushes.DarkGreen;
+                        AppendSshLog($"⏱ 时间偏差：{skewDesc}");
+                    }
+                    var capturedFg = skewFg;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        TxtTimeSkew.Text       = skewDesc;
+                        TxtTimeSkew.Foreground = capturedFg;
+                    }));
+
+                    // ── 1b. 计算平台侧截止时间（修正偏差）─────────────────────
+                    // 平台时间 = 本机时间 - offsetSec
+                    var remoteCutoff       = localCutoff.AddSeconds(-offsetSec);
+                    long remoteCutoffEpoch = new DateTimeOffset(remoteCutoff, TimeSpan.Zero).ToUnixTimeSeconds();
+                    string remoteCutoffStr = remoteCutoff.ToString("yyyy-MM-dd HH:mm:ss");
+                    AppendSshLog($"平台截止：{remoteCutoffStr}");
+                    AppendSshLog("");
+
+                    // ── 1c. 建临时目录，find -newer 定位范围内的文件 ────────
+                    string tmpBase = $"/tmp/dbg_{localNow:yyyyMMddHHmmss}";
+                    SshRunSudo(ssh, password, $"mkdir -p {tmpBase}");
+                    SshRunSudo(ssh, password, $"touch -d @{remoteCutoffEpoch} {tmpBase}/.ts_marker");
+                    string findOut = SshRunSudo(ssh, password,
+                        $"find {remoteLogPath} -maxdepth 1 -type f -newer {tmpBase}/.ts_marker 2>/dev/null");
+
+                    var remoteFiles = findOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim()).Where(s => s.StartsWith("/"))
+                        .OrderBy(s => s).ToList();
+
+                    AppendSshLog($"目录 {remoteLogPath}：{remoteFiles.Count} 个文件在时间范围内");
+
+                    // ── 1d. 逐文件：小文件直接复制，大文件 awk 过滤 ────────
+                    sftp.Connect();
+                    foreach (var remoteFile in remoteFiles)
+                    {
+                        string fname   = Path.GetFileName(remoteFile);
+                        string tmpFile = $"{tmpBase}/{fname}";
+
+                        long fileSize = 0;
+                        string wcOut = SshRunSudo(ssh, password, $"wc -c < {remoteFile} 2>/dev/null").Trim();
+                        long.TryParse(wcOut.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0], out fileSize);
+
+                        if (fileSize <= threshBytes)
+                        {
+                            // 小文件：sudo cp → chmod 644 → SFTP 下载
+                            AppendSshLog($"  ↓ {fname}  ({fileSize / 1024.0:F0} KB) 直接下载");
+                            SshRunSudo(ssh, password, $"cp {remoteFile} {tmpFile} && chmod 644 {tmpFile}");
+                        }
+                        else
+                        {
+                            // 大文件：sudo awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
+                            AppendSshLog($"  🔍 {fname}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 ≥ {remoteCutoffStr}");
+                            // awk: 遇到 [YYYY-MM-DD 开头行提取前19字符为时间戳；在范围内则打印（包括后续续行）
+                            string awkCmd = $"awk -v cutoff='{remoteCutoffStr}' " +
+                                @"'/^\[20[0-9][0-9]-[0-9][0-9]-/{ts=substr($0,2,19); keep=(ts>=cutoff)} keep{print}' " +
+                                $"{remoteFile} > {tmpFile} && chmod 644 {tmpFile}";
+                            SshRunSudo(ssh, password, awkCmd);
+                        }
+
+                        // 通过 SFTP 下载 /tmp 中的文件
+                        try
+                        {
+                            var localDst = Path.Combine(_sshOutputDir, fname);
+                            using var fs = File.OpenWrite(localDst);
+                            sftp.DownloadFile(tmpFile, fs);
+                            long localSize = new FileInfo(localDst).Length;
+                            AppendSshLog($"     → 已下载 {localSize / 1024.0:F0} KB");
+                            remoteCount++;
+                        }
+                        catch (Exception exDl) { AppendSshLog($"     ⚠ 下载失败: {exDl.Message}"); }
                     }
 
                     sftp.Disconnect();
-                    AppendSshLog($"✅ 平台日志：{remoteCount} 个文件下载完成");
+
+                    // ── 1e. 清理临时目录 ──────────────────────────────────
+                    SshRunSudo(ssh, password, $"rm -rf {tmpBase}");
+                    ssh.Disconnect();
+                    AppendSshLog($"\n✅ 平台日志收集完成：{remoteCount} 个文件");
                 }
                 catch (Exception ex)
                 {
-                    AppendSshLog($"❌ SSH 错误：{ex.Message}");
-                    AppendSshLog("提示：平台日志跳过，本地日志正常备份。");
+                    AppendSshLog($"❌ SSH 异常：{ex.Message}");
+                    AppendSshLog("提示：平台日志已跳过，本地日志正常备份。");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        TxtTimeSkew.Text       = "连接失败";
+                        TxtTimeSkew.Foreground = System.Windows.Media.Brushes.DarkRed;
+                    }));
                 }
+
                 AppendSshLog("");
 
-                // ── 2. 备份本地日志 ────────────────────────────────
+                // ── 2. 备份本地调试日志（按本机时间）──────────────────────────
                 AppendSshLog("本地调试日志备份…");
-
-                // heartbeat_monitor 日志
                 try
                 {
                     foreach (var f in Directory.GetFiles(AppContext.BaseDirectory, "heartbeat_monitor_*.log")
-                        .Where(f => File.GetCreationTime(f) >= cutoff))
+                        .Where(f => File.GetLastWriteTime(f) >= localCutoff))
                     {
-                        var dst = Path.Combine(_sshOutputDir, Path.GetFileName(f));
-                        File.Copy(f, dst, true);
-                        AppendSshLog($"  ✓ local: {Path.GetFileName(f)}");
+                        File.Copy(f, Path.Combine(_sshOutputDir, Path.GetFileName(f)), true);
+                        AppendSshLog($"  ✓ {Path.GetFileName(f)}");
                         localCount++;
                     }
                 }
                 catch (Exception ex) { AppendSshLog($"  ⚠ heartbeat log: {ex.Message}"); }
 
-                // logsend-packets 日志
                 try
                 {
                     var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
                     if (Directory.Exists(logDir))
-                    {
                         foreach (var f in Directory.GetFiles(logDir, "logsend-packets-*.log")
-                            .Where(f => File.GetLastWriteTime(f) >= cutoff))
+                            .Where(f => File.GetLastWriteTime(f) >= localCutoff))
                         {
-                            var dst = Path.Combine(_sshOutputDir, Path.GetFileName(f));
-                            File.Copy(f, dst, true);
-                            AppendSshLog($"  ✓ local: {Path.GetFileName(f)}");
+                            File.Copy(f, Path.Combine(_sshOutputDir, Path.GetFileName(f)), true);
+                            AppendSshLog($"  ✓ {Path.GetFileName(f)}");
                             localCount++;
                         }
-                    }
                 }
                 catch (Exception ex) { AppendSshLog($"  ⚠ logsend log: {ex.Message}"); }
+
+                // ── 3. 写时间偏差说明文件 ───────────────────────────────────
+                try
+                {
+                    string note = "# 日志收集说明\n" +
+                        $"收集时刻（本机）: {localNow:yyyy-MM-dd HH:mm:ss}\n" +
+                        $"本机截止时间:     {localCutoff:yyyy-MM-dd HH:mm:ss}\n" +
+                        $"平台时间偏差:     {(offsetSec >= 0 ? "+" : "")}{offsetSec} 秒（本机 - 平台）\n" +
+                        $"平台侧截止时间:   {localCutoff.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}\n\n" +
+                        "分析时间线时请注意：平台日志时间戳 + 偏差秒数 ≈ 本机时间。\n";
+                    File.WriteAllText(Path.Combine(_sshOutputDir, "_时间偏差说明.txt"), note,
+                        System.Text.Encoding.UTF8);
+                }
+                catch { /* non-fatal */ }
 
                 AppendSshLog($"✅ 本地日志：{localCount} 个文件");
             });
@@ -484,6 +579,25 @@ namespace SimulatorApp
             BtnCollectLogs.IsEnabled    = true;
             BtnOpenOutputDir.Visibility = Visibility.Visible;
         }
+
+        /// <summary>通过 SSH exec channel 运行命令，返回 stdout</summary>
+        private static string SshRun(SshClient ssh, string command)
+        {
+            using var cmd = ssh.RunCommand(command);
+            return cmd.Result;
+        }
+
+        /// <summary>通过 echo PASSWORD | sudo -S bash -c '...' 运行需要提权的命令，返回 stdout+stderr</summary>
+        private static string SshRunSudo(SshClient ssh, string password, string command)
+        {
+            string cmdLine = $"echo {ShellQuote(password)} | sudo -S bash -c {ShellQuote(command)} 2>&1";
+            using var cmd  = ssh.RunCommand(cmdLine);
+            return cmd.Result;
+        }
+
+        /// <summary>Shell 单引号安全转义：包裹在 ' 中，将内部的 ' 转义为 '\'  '</summary>
+        private static string ShellQuote(string s)
+            => "'" + s.Replace("'", "'\\''") + "'";
 
         private void BtnOpenOutputDir_Click(object sender, RoutedEventArgs e)
         {

@@ -327,18 +327,17 @@
                 <Grid Margin="0,0,0,6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="120"/>
                         <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="45"/>
                         <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="6"/>
                         <RowDefinition Height="Auto"/>
@@ -350,15 +349,21 @@
                     <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">端口：</TextBlock>
                     <TextBox   Grid.Row="0" Grid.Column="4" x:Name="TxtSshPort" Height="22" Text="22" VerticalContentAlignment="Center" Padding="4,0"/>
                     <TextBlock Grid.Row="0" Grid.Column="6" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">日志目录：</TextBlock>
-                    <TextBox   Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="4" x:Name="TxtSshLogPath" Height="22" Text="/root/logs" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBox   Grid.Row="0" Grid.Column="7" x:Name="TxtSshLogPath" Height="22" Text="/root/logs" VerticalContentAlignment="Center" Padding="4,0"/>
 
-                    <!-- Row2: User / Password / 采集范围 -->
+                    <!-- Row2: 用户名 / 密码 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">用户名：</TextBlock>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TxtSshUser" Height="22" Text="root" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TxtSshUser" Height="22" Text="sysadmin" VerticalContentAlignment="Center" Padding="4,0"/>
                     <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">密码：</TextBlock>
-                    <PasswordBox Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="3" x:Name="PbSshPassword" Height="22" VerticalContentAlignment="Center" Padding="4,0"/>
-                    <TextBlock Grid.Row="2" Grid.Column="7" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">采集（分钟前）：</TextBlock>
-                    <TextBox   Grid.Row="2" Grid.Column="8" Grid.ColumnSpan="3" x:Name="TxtSshMinutes" Height="22" Text="90" VerticalContentAlignment="Center" Padding="4,0" Width="45" HorizontalAlignment="Left"/>
+                    <PasswordBox Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="4" x:Name="PbSshPassword" Height="22" VerticalContentAlignment="Center" Padding="4,0"/>
+
+                    <!-- Row4: 大文件阈值 / 采集范围 / 时间偏差（连接后更新） -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">大文件阈值(MB)：</TextBlock>
+                    <TextBox   Grid.Row="4" Grid.Column="1" x:Name="TxtSshThreshold" Height="22" Text="50" VerticalContentAlignment="Center" Padding="4,0" Width="50" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Row="4" Grid.Column="3" Style="{StaticResource LabelText}" Width="Auto" Margin="0,0,4,0">采集(分钟前)：</TextBlock>
+                    <TextBox   Grid.Row="4" Grid.Column="4" x:Name="TxtSshMinutes" Height="22" Text="90" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Row="4" Grid.Column="6" FontSize="11" Foreground="#888" VerticalAlignment="Center" Margin="0,0,4,0">时间偏差：</TextBlock>
+                    <TextBlock Grid.Row="4" Grid.Column="7" x:Name="TxtTimeSkew" FontSize="11" FontWeight="SemiBold" Foreground="#888" VerticalAlignment="Center">（连接后检测）</TextBlock>
                 </Grid>
 
                 <!-- 按鈕行 -->
