@@ -456,7 +456,20 @@ namespace SimulatorApp
                         TxtTimeSkew.Foreground = capturedFg;
                     }));
 
-                    // ── 1b. 计算平台侧截止时间（修正偏差）─────────────────────
+                    // ── 1b. 切换 root（密码与 SSH 登录密码相同）──────────────
+                    AppendSshLog("正在切换 root 账户…");
+                    string whoamiOut = SshRunAsRoot(ssh, password, "whoami").Trim();
+                    if (whoamiOut == "root")
+                    {
+                        AppendSshLog("✅ 已切换到 root 账户");
+                    }
+                    else
+                    {
+                        AppendSshLog($"⚠ su root 返回：{whoamiOut}（将继续尝试，若命令失败请确认密码）");
+                    }
+                    AppendSshLog("");
+
+                    // ── 1c. 计算平台侧截止时间（修正偏差）─────────────────────
                     // 平台时间 = 本机时间 - offsetSec
                     var remoteCutoff       = localCutoff.AddSeconds(-offsetSec);
                     long remoteCutoffEpoch = new DateTimeOffset(remoteCutoff).ToUnixTimeSeconds();
@@ -464,11 +477,11 @@ namespace SimulatorApp
                     AppendSshLog($"平台截止：{remoteCutoffStr}");
                     AppendSshLog("");
 
-                    // ── 1c. 建临时目录，find -newer 定位范围内的文件 ────────
+                    // ── 1d. 建临时目录，find -newer 定位范围内的文件 ────────
                     string tmpBase = $"/tmp/dbg_{localNow:yyyyMMddHHmmss}";
-                    SshRunSudo(ssh, password, $"mkdir -p {tmpBase}");
-                    SshRunSudo(ssh, password, $"touch -d @{remoteCutoffEpoch} {tmpBase}/.ts_marker");
-                    string findOut = SshRunSudo(ssh, password,
+                    SshRunAsRoot(ssh, password, $"mkdir -p {tmpBase}");
+                    SshRunAsRoot(ssh, password, $"touch -d @{remoteCutoffEpoch} {tmpBase}/.ts_marker");
+                    string findOut = SshRunAsRoot(ssh, password,
                         $"find {remoteLogPath} -maxdepth 1 -type f -newer {tmpBase}/.ts_marker 2>/dev/null");
 
                     var remoteFiles = findOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -477,7 +490,7 @@ namespace SimulatorApp
 
                     AppendSshLog($"目录 {remoteLogPath}：{remoteFiles.Count} 个文件在时间范围内");
 
-                    // ── 1d. 逐文件：小文件直接复制，大文件 awk 过滤 ────────
+                    // ── 1e. 逐文件：小文件直接复制，大文件 awk 过滤 ────────
                     sftp.Connect();
                     foreach (var remoteFile in remoteFiles)
                     {
@@ -485,24 +498,24 @@ namespace SimulatorApp
                         string tmpFile = $"{tmpBase}/{fname}";
 
                         long fileSize = 0;
-                        string wcOut = SshRunSudo(ssh, password, $"wc -c < {remoteFile} 2>/dev/null").Trim();
+                        string wcOut = SshRunAsRoot(ssh, password, $"wc -c < {remoteFile} 2>/dev/null").Trim();
                         long.TryParse(wcOut.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0], out fileSize);
 
                         if (fileSize <= threshBytes)
                         {
-                            // 小文件：sudo cp → chmod 644 → SFTP 下载
+                            // 小文件：root cp → chmod 644 → SFTP 下载
                             AppendSshLog($"  ↓ {fname}  ({fileSize / 1024.0:F0} KB) 直接下载");
-                            SshRunSudo(ssh, password, $"cp {remoteFile} {tmpFile} && chmod 644 {tmpFile}");
+                            SshRunAsRoot(ssh, password, $"cp {remoteFile} {tmpFile} && chmod 644 {tmpFile}");
                         }
                         else
                         {
-                            // 大文件：sudo awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
+                            // 大文件：root awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
                             AppendSshLog($"  🔍 {fname}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 ≥ {remoteCutoffStr}");
                             // awk: 遇到 [YYYY-MM-DD 开头行提取前19字符为时间戳；在范围内则打印（包括后续续行）
                             string awkCmd = $"awk -v cutoff='{remoteCutoffStr}' " +
                                 @"'/^\[20[0-9][0-9]-[0-9][0-9]-/{ts=substr($0,2,19); keep=(ts>=cutoff)} keep{print}' " +
                                 $"{remoteFile} > {tmpFile} && chmod 644 {tmpFile}";
-                            SshRunSudo(ssh, password, awkCmd);
+                            SshRunAsRoot(ssh, password, awkCmd);
                         }
 
                         // 通过 SFTP 下载 /tmp 中的文件
@@ -520,8 +533,8 @@ namespace SimulatorApp
 
                     sftp.Disconnect();
 
-                    // ── 1e. 清理临时目录 ──────────────────────────────────
-                    SshRunSudo(ssh, password, $"rm -rf {tmpBase}");
+                    // ── 1f. 清理临时目录 ──────────────────────────────────
+                    SshRunAsRoot(ssh, password, $"rm -rf {tmpBase}");
                     ssh.Disconnect();
                     AppendSshLog($"\n✅ 平台日志收集完成：{remoteCount} 个文件");
                 }
@@ -601,6 +614,14 @@ namespace SimulatorApp
         private static string SshRunSudo(SshClient ssh, string password, string command)
         {
             string cmdLine = $"echo {ShellQuote(password)} | sudo -S bash -c {ShellQuote(command)} 2>&1";
+            using var cmd  = ssh.RunCommand(cmdLine);
+            return cmd.Result;
+        }
+
+        /// <summary>通过 echo PASSWORD | su root -c '...' 切换 root 执行命令，返回 stdout+stderr</summary>
+        private static string SshRunAsRoot(SshClient ssh, string password, string command)
+        {
+            string cmdLine = $"echo {ShellQuote(password)} | su root -c {ShellQuote(command)} 2>&1";
             using var cmd  = ssh.RunCommand(cmdLine);
             return cmd.Result;
         }
