@@ -358,8 +358,12 @@ namespace SimulatorApp
                 TxtSshPort.Text        = cfg.SshPort > 0 ? cfg.SshPort.ToString() : "22";
                 TxtSshUser.Text        = !string.IsNullOrEmpty(cfg.SshUser) ? cfg.SshUser : "sysadmin";
                 PbSshPassword.Password = cfg.SshPassword;
-                TxtSshLogPath.Text     = !string.IsNullOrEmpty(cfg.SshLogPath) ? cfg.SshLogPath : "/root/logs";
-                TxtSshThreshold.Text   = cfg.SshSizeThresholdMb > 0 ? cfg.SshSizeThresholdMb.ToString() : "50";
+                TxtSshLogPath.Text      = !string.IsNullOrEmpty(cfg.SshLogPath) ? cfg.SshLogPath : "/root/logs";
+                TxtSshThreshold.Text    = cfg.SshSizeThresholdMb > 0 ? cfg.SshSizeThresholdMb.ToString() : "50";
+                var defEnd   = DateTime.Now;
+                var defStart = defEnd.AddMinutes(-90);
+                TxtSshTimeFrom.Text = (DateTime.TryParse(cfg.SshCollectFrom, out var cfgFrom) ? cfgFrom : defStart).ToString("yyyy-MM-dd HH:mm");
+                TxtSshTimeTo.Text   = (DateTime.TryParse(cfg.SshCollectTo,   out var cfgTo)   ? cfgTo   : defEnd  ).ToString("yyyy-MM-dd HH:mm");
             }
             catch { /* 加载失败时保留默认值 */ }
         }
@@ -370,14 +374,19 @@ namespace SimulatorApp
             string user          = TxtSshUser.Text.Trim();
             string password      = PbSshPassword.Password;
             string remoteLogPath = TxtSshLogPath.Text.Trim();
-            if (!int.TryParse(TxtSshPort.Text,      out int sshPort))  sshPort  = 22;
-            if (!int.TryParse(TxtSshMinutes.Text,   out int minutes))  minutes  = 90;
-            if (!int.TryParse(TxtSshThreshold.Text, out int threshMb)) threshMb = 50;
+            if (!int.TryParse(TxtSshPort.Text,         out int sshPort))  sshPort  = 22;
+            if (!int.TryParse(TxtSshThreshold.Text,    out int threshMb)) threshMb = 50;
             long threshBytes = (long)threshMb * 1024 * 1024;
+
+            if (!DateTime.TryParse(TxtSshTimeFrom.Text.Trim(), out DateTime localStart))
+            { AppendSshLog("❌ 开始时间格式错误，请填写如：2026-03-04 14:00"); return; }
+            if (!DateTime.TryParse(TxtSshTimeTo.Text.Trim(), out DateTime localEnd))
+                localEnd = DateTime.Now;
 
             if (string.IsNullOrEmpty(host))     { AppendSshLog("❌ 请填写平台主机地址"); return; }
             if (string.IsNullOrEmpty(user))     { AppendSshLog("❌ 请填写 SSH 用户名");   return; }
             if (string.IsNullOrEmpty(password)) { AppendSshLog("❌ 请填写密码（sudo 提权需要密码）"); return; }
+            if (localEnd <= localStart)         { AppendSshLog("❌ 结束时间必须晚于开始时间"); return; }
 
             BtnCollectLogs.IsEnabled    = false;
             BtnOpenOutputDir.Visibility = Visibility.Collapsed;
@@ -402,17 +411,19 @@ namespace SimulatorApp
                 cfg.SshPassword        = password;
                 cfg.SshLogPath         = remoteLogPath;
                 cfg.SshSizeThresholdMb = threshMb;
+                cfg.SshCollectFrom     = localStart.ToString("yyyy-MM-dd HH:mm");
+                cfg.SshCollectTo       = localEnd.ToString("yyyy-MM-dd HH:mm");
                 await AppConfig.SaveAsync(cfg).ConfigureAwait(true);
             }
             catch { /* non-fatal */ }
 
-            var localNow    = DateTime.Now;
-            var localCutoff = localNow.AddMinutes(-minutes);
-            _sshOutputDir   = Path.Combine(AppContext.BaseDirectory, $"debug_collect_{localNow:yyyyMMdd_HHmmss}");
+            var localNow  = DateTime.Now;
+            _sshOutputDir = Path.Combine(AppContext.BaseDirectory, $"debug_collect_{localNow:yyyyMMdd_HHmmss}");
             Directory.CreateDirectory(_sshOutputDir);
 
+            string localRangeDesc = $"{localStart:yyyy-MM-dd HH:mm:ss}  ~  {localEnd:yyyy-MM-dd HH:mm:ss}";
             AppendSshLog($"输出目录：{_sshOutputDir}");
-            AppendSshLog($"本机截止时间：{localCutoff:yyyy-MM-dd HH:mm:ss}");
+            AppendSshLog($"本机时间范围：{localRangeDesc}");
             AppendSshLog("");
 
             int remoteCount = 0, localCount = 0;
@@ -469,22 +480,26 @@ namespace SimulatorApp
                     }
                     AppendSshLog("");
 
-                    // ── 1c. 计算平台侧截止时间（修正偏差）─────────────────────
+                    // ── 1c. 计算平台侧时间范围（修正时钟偏差）──────────────────
                     // 平台时间 = 本机时间 - offsetSec
-                    var remoteCutoff       = localCutoff.AddSeconds(-offsetSec);
-                    long remoteCutoffEpoch = new DateTimeOffset(remoteCutoff).ToUnixTimeSeconds();
-                    string remoteCutoffStr = remoteCutoff.ToString("yyyy-MM-dd HH:mm:ss");
-                    AppendSshLog($"平台截止：{remoteCutoffStr}");
+                    var remoteStart       = localStart.AddSeconds(-offsetSec);
+                    long remoteStartEpoch = new DateTimeOffset(remoteStart).ToUnixTimeSeconds();
+                    string remoteStartStr = remoteStart.ToString("yyyy-MM-dd HH:mm:ss");
+                    var remoteEnd         = localEnd.AddSeconds(-offsetSec);
+                    long remoteEndEpoch   = new DateTimeOffset(remoteEnd).ToUnixTimeSeconds();
+                    string remoteEndStr   = remoteEnd.ToString("yyyy-MM-dd HH:mm:ss");
+                    AppendSshLog($"平台时间范围：{remoteStartStr}  ~  {remoteEndStr}");
                     AppendSshLog("");
 
                     // ── 1d. 建临时目录，find -newer 递归定位范围内的文件 ────────
                     string tmpBase       = $"/tmp/dbg_{localNow:yyyyMMddHHmmss}";
                     string remoteLogRoot = remoteLogPath.TrimEnd('/');
                     SshRunAsRoot(ssh, password, $"mkdir -p {tmpBase}");
-                    SshRunAsRoot(ssh, password, $"touch -d @{remoteCutoffEpoch} {tmpBase}/.ts_marker");
-                    // 不加 -maxdepth，递归搜索所有子目录下的文件
+                    SshRunAsRoot(ssh, password, $"touch -d @{remoteStartEpoch} {tmpBase}/.ts_start");
+                    SshRunAsRoot(ssh, password, $"touch -d @{remoteEndEpoch}   {tmpBase}/.ts_end");
+                    // 不加 -maxdepth，递归搜索所有子目录下时间区间内的文件
                     string findOut = SshRunAsRoot(ssh, password,
-                        $"find {remoteLogRoot} -type f -newer {tmpBase}/.ts_marker 2>/dev/null");
+                        $"find {remoteLogRoot} -type f -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null");
 
                     var remoteFiles = findOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                         .Select(s => s.Trim()).Where(s => s.StartsWith("/"))
@@ -522,9 +537,9 @@ namespace SimulatorApp
                             else
                             {
                                 // 大文件：root awk 按时间戳过滤（适配 [YYYY-MM-DD HH:MM:SS:ms] 格式）
-                                AppendSshLog($"  🔍 {relPath}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 ≥ {remoteCutoffStr}");
-                                string awkCmd = $"awk -v cutoff='{remoteCutoffStr}' " +
-                                    @"'/^\[20[0-9][0-9]-[0-9][0-9]-/{ts=substr($0,2,19); keep=(ts>=cutoff)} keep{print}' " +
+                                AppendSshLog($"  🔍 {relPath}  ({fileSize / 1024.0 / 1024.0:F1} MB) 服务端过滤 {remoteStartStr} ~ {remoteEndStr}");
+                                string awkCmd = $"awk -v cutoff='{remoteStartStr}' -v endtime='{remoteEndStr}' " +
+                                    $@"'/^\[20[0-9][0-9]-[0-9][0-9]-/{{ts=substr($0,2,19); keep=(ts>=cutoff && ts<=endtime)}} keep{{print}}' " +
                                     $"{remoteFile} > {tmpFile} && chmod 644 {tmpFile}";
                                 SshRunAsRoot(ssh, password, awkCmd);
                             }
@@ -598,7 +613,7 @@ namespace SimulatorApp
                 try
                 {
                     foreach (var f in Directory.GetFiles(AppContext.BaseDirectory, "heartbeat_monitor_*.log")
-                        .Where(f => File.GetLastWriteTime(f) >= localCutoff))
+                        .Where(f => File.GetLastWriteTime(f) >= localStart))
                     {
                         File.Copy(f, Path.Combine(_sshOutputDir, Path.GetFileName(f)), true);
                         AppendSshLog($"  ✓ {Path.GetFileName(f)}");
@@ -616,7 +631,7 @@ namespace SimulatorApp
                         var localLogsDst = Path.Combine(_sshOutputDir, "logs");
                         Directory.CreateDirectory(localLogsDst);
                         foreach (var f in Directory.GetFiles(logDir, "*.log")
-                            .Where(f => File.GetLastWriteTime(f) >= localCutoff))
+                            .Where(f => File.GetLastWriteTime(f) >= localStart))
                         {
                             File.Copy(f, Path.Combine(localLogsDst, Path.GetFileName(f)), true);
                             AppendSshLog($"  ✓ logs/{Path.GetFileName(f)}");
@@ -681,9 +696,9 @@ namespace SimulatorApp
                     sb.AppendLine();
                     sb.AppendLine("## 时间信息");
                     sb.AppendLine($"  收集时刻（本机）: {localNow:yyyy-MM-dd HH:mm:ss}");
-                    sb.AppendLine($"  本机截止时间:     {localCutoff:yyyy-MM-dd HH:mm:ss}");
+                    sb.AppendLine($"  本机时间范围:     {localRangeDesc}");
                     sb.AppendLine($"  平台时间偏差:     {(offsetSec >= 0 ? "+" : "")}{offsetSec} 秒（本机 - 平台）");
-                    sb.AppendLine($"  平台侧截止时间:   {localCutoff.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}");
+                    sb.AppendLine($"  平台侧时间范围:   {localStart.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}  ~  {localEnd.AddSeconds(-offsetSec):yyyy-MM-dd HH:mm:ss}");
                     sb.AppendLine();
                     sb.AppendLine("  注：分析时间线时，平台日志时间戳 + 偏差秒数 ≈ 本机时间。");
                     sb.AppendLine();

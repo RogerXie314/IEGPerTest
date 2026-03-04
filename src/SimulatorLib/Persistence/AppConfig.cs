@@ -52,6 +52,10 @@ namespace SimulatorLib.Persistence
         public string SshLogPath { get; set; } = "/root/logs";
         /// <summary>直接下载的文件大小上限(MB)，超过则在服务端 awk 过滤后再下载</summary>
         public int SshSizeThresholdMb { get; set; } = 50;
+        /// <summary>日志采集开始时间（yyyy-MM-dd HH:mm），空 = 使用默认90分钟前</summary>
+        public string SshCollectFrom { get; set; } = "";
+        /// <summary>日志采集结束时间（yyyy-MM-dd HH:mm），空 = 使用当前时间</summary>
+        public string SshCollectTo { get; set; } = "";
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
 
