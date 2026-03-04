@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="连接参数诊断"
         Width="660"
-        Height="820"
+        Height="680"
         MinHeight="400"
-        MaxHeight="960"
+        MaxHeight="880"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -82,36 +82,16 @@
         <!-- ── 标题栏 ── -->
         <DockPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock DockPanel.Dock="Left" FontSize="16" FontWeight="Bold" Foreground="#3A3A5C" VerticalAlignment="Center">连接参数诊断</TextBlock>
-            <TextBlock DockPanel.Dock="Right" x:Name="TxtSampleTime" FontSize="11" Foreground="#999" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,0,0"/>
-            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="#999" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,4,0">采样时刻：</TextBlock>
+            <TextBlock DockPanel.Dock="Right" x:Name="TxtSampleTime" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,0,0"/>
+            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,4,0">采样时刻：</TextBlock>
+            <Button DockPanel.Dock="Right" Height="24" FontSize="11" Padding="10,0" Margin="0,0,12,0"
+                    Background="#7B5EA7" BorderBrush="#5C3D8F"
+                    Click="BtnPortAdvanced_Click">🔧 端口 &amp; EPS</Button>
         </DockPanel>
 
         <!-- ── 内容区（可滚动）── -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,2,0">
             <StackPanel>
-
-        <!-- ── 系统 TCP 配置 ── -->
-        <Border Style="{StaticResource SectionBorder}">
-            <StackPanel>
-                <TextBlock Style="{StaticResource SectionTitle}">▸ 系统 TCP 配置</TextBlock>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource LabelText}" Margin="0,0,0,6">动态端口范围：</TextBlock>
-                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtPortRange" Style="{StaticResource ValueText}" Margin="0,0,0,6" TextWrapping="Wrap"/>
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource LabelText}">TIME_WAIT 超时：</TextBlock>
-                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtTimeWait" Style="{StaticResource ValueText}" TextWrapping="Wrap"/>
-                </Grid>
-            </StackPanel>
-        </Border>
 
         <!-- ── 当前连接状态 ── -->
         <Border Style="{StaticResource SectionBorder}">
@@ -214,103 +194,6 @@
                         <TextBlock x:Name="TxtLogHttpsTarget" Style="{StaticResource ValueText}"/>
                     </StackPanel>
                 </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 理论 EPS 估算 ── -->
-        <Border Style="{StaticResource SectionBorder}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4">▸ 理论 EPS 上限</TextBlock>
-                    <TextBlock FontSize="11" Foreground="#666" Margin="0,0,0,2">公式：可用端口数 ÷ TIME_WAIT 时长</TextBlock>
-                    <TextBlock x:Name="TxtFormula" FontSize="12" Foreground="#444" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                        <TextBlock FontSize="11" Foreground="#666">端口利用率：</TextBlock>
-                        <TextBlock x:Name="TxtCurrentUsagePct" FontSize="11" Foreground="#4A90E2" FontWeight="SemiBold"/>
-                    </StackPanel>
-                    <TextBlock x:Name="TxtMultiHostTip" FontSize="11" Foreground="#888" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                    <!-- 多IP模式额外行 -->
-                    <Border x:Name="PanelMultiIp" Background="#F0F4FF" CornerRadius="4" Padding="8,5" Margin="0,6,0,0"
-                            Visibility="Collapsed">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock FontSize="11" Foreground="#3949AB" FontWeight="SemiBold">多IP模式已开启：</TextBlock>
-                                <TextBlock x:Name="TxtMultiIpDesc" FontSize="11" Foreground="#3949AB"/>
-                            </StackPanel>
-                            <TextBlock x:Name="TxtMultiIpFormula" FontSize="12" Foreground="#1A237E" FontWeight="SemiBold" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- 大字 EPS 数字 -->
-                <Border Grid.Column="1" Background="#EAF1FB" CornerRadius="8" Padding="16,10" Margin="12,0,0,0" VerticalAlignment="Top">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock FontSize="10" Foreground="#666" HorizontalAlignment="Center">理论最大</TextBlock>
-                        <TextBlock x:Name="TxtTheoreticalEps" FontSize="32" FontWeight="Bold" Foreground="#1565C0" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="TxtMultiIpEps" FontSize="14" FontWeight="Bold" Foreground="#3949AB" HorizontalAlignment="Center" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <!-- ── 参数优化 ── -->
-        <Border Style="{StaticResource SectionBorder}">
-            <StackPanel>
-                <DockPanel Margin="0,0,0,8">
-                    <Button DockPanel.Dock="Right" Height="24" FontSize="11" Padding="10,0"
-                            Background="#43A047" BorderBrush="#2E7D32"
-                            Click="BtnOneClickOptimize_Click">⚡ 一键推荐设置</Button>
-                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center">▸ 参数优化</TextBlock>
-                </DockPanel>
-
-                <!-- 端口范围 + TIME_WAIT 统一 Grid，标签列 Auto，永不截断 -->
-                <Grid Margin="0,0,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="65"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="65"/>
-                        <ColumnDefinition Width="6"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="8"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- 行0：动态端口范围 -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" Foreground="#666" VerticalAlignment="Center" Margin="0,0,4,0">端口起始：</TextBlock>
-                    <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TxtEditPortStart" Height="22" Text="1025" VerticalContentAlignment="Center" Padding="4,0"/>
-                    <TextBlock Grid.Row="0" Grid.Column="3" Foreground="#666" VerticalAlignment="Center" Margin="0,0,4,0">端口数量：</TextBlock>
-                    <TextBox   Grid.Row="0" Grid.Column="4" x:Name="TxtEditPortCount" Height="22" Text="64511" VerticalContentAlignment="Center" Padding="4,0"/>
-                    <TextBlock Grid.Row="0" Grid.Column="6" FontSize="10" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0">(最大 64511)</TextBlock>
-                    <Button    Grid.Row="0" Grid.Column="8" Height="24" FontSize="11" Padding="10,0"
-                               Background="#1976D2" BorderBrush="#1565C0"
-                               Click="BtnApplyPortRange_Click">应用端口范围</Button>
-
-                    <!-- 行2：TIME_WAIT -->
-                    <TextBlock Grid.Row="2" Grid.Column="0" Foreground="#666" VerticalAlignment="Center" Margin="0,0,4,0">TIME_WAIT(秒)：</TextBlock>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TxtEditTimeWait" Height="22" Text="30" VerticalContentAlignment="Center" Padding="4,0"/>
-                    <TextBlock Grid.Row="2" Grid.Column="6" FontSize="10" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0">(建议 30，最小 30)</TextBlock>
-                    <Button    Grid.Row="2" Grid.Column="8" Height="24" FontSize="11" Padding="10,0"
-                               Background="#1976D2" BorderBrush="#1565C0"
-                               Click="BtnApplyTimeWait_Click">应用超时</Button>
-                </Grid>
-
-                <TextBlock x:Name="TxtOptimizeStatus" FontSize="11" Foreground="#888" TextWrapping="Wrap"
-                           Margin="0,8,0,0" Visibility="Collapsed"/>
-                <TextBlock FontSize="10" Foreground="#AAA" TextWrapping="Wrap" Margin="0,4,0,0">
-                    需要管理员权限；修改端口范围立即生效，TIME_WAIT 修改重启后生效。
-                </TextBlock>
             </StackPanel>
         </Border>
 
