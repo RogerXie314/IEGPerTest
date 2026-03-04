@@ -18,5 +18,5 @@ if ($LASTEXITCODE -eq 0) {
     $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
     Write-Host "SimulatorApp.exe 大小: $([math]::Round($exeSize, 2)) MB" -ForegroundColor Yellow
 } else {
-    Write-Host "发布失败！" -ForegroundColor Red
+    Write-Host "Publish failed!" -ForegroundColor Red
 }

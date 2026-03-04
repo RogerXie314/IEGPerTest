@@ -50,7 +50,7 @@ namespace SimulatorLib.Workers
             int SuccessUdp, int FailUdp, int ServerReplied = 0,
             int RsnServerClosed = 0, int RsnWriteFailed = 0,
             int RsnConnFailed = 0, int RsnConnTimeout = 0,
-            int RsnSessionStale = 0);
+            int RsnSessionStale = 0, int RsnLockBusy = 0);
 
         // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
         static class Reason
@@ -61,6 +61,7 @@ namespace SimulatorLib.Workers
             public const int ConnectFailed  = 3; // ConnectAsync 抛异常（含拒绝连接）
             public const int ConnectTimeout = 4; // ConnectAsync 3s 超时
             public const int SessionStale   = 5; // 平台静默踢除 session（TCP 不断但不再回包）
+            public const int LockBusy       = 6; // 写锁被 LogWorker 占用超时，跳过本次心跳（连接仍然有效）
         }
 
         public async Task StartAsync(
@@ -235,6 +236,18 @@ namespace SimulatorLib.Workers
                             bool lockAcq = _streamRegistry != null
                                 ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, sendCts.Token).ConfigureAwait(false)
                                 : true; // 无 registry 时不需要额外锁
+                            if (!lockAcq)
+                            {
+                                // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
+                                // 跳过本次心跳，等下一个周期再试。
+                                // （原来 throw TimeoutException 会被 catch 误判为写失败而 Dispose TCP，
+                                //   导致 HeartbeatWorker 重连失败而永久离线，但 LogWorker 降级独立 TCP 继续发送。）
+                                lastResult[idx] = 0;
+                                lastReason[idx] = Reason.LockBusy;
+                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { break; }
+                                continue;
+                            }
                             try
                             {
                                 await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
@@ -317,7 +330,7 @@ namespace SimulatorLib.Workers
 
                     int total = clients.Count;
                     int conn = 0, ok = 0, fail = 0, replied = 0;
-                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0, rSessionStale = 0;
+                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0, rSessionStale = 0, rLockBusy = 0;
                     long replyWindowMs2 = (long)intervalMs * 3;
                     long nowMs2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < total; j++)
@@ -328,16 +341,14 @@ namespace SimulatorLib.Workers
                         long t2 = Interlocked.Read(ref lastReplyTimeMs[j]);
                         if (t2 > 0 && (nowMs2 - t2) <= replyWindowMs2) replied++;
 
-                        if (connectedFlags[j] == 0)
+                        switch (lastReason[j])
                         {
-                            switch (lastReason[j])
-                            {
-                                case Reason.ServerClosed:   rServerClosed++;   break;
-                                case Reason.WriteFailed:    rWriteFailed++;    break;
-                                case Reason.ConnectFailed:  rConnFailed++;     break;
-                                case Reason.ConnectTimeout: rConnTimeout++;    break;
-                                case Reason.SessionStale:   rSessionStale++;   break;
-                            }
+                            case Reason.ServerClosed:   if (connectedFlags[j] == 0) rServerClosed++;   break;
+                            case Reason.WriteFailed:    if (connectedFlags[j] == 0) rWriteFailed++;    break;
+                            case Reason.ConnectFailed:  if (connectedFlags[j] == 0) rConnFailed++;     break;
+                            case Reason.ConnectTimeout: if (connectedFlags[j] == 0) rConnTimeout++;    break;
+                            case Reason.SessionStale:   if (connectedFlags[j] == 0) rSessionStale++;   break;
+                            case Reason.LockBusy:       rLockBusy++; break; // 连接有效但本次心跳被跳过，单独统计（不要求一定离线）
                         }
                     }
                     int offline = total - conn;
@@ -346,6 +357,10 @@ namespace SimulatorLib.Workers
                     sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 心跳监控");
                     sb.AppendLine($"  总客户端:{total}  已连接:{conn}  离线:{offline}  已发送:{ok}  发送失败:{fail}");
                     sb.AppendLine($"  平台回包({replyWindowMs2/1000}s窗口):{replied}  TCP连接中但未回包:{conn - replied}←平台静默踢出则数量偏高");
+                    if (rLockBusy > 0)
+                    {
+                        sb.AppendLine($"  ⚠ 写锁竞争(LockBusy):{rLockBusy} 次 — 心跳被跳过但连接有效，日志速率过高时出现");
+                    }
                     if (offline > 0)
                     {
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}  平台踢session:{rSessionStale}");
@@ -367,7 +382,7 @@ namespace SimulatorLib.Workers
                     catch { break; }
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
-                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0, rSS = 0;
+                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0, rSS = 0, rLB = 0;
                     long replyWindowMs = (long)intervalMs * 3; // 3个周期内有回包才算在线
                     long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < clients.Count; j++)
@@ -380,20 +395,17 @@ namespace SimulatorLib.Workers
                         // 仅当最近 3×intervalMs 内收到过回包，才计入 replied
                         long t = Interlocked.Read(ref lastReplyTimeMs[j]);
                         if (t > 0 && (nowMs - t) <= replyWindowMs) replied++;
-                        // 仅统计真正离线（未连接）客户端的断线原因
-                        if (connectedFlags[j] == 0)
+                        switch (lastReason[j])
                         {
-                            switch (lastReason[j])
-                            {
-                                case Reason.ServerClosed:   rSC++; break;
-                                case Reason.WriteFailed:    rWF++; break;
-                                case Reason.ConnectFailed:  rCF++; break;
-                                case Reason.ConnectTimeout: rCT++; break;
-                                case Reason.SessionStale:   rSS++; break;
-                            }
+                            case Reason.ServerClosed:   if (connectedFlags[j] == 0) rSC++; break;
+                            case Reason.WriteFailed:    if (connectedFlags[j] == 0) rWF++; break;
+                            case Reason.ConnectFailed:  if (connectedFlags[j] == 0) rCF++; break;
+                            case Reason.ConnectTimeout: if (connectedFlags[j] == 0) rCT++; break;
+                            case Reason.SessionStale:   if (connectedFlags[j] == 0) rSS++; break;
+                            case Reason.LockBusy:       rLB++; break; // 连接有效但心跳被跳过
                         }
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT, rSS)); } catch { }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT, rSS, rLB)); } catch { }
                 }
             }, ct);
 

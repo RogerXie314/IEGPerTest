@@ -80,6 +80,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ── 标题栏 ── -->
@@ -169,8 +171,55 @@
             </StackPanel>
         </Border>
 
+        <!-- ── 心跳 / 日志连接参数 ── -->
+        <Border x:Name="ConnParamsPanel" Grid.Row="3" Style="{StaticResource SectionBorder}" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Style="{StaticResource SectionTitle}">▸ 心跳 / 日志连接参数</TextBlock>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 心跳 TCP -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource LabelText}" Margin="0,0,0,5">心跳 TCP：</TextBlock>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,5">
+                        <TextBlock x:Name="TxtHbTarget" Style="{StaticResource ValueText}" Margin="0,0,14,0"/>
+                        <TextBlock Text="已连接 " Foreground="#666" VerticalAlignment="Center" FontSize="11"/>
+                        <TextBlock x:Name="TxtHbConnected" FontWeight="SemiBold" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 端口来源说明 -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource LabelText}">端口来源：</TextBlock>
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtHbPortNote" FontSize="11" Foreground="#888" TextWrapping="Wrap"/>
+
+                    <!-- 日志 TCP -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource LabelText}" Margin="0,0,0,4">日志 TCP：</TextBlock>
+                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock x:Name="TxtLogTcpMode" FontSize="11" Foreground="#888" VerticalAlignment="Center"/>
+                        <TextBlock Text="  →  " FontSize="11" Foreground="#AAA" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtLogTcpTarget" Style="{StaticResource ValueText}"/>
+                    </StackPanel>
+
+                    <!-- 日志 HTTPS -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource LabelText}">日志 HTTPS：</TextBlock>
+                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="短连接  →  " FontSize="11" Foreground="#888" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtLogHttpsTarget" Style="{StaticResource ValueText}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- ── 理论 EPS 估算 ── -->
-        <Border Grid.Row="3" Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="4" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -211,7 +260,7 @@
         </Border>
 
         <!-- ── 参数优化 ── -->
-        <Border Grid.Row="4" Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="5" Style="{StaticResource SectionBorder}">
             <StackPanel>
                 <DockPanel Margin="0,0,0,8">
                     <Button DockPanel.Dock="Right" Height="24" FontSize="11" Padding="10,0"
@@ -267,7 +316,7 @@
         </Border>
 
         <!-- ── 底部按钮 ── -->
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
             <Button Width="80" Height="30" Margin="0,0,8,0" Click="BtnRefresh_Click">刷新</Button>
             <Button Width="60" Height="30" Background="#888" BorderBrush="#666" Click="BtnClose_Click">关闭</Button>
         </StackPanel>

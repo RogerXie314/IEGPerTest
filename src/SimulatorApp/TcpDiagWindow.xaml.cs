@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Text.Json;
 using System.Windows;
 using Microsoft.Win32;
+using SimulatorLib.Persistence;
 
 namespace SimulatorApp
 {
@@ -12,12 +15,14 @@ namespace SimulatorApp
     {
         private readonly bool _multiIpMode;
         private readonly int  _ipCount;
+        private readonly ViewModels.MainViewModel? _vm;
 
-        public TcpDiagWindow(bool multiIpMode = false, string localIps = "")
+        public TcpDiagWindow(bool multiIpMode = false, string localIps = "", ViewModels.MainViewModel? vm = null)
         {
             InitializeComponent();
             _multiIpMode = multiIpMode;
             _ipCount = multiIpMode ? CountValidIps(localIps) : 1;
+            _vm = vm;
             RefreshData();
         }
 
@@ -167,6 +172,67 @@ namespace SimulatorApp
             TxtMultiHostTip.Text    = _multiIpMode
                 ? $"当前已启用多IP模式（{_ipCount} 个IP）；端口上限已扩大 {_ipCount} 倍"
                 : "若需多台主机：绑定 N 个 IP = 上限 × N；开启压测模式（长连接）可突破端口瓶颈";
+
+            PopulateConnParams();
+        }
+
+        /// <summary>
+        /// 刷新展示心跳 / 日志连接参数区域
+        /// </summary>
+        private void PopulateConnParams()
+        {
+            if (_vm == null)
+            {
+                ConnParamsPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            ConnParamsPanel.Visibility = Visibility.Visible;
+
+            // 读取第一个已注册客户端的 TcpPort（心跳实际使用的端口）
+            int hbTcpPort = _vm.PlatformPort; // fallback
+            bool portFromReg = false;
+            try
+            {
+                string filePath = ClientsPersistence.GetPath();
+                if (File.Exists(filePath))
+                {
+                    foreach (var line in File.ReadLines(filePath))
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        var rec = JsonSerializer.Deserialize<ClientRecord>(line);
+                        if (rec?.TcpPort > 0)
+                        {
+                            hbTcpPort   = rec.TcpPort;
+                            portFromReg = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch { /* 读取失败时用 fallback */ }
+
+            // 心跳 TCP
+            TxtHbTarget.Text    = $"{_vm.PlatformHost}:{hbTcpPort}";
+            TxtHbConnected.Text = $"{_vm.HbConnected:N0} / {_vm.HbTotal:N0} 个";
+            TxtHbPortNote.Text  = portFromReg
+                ? $"注册响应下发（心跳配置端口 {_vm.PlatformPort} 仅用于安全加速 / HTTPS）"
+                : $"心跳配置端口（客户端尚未注册或注册响应无 tcpPort 字段）";
+
+            // 日志 TCP
+            if (_vm.UseLogServer)
+            {
+                TxtLogTcpMode.Text   = "独立日志服务器";
+                TxtLogTcpTarget.Text = $"{_vm.LogHost}:{_vm.LogPort}";
+            }
+            else
+            {
+                TxtLogTcpMode.Text   = "借用心跳流（长连接 CMDID=21）";
+                TxtLogTcpTarget.Text = $"{_vm.PlatformHost}:{hbTcpPort}";
+            }
+
+            // 日志 HTTPS
+            TxtLogHttpsTarget.Text = $"{_vm.PlatformHost}:{_vm.PlatformPort}";
         }
 
         private void BtnRefresh_Click(object sender, RoutedEventArgs e) => RefreshData();

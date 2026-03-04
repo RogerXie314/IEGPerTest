@@ -575,7 +575,7 @@ namespace SimulatorApp.ViewModels
                                 bool hasOffline = offline > 0;
                                 bool hasReasons = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
                                                      s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
-                                                     s.RsnWriteFailed  > 0;
+                                                     s.RsnWriteFailed  > 0 || s.RsnLockBusy > 0;
                                 bool hasIssue = hasOffline || hasReasons;
 
                                 if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
@@ -587,6 +587,7 @@ namespace SimulatorApp.ViewModels
                                     if (s.RsnConnTimeout  > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
                                     if (s.RsnServerClosed > 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
                                     if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
+                                    if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
                                     string reasonStr = reasons.Count > 0
                                         ? "  离线原因: " + string.Join(", ", reasons)
                                         : string.Empty;
