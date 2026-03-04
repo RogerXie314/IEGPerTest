@@ -1,33 +1,22 @@
-param(
-    [string]$Runtime = "win-x64",
-    [switch]$FrameworkDependent,
-    [switch]$NoSingleFile
-)
+# 发布 SimulatorApp 为单个 exe 文件（自包含 + Brotli 压缩，约 73 MB）
+$projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
+$outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
 
-$proj = "src/SimulatorApp"
-$out = "artifacts\SimulatorAppPublish"
+Write-Host "正在发布 SimulatorApp (单文件压缩模式)..." -ForegroundColor Cyan
 
-Write-Host "Publishing SimulatorApp to $out"
+dotnet publish $projectPath `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    /p:PublishSingleFile=true `
+    /p:IncludeNativeLibrariesForSelfExtract=true `
+    /p:EnableCompressionInSingleFile=true `
+    -o $outputPath
 
-$args = @($proj, "-c", "Release", "-r", $Runtime, "-o", $out)
-
-if ($FrameworkDependent) {
-    $args += "--self-contained"
-    $args += "false"
+if ($LASTEXITCODE -eq 0) {
+    $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
+    Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 } else {
-    $args += "--self-contained"
-    $args += "true"
-}
-
-if (-not $NoSingleFile) {
-    $args += "/p:PublishSingleFile=true"
-}
-
-dotnet publish @args
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "publish failed"
+    Write-Error "Publish failed"
     exit $LASTEXITCODE
 }
-
-Write-Host "Publish complete: $out"
