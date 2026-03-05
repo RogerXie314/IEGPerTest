@@ -239,31 +239,10 @@ namespace SimulatorLib.Workers
                             using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                             sendCts.CancelAfter(5000);
 
-                            // 加写锁：防止与 LogWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
-                            bool lockAcq = _streamRegistry != null
-                                ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, sendCts.Token).ConfigureAwait(false)
-                                : true; // 无 registry 时不需要额外锁
-                            if (!lockAcq)
-                            {
-                                // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
-                                // 跳过本次心跳，等下一个周期再试。
-                                // （原来 throw TimeoutException 会被 catch 误判为写失败而 Dispose TCP，
-                                //   导致 HeartbeatWorker 重连失败而永久离线，但 LogWorker 降级独立 TCP 继续发送。）
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.LockBusy;
-                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
-                                catch (OperationCanceledException) { break; }
-                                continue;
-                            }
-                            try
-                            {
-                                await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
-                                await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId, lockAcq);
-                            }
+                            // LogWorker 现在使用独立 TCP 短连接发送日志（对齐老工具 UseHBPort_ThreatLog_CheckBox），
+                            // 不再写入此 stream，因此不需要写锁——此 stream 只有 HeartbeatWorker 唯一写者。
+                            await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
+                            await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
 
                             lastResult[idx] = 1;
                             lastReason[idx] = Reason.Ok;
