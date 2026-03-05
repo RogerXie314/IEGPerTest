@@ -26,8 +26,6 @@ namespace SimulatorLib.Workers
         private readonly INetworkSender _tcpSender;
         private readonly IUdpSender? _udpSender;
 
-        private readonly ConcurrentDictionary<string, TcpConnState> _tcpStates = new();
-
         private readonly ConcurrentDictionary<string, int> _debugSendCount = new();
         private const int MaxDebugSendPerClient = 3;
 
@@ -330,7 +328,6 @@ namespace SimulatorLib.Workers
             }
             finally
             {
-                await CloseAllTcpAsync().ConfigureAwait(false);
             }
 
             WriteFailureSummary();
@@ -927,52 +924,34 @@ namespace SimulatorLib.Workers
 
         private async Task<bool> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
         {
-            // 优先复用心跳已建立的 TCP stream（对齐原项目 SetWLTcpConnectInstance：
-            // WLData.cpp 始终使用与心跳相同的 CWLTcpConnect 实例发送威胁检测日志，
-            // 避免同一 ComputerID 出现两条 TCP 连接被平台踢掉心跳的问题）
-            var hbStream = _streamRegistry?.TryGet(clientId);
-            if (hbStream != null)
-            {
-                // 加写锁：防止与 HeartbeatWorker 并发写同一 NetworkStream 导致包体互相穿插损坏。
-                // 超时 5000ms 对齐 LogWorker 独立路径写+ACK 的最长耗时，减少不必要的独立连接降级。
-                bool lockAcq = await _streamRegistry!.AcquireWriteLockAsync(clientId, 5000, ct).ConfigureAwait(false);
-                try
-                {
-                    // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
-                    hbStream = _streamRegistry.TryGet(clientId);
-                    if (hbStream != null && lockAcq)
-                    {
-                        using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                        cts2.CancelAfter(5000);
-                        await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
-                        await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
-                        // 对齐老工具 RecvThreatLog_：写完后同步等 ACK，形成背压，
-                        // 防止客户端比服务端快导致 TCP 发送缓冲区溢出继而阻塞心跳写锁。
-                        // 注意：锁在 ACK 返回前保持持有，HB 此时无法并发写同一 stream，是正确的。
-                        await TcpConnState.ReadAckFromStreamAsync(hbStream, cts2.Token).ConfigureAwait(false);
-                        // 优化#2 连接所有权：HB stream 可用时，关闭此 clientId 的独立补位连接（如有）。
-                        _ = CloseTcpAsync(clientId);
-                        return true;
-                    }
-                }
-                catch
-                {
-                    // 心跳流已断开，降级走独立 TCP 连接路径
-                }
-                finally
-                {
-                    _streamRegistry?.ReleaseWriteLock(clientId, lockAcq);
-                }
-            }
+            // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回 false。
+            // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
+            if (_streamRegistry == null) return false;
 
-            // external: SendData失败 -> CloseSocket -> CreateSocket -> 重发
-            if (await SendLogTcpOnceAsync(clientId, host, port, payload, ct).ConfigureAwait(false))
+            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 5000, ct).ConfigureAwait(false);
+            try
             {
+                // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
+                var hbStream = _streamRegistry.TryGet(clientId);
+                if (hbStream == null || !lockAcq) return false;
+
+                using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts2.CancelAfter(5000);
+                await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
+                await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
+                // 对齐老工具 RecvThreatLog_：写完后同步等 ACK，形成背压。
+                // 锁在 ACK 返回前持有，HB 此时无法并发写同一 stream，是正确的。
+                await ReadAckFromStreamAsync(hbStream, cts2.Token).ConfigureAwait(false);
                 return true;
             }
-
-            await CloseTcpAsync(clientId).ConfigureAwait(false);
-            return await SendLogTcpOnceAsync(clientId, host, port, payload, ct).ConfigureAwait(false);
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                _streamRegistry.ReleaseWriteLock(clientId, lockAcq);
+            }
         }
 
         private static string ComputeFakeSha1(string input)
@@ -988,165 +967,35 @@ namespace SimulatorLib.Workers
             return sb.ToString().ToUpperInvariant();
         }
 
-        private async Task<bool> SendLogTcpOnceAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
+        private static async Task<uint> ReadAckFromStreamAsync(NetworkStream stream, CancellationToken ct)
         {
-            // 每个 clientId 对应独立 Task，消息在 for 循环内顺序发送，无并发竞争，无需 SemaphoreSlim。
-            try
-            {
-                var state = await GetOrCreateTcpStateAsync(clientId, host, port, ct).ConfigureAwait(false);
-                if (state == null) return false;
+            var header = new byte[PtProtocol.HeaderLength];
+            bool ok = await ReadExactAsync(stream, header, PtProtocol.HeaderLength, ct).ConfigureAwait(false);
+            if (!ok) throw new EndOfStreamException("ACK: remote closed stream");
 
-                // 5000ms 覆盖"写 + 服务器处理 + 读ACK"的完整 RTT
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromMilliseconds(5000));
+            if (header[0] != (byte)'P' || header[1] != (byte)'T')
+                throw new InvalidDataException("ACK: invalid PT flag");
 
-                await state.Stream.WriteAsync(payload, 0, payload.Length, cts.Token).ConfigureAwait(false);
-                await state.Stream.FlushAsync(cts.Token).ConfigureAwait(false);
-                // 同步等待服务器 ACK（对齐老工具 RecvThreatLog_ 的 Req/Resp 模式）
-                // 天然限速：发速率受服务器处理能力约束，防止客户端比服务端快导致 TCP 缓冲区溢出
-                await state.ReadAckAsync(cts.Token).ConfigureAwait(false);
-                return true;
-            }
-            catch (OperationCanceledException)
+            ushort bodyLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
+            if (bodyLen > 0)
             {
-                return false;
+                var body = new byte[bodyLen];
+                await ReadExactAsync(stream, body, bodyLen, ct).ConfigureAwait(false);
             }
-            catch
-            {
-                return false;
-            }
+
+            return BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(32, 4));
         }
 
-        private async Task<TcpConnState?> GetOrCreateTcpStateAsync(string clientId, string host, int port, CancellationToken ct)
+        private static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int len, CancellationToken ct)
         {
-            if (_tcpStates.TryGetValue(clientId, out var existing))
+            int readTotal = 0;
+            while (readTotal < len)
             {
-                if (existing.IsConnectedTo(host, port))
-                {
-                    return existing;
-                }
-
-                await CloseTcpAsync(clientId).ConfigureAwait(false);
+                int read = await stream.ReadAsync(buffer, readTotal, len - readTotal, ct).ConfigureAwait(false);
+                if (read <= 0) return false;
+                readTotal += read;
             }
-
-            try
-            {
-                var tcp = new TcpClient
-                {
-                    NoDelay = true,
-                };
-
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
-                {
-                    cts.CancelAfter(TimeSpan.FromMilliseconds(2000));
-                    await tcp.ConnectAsync(host, port, cts.Token).ConfigureAwait(false);
-                }
-
-                var stream = tcp.GetStream();
-                var state = new TcpConnState(clientId, host, port, tcp, stream);
-                _tcpStates[clientId] = state;
-                return state;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private Task CloseTcpAsync(string clientId)
-        {
-            if (_tcpStates.TryRemove(clientId, out var state))
-            {
-                state.Close();
-            }
-            return Task.CompletedTask;
-        }
-
-        private Task CloseAllTcpAsync()
-        {
-            foreach (var key in _tcpStates.Keys)
-            {
-                _ = CloseTcpAsync(key);
-            }
-            _tcpStates.Clear();
-            return Task.CompletedTask;
-        }
-
-        private sealed class TcpConnState
-        {
-            public string ClientId { get; }
-            public string Host { get; }
-            public int Port { get; }
-            public TcpClient Tcp { get; }
-            public NetworkStream Stream { get; }
-
-            public TcpConnState(string clientId, string host, int port, TcpClient tcp, NetworkStream stream)
-            {
-                ClientId = clientId;
-                Host = host;
-                Port = port;
-                Tcp = tcp;
-                Stream = stream;
-            }
-
-            public bool IsConnectedTo(string host, int port)
-            {
-                if (!Tcp.Connected) return false;
-                if (!string.Equals(Host, host, StringComparison.OrdinalIgnoreCase)) return false;
-                return Port == port;
-            }
-
-            public void Close()
-            {
-                try { Stream.Close(); } catch { }
-                try { Tcp.Close(); } catch { }
-            }
-
-            /// <summary>
-            /// 同步等待服务器 ACK（对齐老工具 RecvThreatLog_）：
-            /// 读取一个完整 PT 协议包（header + body），返回 CmdId。
-            /// 调用方须在持有写锁期间调用，保证同一 socket 不并发读写。
-            /// </summary>
-            public async Task<uint> ReadAckAsync(CancellationToken ct)
-            {
-                uint cmdId = await ReadAckFromStreamAsync(Stream, ct).ConfigureAwait(false);
-                return cmdId;
-            }
-
-            /// <summary>
-            /// 从任意 NetworkStream 读取一个 PT ACK 包，供 HB stream 主路径和独立 TCP 路径共用。
-            /// </summary>
-            internal static async Task<uint> ReadAckFromStreamAsync(NetworkStream stream, CancellationToken ct)
-            {
-                var header = new byte[PtProtocol.HeaderLength];
-                bool ok = await ReadExactAsync(stream, header, PtProtocol.HeaderLength, ct).ConfigureAwait(false);
-                if (!ok) throw new EndOfStreamException("ACK: remote closed stream");
-
-                if (header[0] != (byte)'P' || header[1] != (byte)'T')
-                    throw new InvalidDataException("ACK: invalid PT flag");
-
-                ushort bodyLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
-                if (bodyLen > 0)
-                {
-                    var body = new byte[bodyLen];
-                    await ReadExactAsync(stream, body, bodyLen, ct).ConfigureAwait(false);
-                }
-
-                uint cmdId = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(32, 4));
-                return cmdId;
-            }
-
-            private static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int len, CancellationToken ct)
-            {
-                int readTotal = 0;
-                while (readTotal < len)
-                {
-                    int read = await stream.ReadAsync(buffer, readTotal, len - readTotal, ct).ConfigureAwait(false);
-                    if (read <= 0) return false;
-                    readTotal += read;
-                }
-                return true;
-            }
+            return true;
         }
 
         private void TryDebugWriteSentPacket(string clientId, byte[] ptPacket, string json)
@@ -1177,38 +1026,5 @@ namespace SimulatorLib.Workers
             catch { }
         }
 
-        private static void TryDebugWriteReceivedPacket(string clientId, byte[] header, byte[] body)
-        {
-            try
-            {
-                var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-                Directory.CreateDirectory(logDir);
-                var logPath = Path.Combine(logDir, $"logrecv-{DateTime.UtcNow:yyyyMMdd}.log");
-
-                uint serial = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(12, 4));
-                uint cmd = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(32, 4));
-                uint devid = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(36, 4));
-                ushort srcLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(40, 2));
-
-                string srcPreview;
-                try
-                {
-                    var packet = new byte[PtProtocol.HeaderLength + body.Length];
-                    Buffer.BlockCopy(header, 0, packet, 0, PtProtocol.HeaderLength);
-                    Buffer.BlockCopy(body, 0, packet, PtProtocol.HeaderLength, body.Length);
-                    var src = PtProtocol.Unpack(packet);
-                    var s = Encoding.UTF8.GetString(src);
-                    srcPreview = s.Length > 300 ? s.Substring(0, 300) : s;
-                }
-                catch (Exception ex)
-                {
-                    srcPreview = "<unpack_failed:" + ex.GetType().Name + ">";
-                }
-
-                var line = $"{DateTime.UtcNow:o} RECV client={clientId} cmd={cmd} devid={devid} serial={serial} srcLen={srcLen} srcPreview={srcPreview.Replace("\r", "\\r").Replace("\n", "\\n")}";
-                File.AppendAllText(logPath, line + Environment.NewLine);
-            }
-            catch { }
-        }
     }
 }
