@@ -356,13 +356,16 @@ namespace SimulatorApp
                     // ── 1b. 切换 root（密码与 SSH 登录密码相同）──────────────
                     AppendSshLog("正在切换 root 账户…");
                     string whoamiOut = SshRunAsRoot(ssh, password, "whoami").Trim();
-                    if (whoamiOut == "root")
+                    // su root 会把 "Password:" 提示混入输出，取最后一个非空行作为实际结果
+                    string whoamiLast = whoamiOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .LastOrDefault(l => !l.TrimStart().StartsWith("Password"))?.Trim() ?? whoamiOut;
+                    if (whoamiLast == "root")
                     {
                         AppendSshLog("✅ 已切换到 root 账户");
                     }
                     else
                     {
-                        AppendSshLog($"⚠ su root 返回：{whoamiOut}（将继续尝试，若命令失败请确认密码）");
+                        AppendSshLog($"⚠ su root 返回：{whoamiLast}（将继续尝试，若命令失败请确认密码）");
                     }
                     AppendSshLog("");
 
@@ -392,6 +395,51 @@ namespace SimulatorApp
                         .OrderBy(s => s).ToList();
 
                     AppendSshLog($"目录 {remoteLogRoot}（含子目录）：{remoteFiles.Count} 个文件在时间范围内");
+
+                    // ── 1d2. 若指定目录为空，自动探测常见平台日志目录 ──────────
+                    if (remoteFiles.Count == 0)
+                    {
+                        AppendSshLog("  ℹ 指定目录无文件，自动扫描常见平台日志目录…");
+                        // 列出各候选目录最近修改的 .log 文件，帮助用户确认实际路径
+                        string discoverCmd =
+                            $"find /opt /var/log /home /root /data /srv /usr/local -maxdepth 4" +
+                            $" -type f -name '*.log' -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null" +
+                            $" | head -30";
+                        string discovered = SshRunAsRoot(ssh, password, discoverCmd);
+                        var discoveredFiles = discovered.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim()).Where(s => s.StartsWith("/")).ToList();
+                        if (discoveredFiles.Count > 0)
+                        {
+                            AppendSshLog($"  找到 {discoveredFiles.Count} 个候选文件：");
+                            foreach (var f in discoveredFiles)
+                                AppendSshLog($"    {f}");
+                            AppendSshLog("  → 请在上方'平台日志目录'中填入对应路径后重新收集");
+                            // 把第一个文件的父目录作为建议写回 UI
+                            string suggestedDir = discoveredFiles[0][..discoveredFiles[0].LastIndexOf('/')]; 
+                            Dispatcher.BeginInvoke(new Action(() => TxtSshLogPath.Text = suggestedDir));
+                        }
+                        else
+                        {
+                            AppendSshLog("  未发现时间范围内的 .log 文件（平台可能用非 .log 扩展名）");
+                            // 退而求其次：列出最近修改的任意文件（不过滤扩展名）
+                            string anyCmd =
+                                $"find /opt /var/log /home /root -maxdepth 5" +
+                                $" -type f -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null" +
+                                $" | head -20";
+                            string anyOut = SshRunAsRoot(ssh, password, anyCmd);
+                            var anyFiles = anyOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(s => s.Trim()).Where(s => s.StartsWith("/")).ToList();
+                            if (anyFiles.Count > 0)
+                            {
+                                AppendSshLog($"  时间范围内任意文件（含非.log）：");
+                                foreach (var f in anyFiles) AppendSshLog($"    {f}");
+                            }
+                            else
+                            {
+                                AppendSshLog("  该时间段无任何文件被修改（时钟偏差过大？或平台日志延迟写入）");
+                            }
+                        }
+                    }
 
                     // ── 1e. 逐文件：小文件直接复制，大文件 awk 过滤（保留子目录结构）────────
                     sftp.Connect();
@@ -466,7 +514,30 @@ namespace SimulatorApp
                         }
                         else
                         {
-                            AppendSshLog("  ⚠ /var/log/messages 不存在或无权限，已跳过");
+                            // 兜底：尝试 journalctl（systemd 系统无 /var/log/messages）
+                            AppendSshLog("  ⚠ /var/log/messages 不存在或无权限，尝试 journalctl…");
+                            try
+                            {
+                                string jSince = remoteStart.ToString("yyyy-MM-dd HH:mm:ss");
+                                string jUntil = remoteEnd.ToString("yyyy-MM-dd HH:mm:ss");
+                                string jCmd   = $"journalctl --since='{jSince}' --until='{jUntil}' --no-pager -q 2>/dev/null | head -2000";
+                                string jOut   = SshRunAsRoot(ssh, password, jCmd);
+                                // 过滤 Password: 行
+                                string jClean = string.Join("\n",
+                                    jOut.Split('\n').Where(l => !l.TrimStart().StartsWith("Password")));
+                                if (!string.IsNullOrWhiteSpace(jClean))
+                                {
+                                    string jLocal = Path.Combine(_sshOutputDir, "journalctl.log");
+                                    File.WriteAllText(jLocal, jClean);
+                                    AppendSshLog($"  ↓ journalctl.log  ({jClean.Length / 1024.0:F0} KB，前2000行)");
+                                    remoteCount++;
+                                }
+                                else
+                                {
+                                    AppendSshLog("  journalctl 也无内容（权限不足或 systemd 未运行）");
+                                }
+                            }
+                            catch (Exception exJ) { AppendSshLog($"  journalctl 失败: {exJ.Message}"); }
                         }
                     }
                     catch (Exception exMsg) { AppendSshLog($"  ⚠ /var/log/messages: {exMsg.Message}"); }
@@ -642,12 +713,16 @@ namespace SimulatorApp
             return cmd.Result;
         }
 
-        /// <summary>通过 echo PASSWORD | su root -c '...' 切换 root 执行命令，返回 stdout+stderr</summary>
+        /// <summary>通过 echo PASSWORD | su root -c '...' 切换 root 执行命令，返回 stdout+stderr（已过滤 Password: 提示行）</summary>
         private static string SshRunAsRoot(SshClient ssh, string password, string command)
         {
             string cmdLine = $"echo {ShellQuote(password)} | su root -c {ShellQuote(command)} 2>&1";
             using var cmd  = ssh.RunCommand(cmdLine);
-            return cmd.Result;
+            // su 会把 "Password:" 提示混入输出，过滤掉避免污染下游解析
+            var lines = cmd.Result.Split('\n')
+                .Where(l => !l.TrimStart().StartsWith("Password:"))
+                .ToArray();
+            return string.Join("\n", lines);
         }
 
         /// <summary>Shell 单引号安全转义：包裹在 ' 中，将内部的 ' 转义为 '\'  '</summary>
