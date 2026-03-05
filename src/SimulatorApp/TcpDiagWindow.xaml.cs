@@ -386,15 +386,18 @@ namespace SimulatorApp
                     SshRunAsRoot(ssh, password, $"mkdir -p {tmpBase}");
                     SshRunAsRoot(ssh, password, $"touch -d @{remoteStartEpoch} {tmpBase}/.ts_start");
                     SshRunAsRoot(ssh, password, $"touch -d @{remoteEndEpoch}   {tmpBase}/.ts_end");
-                    // 不加 -maxdepth，递归搜索所有子目录下时间区间内的文件
+                    // 只用下界 -newer ts_start，不限上界
+                    // 原因：日志文件持续滚动写入，mtime = 最后一次写入时刻，
+                    //       经常超出测试窗口上界，加 ! -newer ts_end 会误排除
+                    // 内容时间过滤由后续 awk 按行时间戳完成
                     string findOut = SshRunAsRoot(ssh, password,
-                        $"find {remoteLogRoot} -type f -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null");
+                        $"find {remoteLogRoot} -type f -newer {tmpBase}/.ts_start 2>/dev/null");
 
                     var remoteFiles = findOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                         .Select(s => s.Trim()).Where(s => s.StartsWith("/"))
                         .OrderBy(s => s).ToList();
 
-                    AppendSshLog($"目录 {remoteLogRoot}（含子目录）：{remoteFiles.Count} 个文件在时间范围内");
+                    AppendSshLog($"目录 {remoteLogRoot}（含子目录）：{remoteFiles.Count} 个文件在 {remoteStartStr} 之后有更新");
 
                     // ── 1d2. 若指定目录为空，自动探测常见平台日志目录 ──────────
                     if (remoteFiles.Count == 0)
@@ -403,7 +406,7 @@ namespace SimulatorApp
                         // 列出各候选目录最近修改的 .log 文件，帮助用户确认实际路径
                         string discoverCmd =
                             $"find /opt /var/log /home /root /data /srv /usr/local -maxdepth 4" +
-                            $" -type f -name '*.log' -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null" +
+                            $" -type f -name '*.log' -newer {tmpBase}/.ts_start 2>/dev/null" +
                             $" | head -30";
                         string discovered = SshRunAsRoot(ssh, password, discoverCmd);
                         var discoveredFiles = discovered.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -424,7 +427,7 @@ namespace SimulatorApp
                             // 退而求其次：列出最近修改的任意文件（不过滤扩展名）
                             string anyCmd =
                                 $"find /opt /var/log /home /root -maxdepth 5" +
-                                $" -type f -newer {tmpBase}/.ts_start ! -newer {tmpBase}/.ts_end 2>/dev/null" +
+                                $" -type f -newer {tmpBase}/.ts_start 2>/dev/null" +
                                 $" | head -20";
                             string anyOut = SshRunAsRoot(ssh, password, anyCmd);
                             var anyFiles = anyOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
