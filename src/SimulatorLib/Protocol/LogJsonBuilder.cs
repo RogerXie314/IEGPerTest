@@ -321,21 +321,22 @@ public static class LogJsonBuilder
 
     public static string BuildThreatEventDllLoadLog(string computerId, int processId, string processGuid, string processPath, string targetDll)
     {
-        // external: ThreatLog_Proc_GetJson — THREAT_LOG_TYPE_PROC (DLL load / cross-proc)
-        // EventType=61
+        // external: THREAT_EVENT_TYPE_DLLLOAD=80
+        // No canonical WLJsonParse builder in old tool; use DllLoad.* prefix for consistency
+        var resolvedDll = string.IsNullOrWhiteSpace(targetDll) ? "C:\\Windows\\System32\\malware.dll" : targetDll;
+        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath);
         var cmdContent = new Dictionary<string, object?>
         {
-            ["EventType"] = 61,
-            ["Process.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            ["Process.ProcessId"] = processId,
-            ["Process.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
-            ["Process.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
-            ["Process.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
-            ["Process.TargetProcessId"] = processId + 100,
-            ["Process.TargetProcessGuid"] = Guid.NewGuid().ToString("B"),
-            ["Process.TargetProcessName"] = string.IsNullOrWhiteSpace(targetDll) ? "C:\\Windows\\System32\\test.dll" : targetDll,
-            ["Process.User"] = "user",
-            ["Process.UserSid"] = "S-1-5-18",
+            ["EventType"] = 80,  // THREAT_EVENT_TYPE_DLLLOAD
+            ["DllLoad.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["DllLoad.ProcessId"] = processId,
+            ["DllLoad.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["DllLoad.ProcessFileName"] = procFileName,
+            ["DllLoad.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
+            ["DllLoad.TargetDllFileName"] = System.IO.Path.GetFileName(resolvedDll),
+            ["DllLoad.TargetDllPath"] = resolvedDll,
+            ["DllLoad.User"] = "WIN-913056QNOGK\\DELL",
+            ["DllLoad.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",
         };
         var person = new Dictionary<string, object?>
         {
@@ -349,20 +350,34 @@ public static class LogJsonBuilder
 
     public static string BuildThreatEventFileAccessLog(string computerId, int processId, string processGuid, string processPath, string filePath)
     {
-        // external: ThreatLog_File_GetJson — THREAT_LOG_TYPE_FILE
-        // EventType=62
+        // external: ThreatLog_File_GetJson — THREAT_EVENT_TYPE_FILE=30
+        // Fields align with WLJsonParse.cpp::ThreatLog_File_GetJson, prefix "FileAccess."
+        var resolvedFile = string.IsNullOrWhiteSpace(filePath) ? "\\device\\harddiskvolume3\\windows\\system32\\mimilsa.log" : filePath;
+        var fileName = System.IO.Path.GetFileName(resolvedFile);
+        var fileExt = System.IO.Path.GetExtension(fileName).TrimStart('.');
+        var fileFolder = System.IO.Path.GetDirectoryName(resolvedFile)?.Replace('/', '\\') ?? "\\device\\harddiskvolume3\\windows\\system32";
+        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "dns.exe" : processPath);
         var cmdContent = new Dictionary<string, object?>
         {
-            ["EventType"] = 62,
-            ["File.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            ["File.ProcessId"] = processId,
-            ["File.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
-            ["File.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
-            ["File.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
-            ["File.FileName"] = string.IsNullOrWhiteSpace(filePath) ? "C:\\Temp\\test.txt" : filePath,
-            ["File.Operation"] = 2,
-            ["File.User"] = "user",
-            ["File.UserSid"] = "S-1-5-18",
+            ["EventType"] = 30,  // THREAT_EVENT_TYPE_FILE
+            ["FileAccess.Operation"] = 1,  // THREATLOG_TYPE_FILE_CREATE
+            ["FileAccess.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["FileAccess.ProcessId"] = processId,
+            ["FileAccess.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["FileAccess.ProcessFileName"] = procFileName,
+            ["FileAccess.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "D:\\dns.exe" : processPath,
+            ["FileAccess.CommandLine"] = $"{procFileName} set",
+            ["FileAccess.User"] = "WIN-913056QNOGK\\DELL",
+            ["FileAccess.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",
+            ["FileAccess.TerminalSessionId"] = 1,
+            ["FileAccess.FileName"] = fileName,
+            ["FileAccess.FileExtention"] = fileExt,
+            ["FileAccess.FilePath"] = fileFolder,
+            ["FileAccess.FullFileName"] = resolvedFile,
+            ["FileAccess.TargetFileName"] = fileName,
+            ["FileAccess.TargetFileExtention"] = fileExt,
+            ["FileAccess.TargetFilePath"] = fileFolder,
+            ["FileAccess.TargetFullFileName"] = resolvedFile,
         };
         var person = new Dictionary<string, object?>
         {
@@ -376,20 +391,32 @@ public static class LogJsonBuilder
 
     public static string BuildThreatEventRegAccessLog(string computerId, int processId, string processGuid, string processPath, string regKey)
     {
-        // external: ThreatLog_Reg_GetJson — THREAT_LOG_TYPE_REG
-        // EventType=63
+        // external: ThreatLog_Reg_GetJson — THREAT_EVENT_TYPE_REG=40
+        // Fields align with WLJsonParse.cpp::ThreatLog_Reg_GetJson, prefix "Registry."
+        var resolvedKey = string.IsNullOrWhiteSpace(regKey) ? "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\TVqQAAMAAAAEAAAA" : regKey;
+        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "test_reg.exe" : processPath);
         var cmdContent = new Dictionary<string, object?>
         {
-            ["EventType"] = 63,
-            ["Reg.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            ["Reg.ProcessId"] = processId,
-            ["Reg.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
-            ["Reg.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
-            ["Reg.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
-            ["Reg.RegKey"] = string.IsNullOrWhiteSpace(regKey) ? "HKLM\\SOFTWARE\\Test\\Key" : regKey,
-            ["Reg.Operation"] = 1,
-            ["Reg.User"] = "user",
-            ["Reg.UserSid"] = "S-1-5-18",
+            ["EventType"] = 40,  // THREAT_EVENT_TYPE_REG
+            ["Registry.Operation"] = 40,  // THREAT_EVENT_TYPE_REG
+            ["Registry.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["Registry.ProcessId"] = processId,
+            ["Registry.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
+            ["Registry.ProcessFileName"] = procFileName,
+            ["Registry.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "C:\\Windows\\system32\\test_reg.exe" : processPath,
+            ["Registry.CommandLine"] = $"{procFileName} for test parameters...",
+            ["Registry.User"] = "WIN-913056QNOGK\\DELL",
+            ["Registry.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",
+            ["Registry.TerminalSessionId"] = 1,
+            ["Registry.KeyPath"] = resolvedKey,
+            ["Registry.TargetKeyPath"] = resolvedKey,
+            ["Registry.ValueName"] = "(default)",
+            ["Registry.Value"] = "TVqQAAMAAAAEAAAA",
+            ["Registry.FileVersion"] = "6.1.7601.17514 (win7sp1_rtm.101119-1850)",
+            ["Registry.Description"] = "Host Process for Windows Services",
+            ["Registry.Product"] = "Microsoft Windows Operating System",
+            ["Registry.Company"] = "Microsoft Corporation",
+            ["Registry.OriginalFileName"] = "vdsldr.exe",
         };
         var person = new Dictionary<string, object?>
         {
@@ -403,16 +430,45 @@ public static class LogJsonBuilder
 
     public static string BuildThreatEventOsEventLog(string computerId, long eventId, string logName, string message)
     {
-        // external: WLOSEventLog AnalyEventDataAndGetJson — THREAT_EVENT_TYPE_SYSTEM=65
+        // external: ThreatLog_WinEvent_GetJson — THREAT_EVENT_TYPE_SYSTEM=10
+        // Fields are FLAT (no prefix), aligns with WLSimulateJson::ThreatLog_WinEvent_GetJson
         var cmdContent = new Dictionary<string, object?>
         {
-            ["EventType"] = 65,
-            ["WinEventLog.TimeCreated"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            ["WinEventLog.EventID"] = eventId,
-            ["WinEventLog.Level"] = 4,
-            ["WinEventLog.Channel"] = string.IsNullOrWhiteSpace(logName) ? "System" : logName,
-            ["WinEventLog.Computer"] = computerId,
-            ["WinEventLog.Message"] = string.IsNullOrWhiteSpace(message) ? "Simulated OS event" : message,
+            ["EventType"] = 10,  // THREAT_EVENT_TYPE_SYSTEM
+            ["EventID"] = eventId.ToString(),
+            ["Channel"] = string.IsNullOrWhiteSpace(logName) ? "Security" : logName,
+            ["Level"] = "0",
+            ["TimeCreated"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+            ["SystemTime"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"),
+            ["Computer"] = computerId,
+            ["ComputerID"] = computerId,
+            ["ProviderName"] = "Microsoft-Windows-Security-Auditing",
+            ["ProviderGuid"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            ["Application"] = "\\device\\harddiskvolume3\\windows\\system32\\svchost.exe",
+            ["ProcessID"] = "1504",
+            ["ThreadID"] = "6204",
+            ["Keywords"] = "0x8020000000000000",
+            ["Task"] = "12810",
+            ["Opcode"] = "0",
+            ["Version"] = "1",
+            ["EventRecordID"] = "2005088",
+            ["SourceAddress"] = "123.123.123.123",
+            ["DestAddress"] = "123.123.123.123",
+            ["SourcePort"] = "5353",
+            ["DestPort"] = "5353",
+            ["Protocol"] = "17",
+            ["Direction"] = "%%14592",
+            ["LayerName"] = "%%14610",
+            ["LayerRTID"] = "44",
+            ["FilterRTID"] = "8",
+            ["RemoteMachineID"] = "S-1-0-0",
+            ["RemoteUserID"] = "S-1-0-0",
+            ["assetIp"] = "123.123.123.123",
+            ["clientip"] = "123.123.123.123",
+            ["caffectedip"] = "123.123.123.123",
+            ["factoryid"] = "218",
+            ["System"] = message ?? "Simulated OS event",
+            ["threat"] = false,
         };
         var person = new Dictionary<string, object?>
         {
