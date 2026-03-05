@@ -946,9 +946,11 @@ namespace SimulatorLib.Workers
                         cts2.CancelAfter(5000);
                         await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
                         await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
+                        // 对齐老工具 RecvThreatLog_：写完后同步等 ACK，形成背压，
+                        // 防止客户端比服务端快导致 TCP 发送缓冲区溢出继而阻塞心跳写锁。
+                        // 注意：锁在 ACK 返回前保持持有，HB 此时无法并发写同一 stream，是正确的。
+                        await TcpConnState.ReadAckFromStreamAsync(hbStream, cts2.Token).ConfigureAwait(false);
                         // 优化#2 连接所有权：HB stream 可用时，关闭此 clientId 的独立补位连接（如有）。
-                        // HB 断线重连窗口内 LogWorker 建立了独立连接，重连成功后无需保留，
-                        // 避免同一 clientId 两条 TCP 连接并存被平台踢掉心跳 session。
                         _ = CloseTcpAsync(clientId);
                         return true;
                     }
@@ -1103,31 +1105,34 @@ namespace SimulatorLib.Workers
             /// <summary>
             /// 同步等待服务器 ACK（对齐老工具 RecvThreatLog_）：
             /// 读取一个完整 PT 协议包（header + body），返回 CmdId。
-            /// 调用方须在持有写锁（SemaphoreSlim）期间调用，保证同一 socket 不并发读写。
+            /// 调用方须在持有写锁期间调用，保证同一 socket 不并发读写。
             /// </summary>
             public async Task<uint> ReadAckAsync(CancellationToken ct)
             {
+                uint cmdId = await ReadAckFromStreamAsync(Stream, ct).ConfigureAwait(false);
+                return cmdId;
+            }
+
+            /// <summary>
+            /// 从任意 NetworkStream 读取一个 PT ACK 包，供 HB stream 主路径和独立 TCP 路径共用。
+            /// </summary>
+            internal static async Task<uint> ReadAckFromStreamAsync(NetworkStream stream, CancellationToken ct)
+            {
                 var header = new byte[PtProtocol.HeaderLength];
-                bool ok = await ReadExactAsync(Stream, header, PtProtocol.HeaderLength, ct).ConfigureAwait(false);
+                bool ok = await ReadExactAsync(stream, header, PtProtocol.HeaderLength, ct).ConfigureAwait(false);
                 if (!ok) throw new EndOfStreamException("ACK: remote closed stream");
 
                 if (header[0] != (byte)'P' || header[1] != (byte)'T')
                     throw new InvalidDataException("ACK: invalid PT flag");
 
                 ushort bodyLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
-                byte[] body;
                 if (bodyLen > 0)
                 {
-                    body = new byte[bodyLen];
-                    await ReadExactAsync(Stream, body, bodyLen, ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    body = Array.Empty<byte>();
+                    var body = new byte[bodyLen];
+                    await ReadExactAsync(stream, body, bodyLen, ct).ConfigureAwait(false);
                 }
 
                 uint cmdId = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(32, 4));
-                TryDebugWriteReceivedPacket(ClientId, header, body);
                 return cmdId;
             }
 
