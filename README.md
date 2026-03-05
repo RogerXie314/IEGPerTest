@@ -7,6 +7,7 @@ IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送
 - **项目看板**：[project_dashboard.html](project_dashboard.html) - 可视化进度看板（启动：`.\scripts\start_dashboard.ps1`）
 - **实施文档**：[docs/项目实施文档.md](docs/项目实施文档.md)
 - **经验教训**：[docs/经验教训-日志类型实现.md](docs/经验教训-日志类型实现.md)
+- **参与贡献**：[CONTRIBUTING.md](CONTRIBUTING.md) - 如何提问、报告 Bug 和贡献代码
 
 ## 🚀 快速开始
 
