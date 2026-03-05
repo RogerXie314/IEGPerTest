@@ -928,7 +928,12 @@ namespace SimulatorLib.Workers
             // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
             if (_streamRegistry == null) return false;
 
-            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 5000, ct).ConfigureAwait(false);
+            // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
+            // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
+            // LogWorker 无法安全读 ACK（drain 会抢先消费字节）。
+            // 背压由 TCP 发送缓冲区满时 WriteAsync 自然阻塞提供；
+            // 200ms 超时保证高 EPS 时快速失败而非无限堆积。
+            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 200, ct).ConfigureAwait(false);
             try
             {
                 // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
@@ -936,12 +941,9 @@ namespace SimulatorLib.Workers
                 if (hbStream == null || !lockAcq) return false;
 
                 using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts2.CancelAfter(5000);
+                cts2.CancelAfter(3000);
                 await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
                 await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
-                // 对齐老工具 RecvThreatLog_：写完后同步等 ACK，形成背压。
-                // 锁在 ACK 返回前持有，HB 此时无法并发写同一 stream，是正确的。
-                await ReadAckFromStreamAsync(hbStream, cts2.Token).ConfigureAwait(false);
                 return true;
             }
             catch
@@ -965,37 +967,6 @@ namespace SimulatorLib.Workers
                 sb.Append(b.ToString("x2"));
             }
             return sb.ToString().ToUpperInvariant();
-        }
-
-        private static async Task<uint> ReadAckFromStreamAsync(NetworkStream stream, CancellationToken ct)
-        {
-            var header = new byte[PtProtocol.HeaderLength];
-            bool ok = await ReadExactAsync(stream, header, PtProtocol.HeaderLength, ct).ConfigureAwait(false);
-            if (!ok) throw new EndOfStreamException("ACK: remote closed stream");
-
-            if (header[0] != (byte)'P' || header[1] != (byte)'T')
-                throw new InvalidDataException("ACK: invalid PT flag");
-
-            ushort bodyLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(4, 2));
-            if (bodyLen > 0)
-            {
-                var body = new byte[bodyLen];
-                await ReadExactAsync(stream, body, bodyLen, ct).ConfigureAwait(false);
-            }
-
-            return BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(32, 4));
-        }
-
-        private static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int len, CancellationToken ct)
-        {
-            int readTotal = 0;
-            while (readTotal < len)
-            {
-                int read = await stream.ReadAsync(buffer, readTotal, len - readTotal, ct).ConfigureAwait(false);
-                if (read <= 0) return false;
-                readTotal += read;
-            }
-            return true;
         }
 
         private void TryDebugWriteSentPacket(string clientId, byte[] ptPacket, string json)
