@@ -103,20 +103,12 @@
                                 <TextBlock Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,4,0">Port：</TextBlock>
                                 <TextBox Grid.Row="1" Grid.Column="4" Text="{Binding LogPort, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="8,2,0,2" />
 
-                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,6,0,0" IsChecked="{Binding UseLogServer, Mode=TwoWay}">
-                                    使用日志服务器（心跳 UDP / 其他日志 UDP）
+                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,6,0,0" IsChecked="{Binding UseLogServer, Mode=TwoWay}"
+                                          ToolTip="勾选后：心跳附加 UDP 发往日志服务器；日志发送也改为 UDP 到日志服务器（Windows/Linux 均生效）">
+                                    使用日志服务器（心跳+日志均走 UDP 到日志服务器）
                                 </CheckBox>
 
-                                <Button Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding PortTestCommand}">端口连通测试</Button>
-
-                                <Grid Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="2" Margin="8,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="90" Height="30" Command="{Binding StartHttpsHeartbeatCommand}" Margin="0,0,4,0">HTTPS 心跳</Button>
-                                    <Button Grid.Column="1" Width="60" Height="30" Command="{Binding StopHttpsHeartbeatCommand}">停止</Button>
-                                </Grid>
+                                <Button Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="4" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding PortTestCommand}">端口连通测试</Button>
                             </Grid>
                         </StackPanel>
                 </Border>
@@ -136,7 +128,7 @@
                         <TextBlock Text="{Binding OsInfoText}" FontSize="11" Foreground="#555"
                                    TextWrapping="Wrap"/>
                         <TextBlock FontSize="10" Foreground="#999" Margin="0,4,0,0"
-                                   Text="Linux 心跳自动使用 HTTPS（已支持）；切换 OS 将更新版本号下拉列表"/>
+                                   Text="Windows → TCP 心跳；Linux → HTTPS 心跳。两种模式勾选日志服务器均会附加 UDP 心跳。切换 OS 将更新版本号下拉列表。"/>
                     </StackPanel>
                 </Border>
 
@@ -284,7 +276,12 @@
 
                     <Border DockPanel.Dock="Top" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock FontWeight="SemiBold" FontSize="14">心跳设置</TextBlock>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontWeight="SemiBold" FontSize="14">心跳设置</TextBlock>
+                                <Border Background="#E3F2FD" CornerRadius="3" Padding="5,1" Margin="8,1,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding HeartbeatModeLabel}" Foreground="#1565C0" FontSize="11" FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
                             <Grid Margin="0,8,0,0">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -302,7 +299,7 @@
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">策略接收：</TextBlock>
                                 <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding EnablePolicyReceive, Mode=TwoWay}"
                                           VerticalAlignment="Center" Margin="8,3,0,3"
-                                          ToolTip="开启后心跳连接中的策略下发将被解析并自动回包" />
+                                          ToolTip="开启后心跳连接中的策略下发将被解析并自动回包（仅 TCP/Windows 模式生效）" />
 
                                 <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
@@ -499,7 +496,7 @@
                                     <TextBlock Text="{Binding HbTotal}" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90">TCP 已连接：</TextBlock>
+                                    <TextBlock Width="90" ToolTip="TCP模式=当前持有TCP连接的客户端数；HTTPS模式=本轮HTTP响应成功数">在线客户端：</TextBlock>
                                     <TextBlock Text="{Binding HbConnected}" Foreground="DodgerBlue" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">

@@ -461,7 +461,9 @@ namespace SimulatorLib.Workers
 
         // ──────────────────────────────────────────────────────────────────────
         // HTTPS 心跳：POST https://{host}:{port}/USM/clientHeartbeat.do
-        // 不经过 PT 协议加密，用于诊断 TCP 心跳是否是协议/加密问题。
+        // 不经过 PT 协议加密，用于 Linux 客户端场景。
+        // 若 useLogServer=true 且 udpSender 不为 null，则每次 HTTPS 成功后
+        // 同时以 UDP 将相同 payload 发往日志服务器（与 TCP 心跳的附加 UDP 逻辑对齐）。
         // ──────────────────────────────────────────────────────────────────────
         public async Task StartHttpsAsync(
             int intervalMs,
@@ -469,13 +471,18 @@ namespace SimulatorLib.Workers
             int platformPort,
             CancellationToken ct,
             IProgress<HeartbeatStats>? progress = null,
-            string? osVersion = null)
+            string? osVersion = null,
+            bool useLogServer = false,
+            string? logHost = null,
+            int logPort = 0,
+            IUdpSender? udpSender = null)
         {
             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             if (clients.Count == 0) return;
 
-            var lastResult = new int[clients.Count];
-            for (int j = 0; j < clients.Count; j++) lastResult[j] = -1;
+            var lastResult    = new int[clients.Count];
+            var lastUdpResult = new int[clients.Count];
+            for (int j = 0; j < clients.Count; j++) { lastResult[j] = -1; lastUdpResult[j] = -1; }
 
             int spreadMs = Math.Min(intervalMs, 3000);
 
@@ -521,6 +528,17 @@ namespace SimulatorLib.Workers
                                                .ConfigureAwait(false);
 
                             lastResult[idx] = resp.IsSuccessStatusCode ? 1 : 0;
+
+                            // 可选 UDP 心跳到日志服务器（与 TCP 心跳的附加逻辑对齐）
+                            if (useLogServer && udpSender != null && !string.IsNullOrEmpty(logHost)
+                                && resp.IsSuccessStatusCode)
+                            {
+                                var jsonBytes = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
+                                var payload   = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
+                                var udpOk     = await udpSender.SendUdpAsync(logHost, logPort, payload, 1500, ct)
+                                                               .ConfigureAwait(false);
+                                lastUdpResult[idx] = udpOk ? 1 : 0;
+                            }
                         }
                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                         catch { lastResult[idx] = 0; }
@@ -538,14 +556,16 @@ namespace SimulatorLib.Workers
                     try { await Task.Delay(2000, ct).ConfigureAwait(false); }
                     catch { break; }
 
-                    int ok = 0, fail = 0;
+                    int ok = 0, fail = 0, udpOk = 0, udpFail = 0;
                     for (int j = 0; j < clients.Count; j++)
                     {
                         if      (lastResult[j] == 1) ok++;
                         else if (lastResult[j] == 0) fail++;
+                        if      (lastUdpResult[j] == 1) udpOk++;
+                        else if (lastUdpResult[j] == 0) udpFail++;
                     }
-                    // HTTPS 心跳：用 Connected 字段表示当前在线（响应成功）数量
-                    try { progress?.Report(new HeartbeatStats(clients.Count, ok, 0, 0, 0, 0)); } catch { }
+                    // HTTPS 心跳：Connected = HTTP 响应成功数；SuccessTcp/FailTcp 复用为 HTTPS ok/fail
+                    try { progress?.Report(new HeartbeatStats(clients.Count, ok, ok, fail, udpOk, udpFail)); } catch { }
                 }
             }, ct);
 

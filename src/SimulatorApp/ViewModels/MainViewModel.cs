@@ -247,6 +247,10 @@ namespace SimulatorApp.ViewModels
             ? $"OS: Linux centos7   版本: {RegClientVersion}"
             : $"OS: {SimulatorLib.Protocol.OsInfo.GetWindowsVersionName()}   版本: {RegClientVersion}";
 
+        /// <summary>心跳设置面板展示的协议模式标签（随 OS 类型自动切换）</summary>
+        public string HeartbeatModeLabel =>
+            _osType == "Linux" ? "HTTPS（Linux）" : "TCP（Windows）";
+
         private void OnOsTypeChanged()
         {
             if (_osType == "Linux")
@@ -269,6 +273,7 @@ namespace SimulatorApp.ViewModels
             OnProp(nameof(IsOsWindows));
             OnProp(nameof(IsOsLinux));
             OnProp(nameof(OsInfoText));
+            OnProp(nameof(HeartbeatModeLabel));
         }
 
         // 策略接收
@@ -299,8 +304,6 @@ namespace SimulatorApp.ViewModels
         public ICommand RegisterCommand { get; }
         public ICommand StartHeartbeatCommand { get; }
         public ICommand StopHeartbeatCommand { get; }
-        public ICommand StartHttpsHeartbeatCommand { get; }
-        public ICommand StopHttpsHeartbeatCommand { get; }
         public ICommand PortTestCommand { get; }
         public ICommand StartLogSendCommand { get; }
         public ICommand StopLogSendCommand { get; }
@@ -314,8 +317,6 @@ namespace SimulatorApp.ViewModels
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
             StartHeartbeatCommand = new RelayCommand(async _ => await StartHeartbeatAsync());
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
-            StartHttpsHeartbeatCommand = new RelayCommand(async _ => await StartHttpsHeartbeatAsync());
-            StopHttpsHeartbeatCommand  = new RelayCommand(_ => StopHttpsHeartbeat());
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
             StartLogSendCommand = new RelayCommand(async _ => await StartLogSendAsync());
             StopLogSendCommand = new RelayCommand(_ => StopLogSend());
@@ -597,87 +598,123 @@ namespace SimulatorApp.ViewModels
 
                 await SaveConfigAsync().ConfigureAwait(false);
                 _hbCts = new CancellationTokenSource();
-                _lastHbLogTime = DateTime.Now; // 启动时重置节流，避免连接建立期间的瞬态离线误报
-                var tcp = new TcpSender();
-                var udp = new UdpSender();
-                _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
-                _hbStreamRegistry = new HeartbeatStreamRegistry();
-                var hb = new HeartbeatWorker(tcp, udp, _policyWorker, _hbStreamRegistry);
+                _lastHbLogTime = DateTime.Now;
+
                 var hbTaskRec = AddTaskRecord("心跳", RegCount, HbInterval / 1000);
-                RunOnUi(() => AppendStatus("开始心跳任务" +
-                    (EnablePolicyReceive ? "（策略接收已开启）" : string.Empty) + "..."));
-                _ = Task.Run(async () =>
-                {
-                    var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
-                    {
-                        RunOnUi(() =>
-                        {
-                            HbTotal         = s.Total;
-                            HbConnected     = s.Connected;
-                            HbTcpOk         = s.SuccessTcp;
-                            HbTcpFail       = s.FailTcp;
-                            HbServerReplied = s.ServerReplied;
-                            HbUdpOk         = s.SuccessUdp;
-                            HbUdpFail       = s.FailUdp;
 
-                            // 仅在出现异常时输出日志（全部正常则静默）；同一异常状态下每 30s 最多一条，避免刷屏。
-                            {
-                                int offline = s.Total - s.Connected;
-                                // 注意：不再单独判断 silentDrop（TCP在线但无回包）。
-                                // 原因：silentDrop = Connected - ServerReplied，启动时多客户端连接时差、
-                                // 或 90s 窗口边界时，必然有客户端暂时无回包，造成大量误报。
-                                // session stale 检测（HeartbeatWorker 内）已自动处理平台静默踢人并重连，
-                                // 重连时 RsnSessionStale 会短暂出现，由下面的 hasReasons 体现。
-                                bool hasOffline = offline > 0;
-                                bool hasReasons = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
-                                                     s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
-                                                     s.RsnWriteFailed  > 0 || s.RsnLockBusy > 0;
-                                bool hasIssue = hasOffline || hasReasons;
-
-                                if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
-                                {
-                                    _lastHbLogTime = DateTime.Now;
-                                    var reasons = new System.Collections.Generic.List<string>();
-                                    if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
-                                    if (s.RsnConnFailed   > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
-                                    if (s.RsnConnTimeout  > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
-                                    if (s.RsnServerClosed > 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
-                                    if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
-                                    if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
-                                    string reasonStr = reasons.Count > 0
-                                        ? "  离线原因: " + string.Join(", ", reasons)
-                                        : string.Empty;
-                                    AppendStatus(
-                                        $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
-                                        reasonStr);
-                                }
-                            }
-                        });
-                    });
-                    await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
-                        osVersion: _osType == "Linux" ? "Linux centos7" : null).ConfigureAwait(false);
-                    // 心跳结束（用户停止）
-                    hbTaskRec.MarkStopped();
-                });
-                // 定时将策略接收统计同步到 UI
-                _ = Task.Run(async () =>
+                if (_osType == "Linux")
                 {
-                    while (_hbCts != null && !_hbCts.IsCancellationRequested)
+                    // ── Linux 路径：HTTPS 心跳 + 可选 UDP 到日志服务器 ────────────────────
+                    var udpSender = UseLogServer ? new UdpSender() : null;
+                    var hb = new HeartbeatWorker(new TcpSender(), udpSender);
+                    RunOnUi(() => AppendStatus($"开始心跳任务（HTTPS 模式，目标: https://{PlatformHost}:{PlatformPort}/USM/clientHeartbeat.do）" +
+                        (UseLogServer ? $"  + UDP 日志服务器 {LogHost}:{LogPort}" : "") + "..."));
+                    _ = Task.Run(async () =>
                     {
-                        if (_policyWorker != null)
+                        var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
                         {
                             RunOnUi(() =>
                             {
-                                PolicyReceived = _policyWorker.ReceivedCount;
-                                PolicyReplied  = _policyWorker.RepliedCount;
-                                if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
-                                    hbTaskRec.Detail = $"策略收到:{PolicyReceived} 已回包:{PolicyReplied}";
+                                HbTotal     = s.Total;
+                                HbConnected = s.Connected;
+                                HbTcpOk     = s.SuccessTcp;   // HTTPS 成功数复用此字段
+                                HbTcpFail   = s.FailTcp;      // HTTPS 失败数复用此字段
+                                HbUdpOk     = s.SuccessUdp;
+                                HbUdpFail   = s.FailUdp;
                             });
+                        });
+                        await hb.StartHttpsAsync(
+                            HbInterval,
+                            platformHost:  PlatformHost,
+                            platformPort:  PlatformPort,
+                            ct:            _hbCts.Token,
+                            progress:      progress,
+                            osVersion:     "Linux centos7",
+                            useLogServer:  UseLogServer,
+                            logHost:       LogHost,
+                            logPort:       LogPort,
+                            udpSender:     udpSender).ConfigureAwait(false);
+                        hbTaskRec.MarkStopped();
+                    });
+                }
+                else
+                {
+                    // ── Windows 路径：TCP 长连接心跳 + 可选 UDP 到日志服务器 ───────────────
+                    var tcp = new TcpSender();
+                    var udp = new UdpSender();
+                    _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
+                    _hbStreamRegistry = new HeartbeatStreamRegistry();
+                    var hb = new HeartbeatWorker(tcp, udp, _policyWorker, _hbStreamRegistry);
+                    RunOnUi(() => AppendStatus("开始心跳任务（TCP 模式）" +
+                        (EnablePolicyReceive ? "（策略接收已开启）" : string.Empty) +
+                        (UseLogServer ? $"  + UDP 日志服务器 {LogHost}:{LogPort}" : "") + "..."));
+                    _ = Task.Run(async () =>
+                    {
+                        var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
+                        {
+                            RunOnUi(() =>
+                            {
+                                HbTotal         = s.Total;
+                                HbConnected     = s.Connected;
+                                HbTcpOk         = s.SuccessTcp;
+                                HbTcpFail       = s.FailTcp;
+                                HbServerReplied = s.ServerReplied;
+                                HbUdpOk         = s.SuccessUdp;
+                                HbUdpFail       = s.FailUdp;
+
+                                // 仅在出现异常时输出日志；同一状态每 30s 最多一条，避免刷屏
+                                {
+                                    int offline = s.Total - s.Connected;
+                                    bool hasOffline = offline > 0;
+                                    bool hasReasons = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
+                                                         s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
+                                                         s.RsnWriteFailed  > 0 || s.RsnLockBusy > 0;
+                                    bool hasIssue = hasOffline || hasReasons;
+
+                                    if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
+                                    {
+                                        _lastHbLogTime = DateTime.Now;
+                                        var reasons = new System.Collections.Generic.List<string>();
+                                        if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
+                                        if (s.RsnConnFailed   > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
+                                        if (s.RsnConnTimeout  > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
+                                        if (s.RsnServerClosed > 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
+                                        if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
+                                        if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
+                                        string reasonStr = reasons.Count > 0
+                                            ? "  离线原因: " + string.Join(", ", reasons)
+                                            : string.Empty;
+                                        AppendStatus(
+                                            $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
+                                            reasonStr);
+                                    }
+                                }
+                            });
+                        });
+                        await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
+                            osVersion: null).ConfigureAwait(false);
+                        hbTaskRec.MarkStopped();
+                    });
+                    // 定时将策略接收统计同步到 UI
+                    _ = Task.Run(async () =>
+                    {
+                        while (_hbCts != null && !_hbCts.IsCancellationRequested)
+                        {
+                            if (_policyWorker != null)
+                            {
+                                RunOnUi(() =>
+                                {
+                                    PolicyReceived = _policyWorker.ReceivedCount;
+                                    PolicyReplied  = _policyWorker.RepliedCount;
+                                    if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
+                                        hbTaskRec.Detail = $"策略收到:{PolicyReceived} 已回包:{PolicyReplied}";
+                                });
+                            }
+                            try { await Task.Delay(2000, _hbCts.Token).ConfigureAwait(false); }
+                            catch { break; }
                         }
-                        try { await Task.Delay(2000, _hbCts.Token).ConfigureAwait(false); }
-                        catch { break; }
-                    }
-                });
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -692,6 +729,9 @@ namespace SimulatorApp.ViewModels
                 _hbCts.Cancel();
                 RunOnUi(() => AppendStatus("已请求停止心跳任务"));
             }
+            // 兼容旧路径（直接调用 HTTPS 命令时产生的 CTS）
+            if (_httpsCts != null && !_httpsCts.IsCancellationRequested)
+                _httpsCts.Cancel();
         }
 
         private async Task StartHttpsHeartbeatAsync()
