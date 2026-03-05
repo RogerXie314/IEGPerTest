@@ -924,79 +924,36 @@ namespace SimulatorLib.Workers
 
         private async Task<bool> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
         {
-            // 对齐老工具 WLServerTest UseHBPort_ThreatLog_CheckBox：
-            //   SOCKET sockTemp;
-            //   CreateConnection(sockTemp, ..., m_strServerPortHB);  // 独立新连接，同一端口
-            //   SendUsingHBPort_ThreatLog(sObj, sockTemp);
-            //   RecvHeartBeatBack_TCP_ThreatLog(sockTemp);            // 读 ACK
-            //   CloseConnection(sockTemp);                            // 立即关闭
-            //
-            // 关键点：日志和心跳连接的是同一个 TCP 端口，但是完全独立的 socket。
-            // 不共享 HB stream → 不需要写锁 → 无 drain 竞争 → 无 ACK 字节乱序。
+            // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回 false。
+            // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
+            if (_streamRegistry == null) return false;
+
+            // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
+            // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
+            // LogWorker 无法安全读 ACK（drain 会抢先消费字节）。
+            // 背压由 TCP 发送缓冲区满时 WriteAsync 自然阻塞提供；
+            // 200ms 超时保证高 EPS 时快速失败而非无限堆积。
+            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 200, ct).ConfigureAwait(false);
             try
             {
-                using var tcp = new TcpClient { NoDelay = true };
-                tcp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
+                // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
+                var hbStream = _streamRegistry.TryGet(clientId);
+                if (hbStream == null || !lockAcq) return false;
 
-                // 2s 连接超时，对齐老工具 stcTime.tv_sec = 2
-                using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                connCts.CancelAfter(2000);
-                await tcp.ConnectAsync(host, port, connCts.Token).ConfigureAwait(false);
-
-                var stream = tcp.GetStream();
-                using var rwCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                rwCts.CancelAfter(5000); // 发送 + 读 ACK 共 5s 超时
-
-                // 发送日志包（对齐 SendData_OnlyCompress → WSASend）
-                await stream.WriteAsync(payload, 0, payload.Length, rwCts.Token).ConfigureAwait(false);
-                await stream.FlushAsync(rwCts.Token).ConfigureAwait(false);
-
-                // 读 ACK（对齐 RecvThreatLog_：读包头→解析 bodyLen→读 body）
-                // ACK 读取失败不影响本次发送结果（老工具也只是记录日志，连接照样关闭）
-                await ReadAndDiscardAckAsync(stream, rwCts.Token).ConfigureAwait(false);
-
+                using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts2.CancelAfter(3000);
+                await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
+                await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
                 return true;
-                // using 块结束自动关闭 tcp/stream，对齐 CloseConnection(sockTemp)
             }
             catch
             {
                 return false;
             }
-        }
-
-        /// <summary>
-        /// 读取并丢弃平台回包（对齐老工具 RecvThreatLog_ / RecvHeartbeat）。
-        /// 失败静默忽略——本次日志发送已完成，ACK 仅用于协议完整性。
-        /// </summary>
-        private static async Task ReadAndDiscardAckAsync(NetworkStream stream, CancellationToken ct)
-        {
-            try
+            finally
             {
-                // 读48字节包头
-                var header = new byte[PtProtocol.HeaderLength];
-                int read = 0;
-                while (read < header.Length)
-                {
-                    int n = await stream.ReadAsync(header, read, header.Length - read, ct).ConfigureAwait(false);
-                    if (n == 0) return; // 服务端提前关闭
-                    read += n;
-                }
-
-                // 从 offset 4~5 读 bodyLen（大端 uint16）
-                int bodyLen = (header[4] << 8) | header[5];
-                if (bodyLen <= 0 || bodyLen > 65536) return;
-
-                // 读并丢弃 body
-                var body = new byte[bodyLen];
-                int bodyRead = 0;
-                while (bodyRead < bodyLen)
-                {
-                    int n = await stream.ReadAsync(body, bodyRead, bodyLen - bodyRead, ct).ConfigureAwait(false);
-                    if (n == 0) return;
-                    bodyRead += n;
-                }
+                _streamRegistry.ReleaseWriteLock(clientId, lockAcq);
             }
-            catch { /* ACK 读失败静默忽略 */ }
         }
 
         private static string ComputeFakeSha1(string input)
