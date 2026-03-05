@@ -194,7 +194,17 @@ namespace SimulatorLib.Workers
             // 1000客户端 × 2/s → 若全部同时启动，瞬间 2000 TLS 握手/s 直接打垮服务端。
             // 扩大为 10s 启动窗口 → 100 握手/s，服务端可承受。
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
-            int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
+            // TCP 长连接通道：注册表已注入 + 非日志服务器模式 + 全部分类均为威胁检测。
+            bool isTcpLongConnMode = _streamRegistry != null
+                && !useLogServer
+                && categoryList.All(cat => IsThreatDataCategory(cat));
+            // TCP 长连接复用心跳已建立的 stream，无 TLS 握手，spreadMs=0 实现真正并发。
+            // HTTPS 短连接仍使用原有错峰逻辑，防止握手风暴。
+            int spreadMs = isTcpLongConnMode
+                ? 0
+                : clients.Count > 1
+                    ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000)
+                    : 0;
 
             var clientTasks = new List<Task>(clients.Count);
             for (int ci = 0; ci < clients.Count; ci++)
