@@ -928,6 +928,14 @@ namespace SimulatorLib.Workers
             // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
             if (_streamRegistry == null) return false;
 
+            // ★ 心跳优先让步：若 HeartbeatWorker 已通过 RaiseHeartbeatPriority 发出优先信号，
+            // 本轮跳过日志发送，返回 false。LogWorker 的 caller 会在下一个 intervalMs 后重试。
+            // 原因：高 EPS 下 LogWorker 近乎连续持锁，不让步则 HeartbeatWorker 在 4000ms 窗口内
+            // 始终拿不到锁（LockBusy），平台侧判定心跳超时，导致连接被踢。
+            // 对齐 C++ 串行工具行为：C++ 串行发送在消息间天然留出心跳发送窗口，此处显式实现同等效果。
+            if (_streamRegistry.IsHeartbeatPending(clientId))
+                return false;
+
             // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
             // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
             // LogWorker 无法安全读 ACK（drain 会抢先消费字节）。

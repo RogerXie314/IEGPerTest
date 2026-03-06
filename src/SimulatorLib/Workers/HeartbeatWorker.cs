@@ -239,10 +239,19 @@ namespace SimulatorLib.Workers
                             using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                             sendCts.CancelAfter(5000);
 
+                            // ★ 心跳优先：置位优先标志，通知 LogWorker 让出写锁。
+                            // 高 EPS 时 LogWorker 近乎连续持锁，若不置位则 HeartbeatWorker 最长
+                            // 等待 4000ms 仍可能超时（LockBusy），导致平台判定心跳超时踢掉连接。
+                            // 标志置位后，LogWorker 下次尝试获取写锁前会检查并让步。
+                            _streamRegistry?.RaiseHeartbeatPriority(c.ClientId);
+
                             // 加写锁：防止与 LogWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
                             bool lockAcq = _streamRegistry != null
                                 ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, sendCts.Token).ConfigureAwait(false)
                                 : true; // 无 registry 时不需要额外锁
+
+                            // 锁已获取（或放弃），清除优先标志，允许 LogWorker 恢复发送
+                            _streamRegistry?.ClearHeartbeatPriority(c.ClientId);
                             if (!lockAcq)
                             {
                                 // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
