@@ -184,11 +184,25 @@ namespace SimulatorLib.Workers
                     ? CreateHttpClientMultiIp(parsedLocalIps, ipCounters!, connectTimeoutMs: 6000, requestTimeoutMs: 30000)
                     : CreateHttpClient(connectTimeoutMs: 6000, requestTimeoutMs: 30000);
 
-            // 压测模式下用信号量限制同时飞行的 HTTPS 请求数，避免连接池内锁竞争。
-            // 门控容量 == MaxConnectionsPerServer，进门即有连接，零等待。
-            using var httpsGate = stressMode
-                ? new SemaphoreSlim(Math.Max(1, concurrency), Math.Max(1, concurrency))
-                : null;
+            // HTTPS 并发门控：所有模式均限制并发 TLS 连接数，防止 TLS 握手风暴过载平台。
+            // - 非压测模式：最多 10 个并发 TLS 连接。
+            //   推导：单条 HTTPS 请求含 TLS 握手耗时约 10ms（局域网），10 并发 × (1000ms/10ms) ≈ 100 EPS，
+            //   与文档 "HTTPS 通道 EPS ≤100" 上限一致。旧逻辑 gate=null 导致 1000 客户端
+            //   同时握手，平台 CPU 过载 → 心跳回包延迟 → 心跳掉线。
+            // - 压测模式：使用 concurrency 配置值，与连接池大小一致，消除池内锁竞争（原逻辑不变）。
+            int httpsConcurrencyLimit = stressMode ? Math.Max(1, concurrency) : 10;
+            using var httpsGate = new SemaphoreSlim(httpsConcurrencyLimit, httpsConcurrencyLimit);
+
+            // TCP 全局串行门控：对齐原始 C++ 工具的串行发送逻辑（日志串行发送）。
+            // 根本原因分析：C# 工具每客户端独立并发 Task，1000 个 WriteAsync 同时并发写入各自的
+            // 心跳 TCP 流，平台同时收到 1000 路日志数据 → 处理过载 → 心跳回包延迟 → 心跳掉线。
+            // C++ 工具以串行方式发送日志（一次只有一个 TCP WriteAsync），5000 EPS 也不掉线。
+            // 将 TCP 日志写操作串行化（SemaphoreSlim(1,1)），消除并发冲击，与 C++ 行为完全对齐。
+            // 性能说明：TCP WriteAsync 仅将数据拷入内核发送缓冲区（不等 ACK），在无 TCP 背压的
+            // 局域网环境下通常 < 0.5ms；串行可支撑约 2000 EPS（1000ms/0.5ms）。若需更高 EPS
+            // 或环境延迟较高，可将 SemaphoreSlim(1,1) 改为 SemaphoreSlim(N,N)（N=5~10）
+            // 以在有限并发内提升吞吐，同时避免完全无限并发带来的平台过载。
+            using var tcpGate = new SemaphoreSlim(1, 1);
 
             // 错峰启动：在 spreadMs 内均匀分散各客户端的首次发送，避免瞬间冲击。
             // 1000客户端 × 2/s → 若全部同时启动，瞬间 2000 TLS 握手/s 直接打垮服务端。
@@ -277,8 +291,17 @@ namespace SimulatorLib.Workers
                                         : false;
                                 else
                                 {
-                                    var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                    ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    // 全局串行门控：一次只允许一个 TCP 写操作（对齐 C++ 串行逻辑）
+                                    await tcpGate.WaitAsync(ct).ConfigureAwait(false);
+                                    try
+                                    {
+                                        var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                        ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    }
+                                    finally
+                                    {
+                                        tcpGate.Release();
+                                    }
                                 }
                             }
                             else if (useLogServer)
