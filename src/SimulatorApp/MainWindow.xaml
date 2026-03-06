@@ -420,7 +420,7 @@
                                 <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding LogThreatClientCount, Mode=TwoWay}" Width="60" HorizontalAlignment="Left" Margin="6,2,0,2" />
                                 <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="4,0,0,0">每秒：</TextBlock>
                                 <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
-                                <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">条</TextBlock>
+                                <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">轮/秒</TextBlock>
 
                                 <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>
@@ -434,7 +434,7 @@
 
                                 <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
                                            Foreground="Gray" FontSize="11"
-                                           Text="按 Clients.log 前 N 个客户端；两通道并发独立发送" />
+                                           Text="威胁检测：每轮依次发送全部勾选类型（对齐C++ SendThreatLog），轮/秒=EPS/N种" />
                             </Grid>
                         </StackPanel>
                     </Border>
