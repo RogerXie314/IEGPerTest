@@ -59,6 +59,22 @@ namespace SimulatorLib.Workers
         // ── 写锁 API ───────────────────────────────────────────────────────────
 
         /// <summary>
+        /// 立即尝试获取写锁（同步，无等待）。
+        /// 返回 true 表示成功获取；false 表示锁不存在或已被其他写方占用。
+        /// 调用方须在 finally 块中调用 <c>ReleaseWriteLock(clientId, lockAcq)</c>——
+        /// <c>ReleaseWriteLock</c> 在 <c>acquired=false</c> 时为空操作，调用安全。
+        /// </summary>
+        /// <remarks>
+        /// 专为 C++ 对齐串行调度器设计：单线程顺序发送时不需要等待，
+        /// 若 HB 线程恰好正在写入（概率极低，HB 间隔 30s），则跳过本次发送即可。
+        /// </remarks>
+        public bool TryAcquireWriteLock(string clientId)
+        {
+            if (!_writeLocks.TryGetValue(clientId, out var sem)) return false;
+            return sem.Wait(0);
+        }
+
+        /// <summary>
         /// 获取指定 clientId 的写锁（异步，最长等待 timeoutMs 毫秒）。
         /// 返回 true 表示成功获取；false 表示超时或锁不存在（此时不得写入 stream）。
         /// 调用方须在 finally 块中调用 <c>ReleaseWriteLock</c>，无论是否获取成功均安全。

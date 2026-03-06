@@ -196,6 +196,116 @@ namespace SimulatorLib.Workers
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
             int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
+            // === C++ 对齐串行调度器（TCP + EPS 模式）===
+            // 完全对齐 C++ WLServerTest 日志线程模型（WLServerTestDlg.cpp L2152）：
+            //   C++ 日志线程: for i { SendData(g_sock[i], payload) }  Sleep(N)
+            //
+            // 三项关键对齐：
+            //   ① 独立 OS 线程（new Thread，非 Task.Run 线程池）：对应 C++ 独立日志线程。
+            //   ② Socket.Send() 同步写入内核 TCP 缓冲区（< 0.1ms）：对应 C++ SendData()。
+            //      消除 WriteAsync/FlushAsync ~2ms async 状态机/调度开销。
+            //      600 客户端一轮 ≈ 60ms（vs async 版本 1200ms，后者超过 intervalMs 导致零等待）。
+            //   ③ ct.WaitHandle.WaitOne(waitMs) OS 级阻塞等待：对应 C++ Sleep(N)。
+            //      等待期间线程真正挂起，TCP 内核缓冲区无新写入，
+            //      平台 HB handler 每秒获得 ≈ 940ms 真实安静窗口，不触发 90s watchdog。
+            //
+            // 这正是"C++ 工具能稳定但 C# 不能"的根因：
+            //   不是语言能力差异，是发送模式差异（slow-drip vs burst+sleep）。
+            //   本调度器使 C# 产生与 C++ 相同的 burst+sleep 波形，应当复现 C++ 的稳定性。
+            if (!useLogServer && intervalMs > 0 && _streamRegistry != null)
+            {
+                var serials    = new uint[clients.Count];
+                var msgIndices = new int[clients.Count];
+
+                var tcs    = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        while (!ct.IsCancellationRequested)
+                        {
+                            // 有界模式：所有客户端都已发完则退出
+                            bool allDone = true;
+                            for (int ci2 = 0; ci2 < clients.Count; ci2++)
+                                if (msgIndices[ci2] < messagesPerClient) { allDone = false; break; }
+                            if (allDone) break;
+
+                            var roundStartMs = Environment.TickCount64;
+
+                            for (int ci = 0; ci < clients.Count && !ct.IsCancellationRequested; ci++)
+                            {
+                                if (msgIndices[ci] >= messagesPerClient) continue;
+
+                                var c      = clients[ci];
+                                var msgIdx = msgIndices[ci]++;
+                                var cat    = categoryList[msgIdx % categoryList.Count];
+
+                                try
+                                {
+                                    if (IsThreatDataCategory(cat))
+                                    {
+                                        var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                                        var src    = GetThreatDataJsonBytes(json);
+                                        uint serial = unchecked(++serials[ci]);
+                                        var pt = PtProtocol.Pack(
+                                            src,
+                                            cmdId: socketCmd,
+                                            compressType: PtCompressType.Zlib,
+                                            encryptType: PtEncryptType.None,
+                                            deviceId: c.DeviceId,
+                                            serialNumber: serial);
+                                        bool ok = TrySendLogTcpSync(c.ClientId, pt);
+                                        if (ok) Interlocked.Increment(ref success);
+                                        else  { Interlocked.Increment(ref fail); TrackFailure(cat, "send_skip_or_fail"); }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Interlocked.Increment(ref fail);
+                                    TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
+                                }
+
+                                MaybeReportProgress();
+                            }
+
+                            if (ct.IsCancellationRequested) break;
+
+                            // OS 级等待剩余时间（对应 C++ Sleep(N)）。
+                            // ct.WaitHandle.WaitOne 在取消时立即返回，无需额外检查。
+                            var elapsedMs = (int)(Environment.TickCount64 - roundStartMs);
+                            var waitMs    = intervalMs - elapsedMs;
+                            if (waitMs > 0)
+                                ct.WaitHandle.WaitOne(waitMs);
+                        }
+                    }
+                    finally
+                    {
+                        tcs.TrySetResult();
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Name         = "LogSerialDispatcher",
+                };
+                thread.Start();
+
+                await tcs.Task.ConfigureAwait(false);
+
+                WriteFailureSummary();
+                var stats0 = new LogSendStats(success + fail, success, fail);
+                try { progress?.Report(stats0); } catch { }
+                try
+                {
+                    var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                    if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
+                    var logPath = Path.Combine(logDir, $"logsend-{DateTime.UtcNow:yyyyMMdd}.log");
+                    var line = $"{DateTime.UtcNow:o} [CppStyleDispatcher] TotalSent={stats0.TotalMessages} Success={stats0.Success} Fail={stats0.Failed} Clients={clients.Count} Platform={platformHost}:{platformPort}";
+                    await File.AppendAllTextAsync(logPath, line + Environment.NewLine).ConfigureAwait(false);
+                }
+                catch { }
+                return;
+            }
+
             var clientTasks = new List<Task>(clients.Count);
             for (int ci = 0; ci < clients.Count; ci++)
             {
@@ -920,6 +1030,50 @@ namespace SimulatorLib.Workers
                 // 未知分类fallback到客户端操作日志
                 _ => (CmdWords.SocketCmd.LogAdmin, LogJsonBuilder.BuildClientAdminLog(client.ClientId, userName, $"Fallback: unknown category={category} idx={messageIndex}", success: true)),
             };
+        }
+
+        /// <summary>
+        /// C++ 对齐串行调度器专用同步发送。
+        /// <para>
+        /// 对应 C++ <c>SendData(g_sock[i], payload)</c>：写入 OS TCP 内核缓冲区，
+        /// 返回即完成（不等 ACK），延迟 &lt;0.1ms。
+        /// </para>
+        /// <para>
+        /// 与 <see cref="SendLogTcpLikeExternalAsync"/> 的区别：
+        /// <list type="bullet">
+        ///   <item>使用 <c>Socket.Send()</c>（同步）而非 <c>WriteAsync/FlushAsync</c>（~2ms async 开销）。</item>
+        ///   <item>使用 <c>TryAcquireWriteLock</c>（timeout=0）而非带等待的异步版本，
+        ///         避免在串行循环内引入任何调度延迟。</item>
+        ///   <item>HB 恰好在写时直接跳过（返回 false），而非阻塞等待——串行模式极少冲突（HB 30s 一次）。</item>
+        /// </list>
+        /// </para>
+        /// </summary>
+        private bool TrySendLogTcpSync(string clientId, byte[] payload)
+        {
+            if (_streamRegistry == null) return false;
+
+            bool lockAcq = _streamRegistry.TryAcquireWriteLock(clientId);
+            try
+            {
+                var hbStream = _streamRegistry.TryGet(clientId);
+                if (hbStream == null || !lockAcq) return false;
+
+                // Socket.Send：同步写入内核 TCP 缓冲区，对应 C++ send() 系统调用。
+                // 内核缓冲区满时阻塞（天然背压），与 C++ 行为完全一致。
+                // TCP 是流协议，Send 可能少于 payload.Length；循环确保全部发出。
+                int sent = 0;
+                while (sent < payload.Length)
+                    sent += hbStream.Socket.Send(payload, sent, payload.Length - sent, SocketFlags.None);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                _streamRegistry.ReleaseWriteLock(clientId, lockAcq);
+            }
         }
 
         private async Task<bool> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
