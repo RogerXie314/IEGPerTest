@@ -32,18 +32,6 @@ namespace SimulatorLib.Workers
         /// <summary>每个 clientId 独占一把写锁，防止心跳写与日志写并发损坏包体。</summary>
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks = new();
 
-        /// <summary>
-        /// 心跳优先标志：HeartbeatWorker 即将写入前通过 <c>RaiseHeartbeatPriority</c> 置位，
-        /// 通知 LogWorker 让出写锁；写入完成（或超时）后通过 <c>ClearHeartbeatPriority</c> 清除。
-        /// <para>
-        /// 解决"日志写锁饥饿"问题：高 EPS 时 LogWorker 近乎连续持锁，HeartbeatWorker 无法在
-        /// 4000ms 窗口内抢到锁（LockBusy），导致平台侧判定心跳超时而踢掉连接。
-        /// 标志置位后，LogWorker 在下次尝试获取写锁前先检查此标志，若为 true 则跳过本条日志
-        /// （本轮返回 false），将写锁优先留给心跳，下一个 intervalMs 后再重试日志发送。
-        /// </para>
-        /// </summary>
-        private readonly ConcurrentDictionary<string, bool> _heartbeatPending = new();
-
         // ── 注册 / 注销 ────────────────────────────────────────────────────────
 
         /// <summary>注册心跳连接的 stream（每次重连时覆盖旧值）。</summary>
@@ -67,29 +55,6 @@ namespace SimulatorLib.Workers
             _streams.TryGetValue(clientId, out var s);
             return s;
         }
-
-        // ── 心跳优先 API ──────────────────────────────────────────────────────
-
-        /// <summary>
-        /// HeartbeatWorker 即将尝试获取写锁前调用：置位心跳优先标志，通知 LogWorker 让步。
-        /// LogWorker 在下次尝试获取写锁前会检查此标志，若置位则跳过本条日志（本轮返回 false）。
-        /// </summary>
-        public void RaiseHeartbeatPriority(string clientId)
-            => _heartbeatPending[clientId] = true;
-
-        /// <summary>
-        /// HeartbeatWorker 获取写锁成功（或超时放弃）后调用：清除心跳优先标志，允许 LogWorker 恢复发送。
-        /// 即使 lockAcq=false（极少发生）也须清除，避免 LogWorker 被永久阻塞；
-        /// HeartbeatWorker 在下一个 intervalMs 后会重新 Raise 优先标志再试。
-        /// </summary>
-        public void ClearHeartbeatPriority(string clientId)
-            => _heartbeatPending.TryRemove(clientId, out _);
-
-        /// <summary>
-        /// LogWorker 在尝试获取写锁前检查：返回 true 表示心跳即将写入，LogWorker 应让步本轮。
-        /// </summary>
-        public bool IsHeartbeatPending(string clientId)
-            => _heartbeatPending.TryGetValue(clientId, out var v) && v;
 
         // ── 写锁 API ───────────────────────────────────────────────────────────
 
