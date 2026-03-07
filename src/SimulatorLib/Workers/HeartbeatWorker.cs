@@ -98,6 +98,10 @@ namespace SimulatorLib.Workers
 
             // 事件驱动日志队列：断连发生时立即入队，监控任务异步写文件（不等下次轮询）
             var eventQueue = new ConcurrentQueue<string>();
+            // 专用事件日志队列：实时写入 heartbeat-events-YYYYMMDD.log（500ms 刷新，独立于 monitor 快照）
+            var hbEventLog = new ConcurrentQueue<string>();
+            // 每客户端最近断线时间戳（ms），用于计算 RECONNECT 延迟
+            var evtDisconnAtMs = new long[clients.Count];
 
             // 错峰启动：在 spreadMs 内均匀错开首次连接
             int spreadMs = Math.Min(intervalMs, 3000);
@@ -122,6 +126,7 @@ namespace SimulatorLib.Workers
                     NetworkStream? stream = null;
                     bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
                     long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
+                    bool           hasConnectedBefore = false; // 区分首次 CONNECT 与 RECONNECT
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -152,6 +157,13 @@ namespace SimulatorLib.Workers
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
                                 // 注册到共享表，供威胁检测 LogWorker 复用此 stream（对齐原项目 SetWLTcpConnectInstance）
                                 _streamRegistry?.Register(c.ClientId, stream);
+                                // 事件日志：首次 CONNECT 或断线后 RECONNECT
+                                {
+                                    long latMs = hasConnectedBefore && evtDisconnAtMs[idx] > 0
+                                        ? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - evtDisconnAtMs[idx] : -1;
+                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} {(hasConnectedBefore ? "RECONNECT" : "CONNECT  ")} client={c.ClientId}{(latMs >= 0 ? $" latencyMs={latMs}" : "")}");
+                                    hasConnectedBefore = true;
+                                }
 
                                 // 后台 drain：读取服务端推送（对应原始 C++ HeartBeatRecvThread）。
                                 // 若配置了 PolicyReceiveWorker，则解析下行命令并回包；
@@ -180,6 +192,8 @@ namespace SimulatorLib.Workers
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
                                                 capturedRegistry?.Unregister(capturedC.ClientId);
                                                 eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(PolicyDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
+                                                evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
                                             }
                                         }
                                         else
@@ -195,6 +209,8 @@ namespace SimulatorLib.Workers
                                                     lastReason[capturedIdx] = Reason.ServerClosed;
                                                     capturedRegistry?.Unregister(capturedC.ClientId);
                                                     eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(RawDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
+                                                    evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
                                                     break;
                                                 }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -202,7 +218,7 @@ namespace SimulatorLib.Workers
                                             }
                                         }
                                     }
-                                    catch { alive = false; capturedRegistry?.Unregister(capturedC.ClientId); }
+                                    catch { alive = false; capturedRegistry?.Unregister(capturedC.ClientId); evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=连接异常"); }
                                 }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
@@ -212,6 +228,8 @@ namespace SimulatorLib.Workers
                                 // 对应原始：connect timeout → 下一个心跳周期重试，节奏由 intervalMs 控制
                                 lastResult[idx]  = 0;
                                 lastReason[idx]  = Reason.ConnectTimeout;
+                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=连接超时");
                                 try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -221,6 +239,8 @@ namespace SimulatorLib.Workers
                                 // 连接被拒绝 / 网络不通：等一个心跳周期后重试（与原始行为一致）
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
+                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=连接失败");
                                 try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
                                 continue;
@@ -289,6 +309,8 @@ namespace SimulatorLib.Workers
                             lastResult[idx] = 0;
                             lastReason[idx] = Reason.WriteFailed;
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
+                            evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=写入失败");
                         }
 
                         // 等待下一个心跳周期
@@ -317,7 +339,14 @@ namespace SimulatorLib.Workers
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.SessionStale;
                                 _streamRegistry?.Unregister(c.ClientId);
-                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{(Interlocked.Read(ref lastReplyTimeMs[idx]) > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(Interlocked.Read(ref lastReplyTimeMs[idx])).LocalDateTime.ToString("HH:mm:ss") : "从未")} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
+                                // snapshot 一次，避免 drain task 并发修改导致双重读取结果不一致
+                                long snapReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
+                                string snapReplyStr = snapReply > 0
+                                    ? DateTimeOffset.FromUnixTimeMilliseconds(snapReply).LocalDateTime.ToString("HH:mm:ss")
+                                    : "从未";
+                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
+                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
                             }
                         }
                     }
@@ -403,6 +432,30 @@ namespace SimulatorLib.Workers
                     catch { /* 写文件失败不影响主流程 */ }
                 }
             }, ct);
+
+            // 事件日志任务：实时将 hbEventLog 写入 heartbeat-events-YYYYMMDD.log（500ms 刷新）
+            var hbEventLogFile = Path.Combine(AppContext.BaseDirectory, $"heartbeat-events-{DateTime.UtcNow:yyyyMMdd}.log");
+            _ = Task.Run(async () =>
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    try { await Task.Delay(500, ct).ConfigureAwait(false); }
+                    catch { break; }
+                    if (!hbEventLog.IsEmpty)
+                    {
+                        var esb = new StringBuilder();
+                        while (hbEventLog.TryDequeue(out var ev)) esb.AppendLine(ev);
+                        try { await File.AppendAllTextAsync(hbEventLogFile, esb.ToString(), CancellationToken.None).ConfigureAwait(false); } catch { }
+                    }
+                }
+                // 取消后 drain 残留事件，确保最后一批不丢失
+                if (!hbEventLog.IsEmpty)
+                {
+                    var esb = new StringBuilder();
+                    while (hbEventLog.TryDequeue(out var ev)) esb.AppendLine(ev);
+                    try { File.AppendAllText(hbEventLogFile, esb.ToString()); } catch { }
+                }
+            });
 
             // 统计上报：扫描 lastResult / connectedFlags 数组（gauge，无累计溢出）
             // 固定 2s 刷新，与心跳间隔解耦：心跳间隔再长（如 30s），UI 也能保持实时响应。

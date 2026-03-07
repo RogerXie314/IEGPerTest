@@ -281,9 +281,9 @@ namespace SimulatorLib.Workers
                                         serialNumber: serial);
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    bool typeOk = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
-                                    if (typeOk) Interlocked.Increment(ref success);
-                                    else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
+                                    var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    if (typeFailR == null) Interlocked.Increment(ref success);
+                                    else { Interlocked.Increment(ref fail); TrackFailure(cat, typeFailR); }
 
                                     // ~50ms 间隔，对齐C++ Sleep(50)（类型之间，最后一种后不等）
                                     if (typeIdx < categoryList.Count - 1)
@@ -302,6 +302,7 @@ namespace SimulatorLib.Workers
                             var cat = categoryList[msgIdx % categoryList.Count];
                             var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
                             bool ok;
+                            string? tcpSendFail = null; // TCP 通道失败时记录具体原因，传入 TrackFailure
 
                             try
                             {
@@ -325,7 +326,8 @@ namespace SimulatorLib.Workers
                                     else
                                     {
                                         var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                        ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                        tcpSendFail = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                        ok = tcpSendFail == null;
                                     }
                                 }
                                 else if (useLogServer)
@@ -354,7 +356,7 @@ namespace SimulatorLib.Workers
                                 }
 
                                 if (ok) Interlocked.Increment(ref success);
-                                else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
+                                else { Interlocked.Increment(ref fail); TrackFailure(cat, tcpSendFail ?? "non_ok_response"); }
                             }
                             catch (OperationCanceledException) { return; }
                             catch (Exception ex)
@@ -970,11 +972,12 @@ namespace SimulatorLib.Workers
             };
         }
 
-        private async Task<bool> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
+        private async Task<string?> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
         {
-            // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回 false。
+            // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回失败原因。
             // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
-            if (_streamRegistry == null) return false;
+            // 返回 null = 成功；返回非 null 字符串 = 失败原因（stream_null / lock_timeout / write_ex:类型名）。
+            if (_streamRegistry == null) return "no_registry";
 
             // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
             // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
@@ -984,19 +987,20 @@ namespace SimulatorLib.Workers
             bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 200, ct).ConfigureAwait(false);
             try
             {
+                if (!lockAcq) return "lock_timeout";
                 // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
                 var hbStream = _streamRegistry.TryGet(clientId);
-                if (hbStream == null || !lockAcq) return false;
+                if (hbStream == null) return "stream_null";
 
                 using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 cts2.CancelAfter(3000);
                 await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
                 await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
-                return true;
+                return null; // success
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return "write_ex:" + ex.GetType().Name;
             }
             finally
             {
