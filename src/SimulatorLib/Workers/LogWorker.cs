@@ -283,7 +283,14 @@ namespace SimulatorLib.Workers
 
                                     var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
                                     if (typeFailR == null) Interlocked.Increment(ref success);
-                                    else { Interlocked.Increment(ref fail); TrackFailure(cat, typeFailR); }
+                                    else
+                                    {
+                                        Interlocked.Increment(ref fail);
+                                        TrackFailure(cat, typeFailR);
+                                        // 对齐C++ goto END：任一类型发送失败立即停止本轮，
+                                        // 避免用已损坏的 stream 继续发后续类型（失败膨胀×N倍）。
+                                        break;
+                                    }
 
                                     // ~50ms 间隔，对齐C++ Sleep(50)（类型之间，最后一种后不等）
                                     if (typeIdx < categoryList.Count - 1)
@@ -1000,6 +1007,10 @@ namespace SimulatorLib.Workers
             }
             catch (Exception ex)
             {
+                // write_ex：半截报文已写入 stream，继续使用会导致协议帧错位。
+                // 主动 Unregister 通知 HeartbeatWorker 此 stream 已损坏，
+                // 触发快速重连（避免等待 SessionStale 超时 90s 才发现问题）。
+                _streamRegistry.Unregister(clientId);
                 return "write_ex:" + ex.GetType().Name;
             }
             finally

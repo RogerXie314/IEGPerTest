@@ -1,0 +1,295 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "targetver.h"
+#endif
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 中文(中华人民共和国) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+#ifdef _WIN32
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(936)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)\r\n"
+    "LANGUAGE 4, 2\r\n"
+    "#pragma code_page(936)\r\n"
+    "#include ""res\\WLServerTest.rc2""  // 非 Microsoft Visual C++ 编辑的资源\r\n"
+    "#include ""l.CHS\\afxres.rc""      // 标准组件\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\WLServerTest.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 170, 62
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "关于 WLServerTest"
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,14,14,21,20
+    LTEXT           "WLServerTest，1.0 版",IDC_STATIC,42,14,114,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2015",IDC_STATIC,42,26,114,8
+    DEFPUSHBUTTON   "确定",IDOK,113,41,50,14,WS_GROUP
+END
+
+IDD_WLSERVERTEST_DIALOG DIALOGEX 0, 0, 575, 547
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+EXSTYLE WS_EX_APPWINDOW
+CAPTION " "
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "注册",IDC_STATIC,7,40,561,67
+    GROUPBOX        "心跳",IDC_STATIC,7,111,561,126
+    LTEXT           "",IDC_STATIC_HEARTBEAT_OnlineClientCountRigthData,71,223,60,8
+    EDITTEXT        IDC_EDIT_SERV_IP,58,20,72,14,ES_AUTOHSCROLL
+    LTEXT           "服务器地址:",IDC_STATIC,11,23,46,8
+    COMBOBOX        IDC_COMBO_REG_COUNT,368,56,52,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_EDIT_SERV_PORT,207,21,48,14,ES_AUTOHSCROLL
+    LTEXT           "注册端口：",IDC_STATIC,168,23,35,8
+    LTEXT           "此次注册客户端个数：",IDC_STATIC,297,58,70,8
+    PUSHBUTTON      "开始注册",IDC_BUTTON_REG_REG,303,81,59,14
+    GROUPBOX        "服务器信息",IDC_STATIC,7,6,561,33
+    PUSHBUTTON      "添加任务",IDC_BUTTON_HEARTBEAT_AddTask,365,206,50,14
+    COMBOBOX        IDC_COMBO_HEARTBEAT_ClientCount,58,206,46,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "客户端个数：",IDC_STATIC,15,208,42,8
+    LTEXT           "发送程序日志计数(成功/总数):",IDC_STATIC_APPLOG,12,372,96,8
+    COMBOBOX        IDC_COMBO_APPLOG_COUNT,97,528,50,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "客户端个数:",IDC_STATIC,97,516,38,8
+    PUSHBUTTON      "添加任务",IDC_BUTTON_APPLOG_SEND_LowestAddTask,365,526,50,14
+    COMBOBOX        IDC_COMBO_HEARTBEAT_IntervalTime,158,206,46,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "间隔(毫秒)：",IDC_STATIC,116,208,41,8
+    COMBOBOX        IDC_COMBO_APPLOG_HZ,171,528,50,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "每客户端总条数:",IDC_STATIC,170,516,51,8
+    LTEXT           "注册客户端总数:",IDC_STATIC_RegisteredClientCount,462,62,99,12
+    CONTROL         "",IDC_LIST_HEARTBEAT_ListShowWindow,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,121,561,81
+    CONTROL         "",IDC_LIST_LOWPART_ListShowWindow,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,253,561,61
+    COMBOBOX        IDC_COMBO_HEARTBEAT_TotalMimutes,263,206,46,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "时长(分钟)：",IDC_STATIC,221,208,41,8
+    COMBOBOX        IDC_COMBO_APPLOG_TIME,241,528,50,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "每客户端每秒条数:",IDC_STATIC,240,515,59,8
+    PUSHBUTTON      "重置所有",IDC_BUTTON_REG_RESET,516,91,52,14
+    EDITTEXT        IDC_EDIT_SERV_PORT2,337,21,47,14,ES_AUTOHSCROLL
+    LTEXT           "心跳端口：",IDC_STATIC,298,23,35,8
+    PUSHBUTTON      "端口测试",IDC_Btn_TestConn,462,20,50,14
+    CONTROL         "客户端操作",IDC_OPT_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,18,336,48,10
+    CONTROL         "进程控制",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,144,336,43,10
+    CONTROL         "存储设备",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,384,336,43,10
+    CONTROL         "漏洞防护",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,84,336,43,10
+    CONTROL         "安全商店",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,264,336,43,10
+    CONTROL         "系统检查",IDC_CHECK6,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,324,336,43,10
+    CONTROL         "上传程序白名单",IDC_WHITE_LIST,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,19,416,61,12
+    CONTROL         "防火墙",IDC_CHECK8,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,444,336,42,10
+    CONTROL         "操作系统",IDC_CHECK9,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,204,336,43,10
+    CONTROL         "非法外联",IDC_CHECK10,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,24,354,43,10
+    CONTROL         "IPC日志",IDC_CHECK11,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,504,336,42,10
+    LTEXT           "客户端ID前缀:",IDC_STATIC,15,61,44,8
+    LTEXT           "客户端ID起始编号:",IDC_STATIC,146,60,58,8
+    EDITTEXT        IDC_EDIT_IDPRE,62,57,67,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_STARTNUM,208,56,67,14,ES_AUTOHSCROLL
+    LTEXT           "在线客户端计数：",IDC_STATIC,15,223,60,8
+    LTEXT           "此次注册首个客户端的IP地址：",IDC_STATIC,15,85,96,8
+    CONTROL         "",IDC_IPADDRESS_CLIENT,"SysIPAddress32",WS_TABSTOP,112,81,118,14
+    LTEXT           "发送文件日志计数(成功/总数):",IDC_STATIC_FILELOG,12,438,96,8
+    EDITTEXT        IDC_WL_FILE_PATH_EDIT,132,414,171,14,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "选择白名单",IDC_WL_FILE_CHOOSE_BUTTON,314,414,48,14
+    GROUPBOX        "程序日志",IDC_STATIC,7,321,561,66,0,WS_EX_ACCEPTFILES
+    GROUPBOX        "程序白名单(每次添加任务，每个客户端只上传一次白名单文件，总条数和每秒条数对此功能无意义)",IDC_STATIC,7,395,561,62
+    GROUPBOX        "状态上传",IDC_STATIC,7,457,561,53
+    CONTROL         "安全基线",IDC_CHECK_BASE_LINE,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,36,474,42,10
+    LTEXT           "状态上传成功计数(成功/总数)：",IDC_STATIC,12,492,102,8
+    LTEXT           "0 ",IDC_STATIC_STATE_SUC_NUM,114,492,36,8
+    LTEXT           "0",IDC_STATIC_WL_SUC_NUM,114,438,34,8
+    LTEXT           "/",IDC_STATIC,151,438,8,8
+    LTEXT           "0",IDC_STATIC_WL_ALL_NUM,179,438,36,8
+    LTEXT           "/",IDC_STATIC,152,492,8,8
+    LTEXT           "0",IDC_STATIC_STATE_ALL_NUM,177,492,36,8
+    LTEXT           "0",IDC_STATIC_LOG_SUC_NUM,114,372,37,8
+    LTEXT           "/",IDC_STATIC,153,372,8,8
+    LTEXT           "0",IDC_STATIC_LOG_ALL_NUM,180,372,36,8
+    CONTROL         "UKey",IDC_CHECK_UKEY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,474,32,10,WS_EX_RIGHT
+    PUSHBUTTON      "结束任务",IDC_BUTTON_STOP_TASK,431,526,50,14
+    CONTROL         "威胁检测(五种事件)",IDC_THT_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,82,355,79,8
+    CONTROL         "非白名单",IDC_NWL_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,205,354,41,10
+    CONTROL         "数据保护",IDC_DATAPROTECT_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,265,354,41,10
+    CONTROL         "系统保护",IDC_SYSPROTECT_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,325,353,41,10
+    CONTROL         "备份与恢复",IDC_Backup_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,384,352,41,10
+    CONTROL         "病毒告警",IDC_Virus_LOG,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,443,352,41,10
+    CONTROL         "白名单相同路径",IDC_Whitelist_Path_Type,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,13,525,58,10
+    CONTROL         "是否同时注册",IDC_OPT_REGISTER_SAMETIME,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,365,83,61,10
+    LTEXT           "注册线程总数:",IDC_STATIC_RegisteredThreadCount,468,49,46,12,NOT WS_VISIBLE
+    LTEXT           "0",IDC_RegisteredThreadCount,516,49,46,12,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT_REGFAIL_CD,362,94,27,12,ES_AUTOHSCROLL | NOT WS_VISIBLE
+    LTEXT           "s 注册失败等待时间",IDC_STATIC_REGFAIL_CD,392,97,61,8,NOT WS_VISIBLE
+    LTEXT           "已上传白名单客户端总数:",IDC_STATIC_UPLOADWLCount,435,74,81,12,NOT WS_VISIBLE
+    LTEXT           "0",IDC_UPLOADWLCOUNT,516,74,46,12,NOT WS_VISIBLE
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 2,1,0,50
+ PRODUCTVERSION 2,1,0,50
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080403a8"
+        BEGIN
+            VALUE "CompanyName", "北京威努特技术有限公司"
+            VALUE "FileVersion", "2, 1, 0, 50"
+            VALUE "InternalName", "WLServerTest.exe"
+            VALUE "LegalCopyright", "版权所有 (C) 2015-2018"
+            VALUE "OriginalFilename", "WLServerTest.exe"
+            VALUE "ProductName", "工控主机卫士"
+            VALUE "ProductVersion", "2, 1, 0, 50"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 936
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 163
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 55
+    END
+
+    IDD_WLSERVERTEST_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 568
+        VERTGUIDE, 79
+        VERTGUIDE, 82
+        VERTGUIDE, 303
+        VERTGUIDE, 362
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 540
+        HORZGUIDE, 341
+        HORZGUIDE, 357
+        HORZGUIDE, 371
+        HORZGUIDE, 387
+        HORZGUIDE, 395
+        HORZGUIDE, 428
+        HORZGUIDE, 457
+        HORZGUIDE, 492
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_ABOUTBOX            "关于 WLServerTest(&A)..."
+END
+
+#endif    // 中文(中华人民共和国) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+LANGUAGE 4, 2
+#pragma code_page(936)
+#include "res\WLServerTest.rc2"  // 非 Microsoft Visual C++ 编辑的资源
+#include "l.CHS\afxres.rc"      // 标准组件
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

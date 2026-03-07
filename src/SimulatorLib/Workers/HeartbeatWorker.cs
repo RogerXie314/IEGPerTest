@@ -192,7 +192,7 @@ namespace SimulatorLib.Workers
                                                 lastReason[capturedIdx] = Reason.ServerClosed;
                                                 capturedRegistry?.Unregister(capturedC.ClientId);
                                                 eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(PolicyDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
-                                                evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                                Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
                                             }
                                         }
@@ -209,7 +209,7 @@ namespace SimulatorLib.Workers
                                                     lastReason[capturedIdx] = Reason.ServerClosed;
                                                     capturedRegistry?.Unregister(capturedC.ClientId);
                                                     eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(RawDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
-                                                    evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                                    Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                                     hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
                                                     break;
                                                 }
@@ -218,7 +218,15 @@ namespace SimulatorLib.Workers
                                             }
                                         }
                                     }
-                                    catch { alive = false; capturedRegistry?.Unregister(capturedC.ClientId); evtDisconnAtMs[capturedIdx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=连接异常"); }
+                                    catch (Exception exDrain)
+                                    {
+                                        alive = false;
+                                        capturedRegistry?.Unregister(capturedC.ClientId);
+                                        Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        // 记录具体异常类型，区分网络错误/ObjectDisposed/OperationCanceled
+                                        string drainReason = exDrain is ObjectDisposedException ? "连接已释放" : exDrain.GetType().Name;
+                                        hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=drain异常:{drainReason}");
+                                    }
                                 }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
@@ -228,7 +236,7 @@ namespace SimulatorLib.Workers
                                 // 对应原始：connect timeout → 下一个心跳周期重试，节奏由 intervalMs 控制
                                 lastResult[idx]  = 0;
                                 lastReason[idx]  = Reason.ConnectTimeout;
-                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=连接超时");
                                 try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
@@ -239,7 +247,7 @@ namespace SimulatorLib.Workers
                                 // 连接被拒绝 / 网络不通：等一个心跳周期后重试（与原始行为一致）
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
-                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=连接失败");
                                 try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { return; }
@@ -266,14 +274,25 @@ namespace SimulatorLib.Workers
                             if (!lockAcq)
                             {
                                 // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
-                                // 跳过本次心跳，等下一个周期再试。
-                                // （原来 throw TimeoutException 会被 catch 误判为写失败而 Dispose TCP，
-                                //   导致 HeartbeatWorker 重连失败而永久离线，但 LogWorker 降级独立 TCP 继续发送。）
+                                // 不跳过整个心跳周期（老工具 send() 由 OS 排队，心跳包一定发出）：
+                                // 短暂等待 200ms 让 LogWorker 完成写操作后，立即补发心跳。
+                                // 补发失败才按 WriteFailed 处理（而非静默跳过）。
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.LockBusy;
-                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                                try { await Task.Delay(200, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { break; }
-                                continue;
+                                // 等待后重试获取锁（500ms），写完即释放
+                                bool retryLock = _streamRegistry != null
+                                    ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 500, ct).ConfigureAwait(false)
+                                    : true;
+                                if (!retryLock)
+                                {
+                                    // 仍抢不到：本次心跳确实跳过，等下一周期，但不等完整 intervalMs
+                                    continue;
+                                }
+                                // 重新赋值 lockAcq 供 finally 块正确释放
+                                lockAcq = retryLock;
+                                // 继续走下方 try { WriteAsync } finally { ReleaseWriteLock }
                             }
                             try
                             {
@@ -309,7 +328,7 @@ namespace SimulatorLib.Workers
                             lastResult[idx] = 0;
                             lastReason[idx] = Reason.WriteFailed;
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
-                            evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                             hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=写入失败");
                         }
 
@@ -330,7 +349,10 @@ namespace SimulatorLib.Workers
                             long refTime   = lastReply > 0 ? lastReply : connectedAtMs;
                             if (refTime > 0 && (nowCheck - refTime) > staleMs)
                             {
-                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接
+                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接。
+                                // 加随机 jitter（0~5s）打散重连潮：同批注册的客户端可能同时触发
+                                // SessionStale，若同时重连则 270 个 ConnectAsync 并发冲击平台，
+                                // 导致更多拒绝 → 雪崩。
                                 tcp?.Dispose();
                                 tcp    = null;
                                 stream = null;
@@ -345,8 +367,15 @@ namespace SimulatorLib.Workers
                                     ? DateTimeOffset.FromUnixTimeMilliseconds(snapReply).LocalDateTime.ToString("HH:mm:ss")
                                     : "从未";
                                 eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
-                                evtDisconnAtMs[idx] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
+                                // 随机 jitter 0~5000ms，打散多客户端同时重连对平台的冲击
+                                int reconnJitter = Random.Shared.Next(0, 5000);
+                                if (reconnJitter > 0)
+                                {
+                                    try { await Task.Delay(reconnJitter, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { break; }
+                                }
                             }
                         }
                     }
