@@ -13,8 +13,8 @@ namespace SimulatorLib.Models
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private TaskStatus _status = TaskStatus.Running;
-        private int    _successCount;
-        private int    _failCount;
+        private long   _successCount;
+        private long   _failCount;
         private string _detail = string.Empty;
         private DateTime? _endTime;
 
@@ -31,13 +31,13 @@ namespace SimulatorLib.Models
             set { _status = value; Notify(); Notify(nameof(StatusText)); Notify(nameof(StatusColor)); }
         }
 
-        public int SuccessCount
+        public long SuccessCount
         {
             get => _successCount;
             set { _successCount = value; Notify(); }
         }
 
-        public int FailCount
+        public long FailCount
         {
             get => _failCount;
             set { _failCount = value; Notify(); }

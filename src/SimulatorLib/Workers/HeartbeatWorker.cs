@@ -529,6 +529,19 @@ namespace SimulatorLib.Workers
 
                             lastResult[idx] = resp.IsSuccessStatusCode ? 1 : 0;
 
+                            // 策略接收：解析响应体中的策略 JSON 并回包
+                            // 对应老工具 ParseRevData → SendExecResult 流程
+                            if (resp.IsSuccessStatusCode && _policyWorker != null)
+                            {
+                                try
+                                {
+                                    var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                                    if (!string.IsNullOrWhiteSpace(body))
+                                        _ = _policyWorker.ProcessHttpsResponseBodyAsync(body, c.ClientId, ct);
+                                }
+                                catch { }
+                            }
+
                             // 可选 UDP 心跳到日志服务器（与 TCP 心跳的附加逻辑对齐）
                             if (useLogServer && udpSender != null && !string.IsNullOrEmpty(logHost)
                                 && resp.IsSuccessStatusCode)

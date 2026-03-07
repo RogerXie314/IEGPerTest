@@ -36,9 +36,9 @@ namespace SimulatorApp.ViewModels
         private int _logHttpsEps = 10;
         private int _logThreatClientCount = 5;
         private int _logThreatEps = 1;
-        private int _logTotalMessages;
-        private int _logSuccess;
-        private int _logFailed;
+        private long _logTotalMessages;
+        private long _logSuccess;
+        private long _logFailed;
 
         private bool _catClientOps = true;
         private bool _catVulnProtect;
@@ -87,9 +87,9 @@ namespace SimulatorApp.ViewModels
         private int _whitelistClientCount = 5;
         private int _whitelistConcurrency = 4;
         private int _whitelistCycleIntervalSec = 900; // 15分钟
-        private int _uploadTotal;
-        private int _uploadSuccess;
-        private int _uploadFailed;
+        private long _uploadTotal;
+        private long _uploadSuccess;
+        private long _uploadFailed;
         private string _statusLog = string.Empty;
 
         // 操作系统类型和客户端版本（注册时影响平台功能可用性）
@@ -163,9 +163,9 @@ namespace SimulatorApp.ViewModels
         public int LogThreatClientCount { get => _logThreatClientCount; set { _logThreatClientCount = value; OnProp(); } }
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get => _logThreatEps; set { _logThreatEps = value; OnProp(); } }
-        public int LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
-        public int LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
-        public int LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
+        public long LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
+        public long LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
+        public long LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
 
         public bool CatClientOps { get => _catClientOps; set { _catClientOps = value; OnProp(); } }
         public bool CatVulnProtect { get => _catVulnProtect; set { _catVulnProtect = value; OnProp(); } }
@@ -214,9 +214,9 @@ namespace SimulatorApp.ViewModels
         public int WhitelistClientCount { get => _whitelistClientCount; set { _whitelistClientCount = value; OnProp(); } }
         public int WhitelistConcurrency { get => _whitelistConcurrency; set { _whitelistConcurrency = value; OnProp(); } }
         public int WhitelistCycleIntervalSec { get => _whitelistCycleIntervalSec; set { _whitelistCycleIntervalSec = value; OnProp(); } }
-        public int UploadTotal { get => _uploadTotal; set { _uploadTotal = value; OnProp(); } }
-        public int UploadSuccess { get => _uploadSuccess; set { _uploadSuccess = value; OnProp(); } }
-        public int UploadFailed { get => _uploadFailed; set { _uploadFailed = value; OnProp(); } }
+        public long UploadTotal { get => _uploadTotal; set { _uploadTotal = value; OnProp(); } }
+        public long UploadSuccess { get => _uploadSuccess; set { _uploadSuccess = value; OnProp(); } }
+        public long UploadFailed { get => _uploadFailed; set { _uploadFailed = value; OnProp(); } }
 
         // 注册版本
         public string RegClientVersion
@@ -904,7 +904,7 @@ namespace SimulatorApp.ViewModels
 
                 RunOnUi(() =>
                 {
-                    LogTotalMessages = (int)(totalHttps + totalThreat);
+                    LogTotalMessages = totalHttps + totalThreat;
                     LogSuccess = 0;
                     LogFailed  = 0;
 
@@ -925,8 +925,8 @@ namespace SimulatorApp.ViewModels
                     }
 
                     // 两个通道各自维护 success/fail 计数，合并上报 UI 和任务面板
-                    int httpsOk = 0, httpsFail = 0;
-                    int threatOk = 0, threatFail = 0;
+                    long httpsOk = 0L, httpsFail = 0L;
+                    long threatOk = 0L, threatFail = 0L;
 
                     void ReportCombined()
                     {

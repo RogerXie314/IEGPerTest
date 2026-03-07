@@ -19,7 +19,7 @@ using System.Net.Http;
 
 namespace SimulatorLib.Workers
 {
-    public record LogSendStats(int TotalMessages, int Success, int Failed, string? MultiIpSummary = null);
+    public record LogSendStats(long TotalMessages, long Success, long Failed, string? MultiIpSummary = null);
 
     public class LogWorker
     {
@@ -147,9 +147,9 @@ namespace SimulatorLib.Workers
                 && categories.All(IsThreatDataCategory);
 
             // allThreatTcp模式：每轮发N种，totalMessages反映实际平台记录数
-            var totalMessages = clients.Count * messagesPerClient * (allThreatTcp ? categories!.Count : 1);
-            var success = 0;
-            var fail = 0;
+            long totalMessages = (long)clients.Count * messagesPerClient * (allThreatTcp ? categories!.Count : 1);
+            long success = 0L;
+            long fail = 0L;
 
             // 任务启动即上报一次，避免 UI 长时间显示 0。
             try { progress?.Report(new LogSendStats(totalMessages, 0, 0)); } catch { }
