@@ -35,7 +35,7 @@ namespace SimulatorApp.ViewModels
         private int _logHttpsClientCount = 5;
         private int _logHttpsEps = 10;
         private int _logThreatClientCount = 5;
-        private int _logThreatEps = 100;
+        private int _logThreatEps = 1;
         private int _logTotalMessages;
         private int _logSuccess;
         private int _logFailed;
@@ -459,12 +459,12 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // EDR如属：威胁检测 4 种 EDR 事件
+                // EDR如属：威胁检测全部5种事件（EDR 4种 + IEG操作系统日志）
                 CatThreatProcStart = true;
                 CatThreatRegAccess = true;
                 CatThreatFileAccess = true;
                 CatThreatDllLoad = true;
-                CatThreatOsEvent = false;
+                CatThreatOsEvent = true;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
                 CatVirusAlert = true;

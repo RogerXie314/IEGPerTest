@@ -140,7 +140,14 @@ namespace SimulatorLib.Workers
                 return;
             }
 
-            var totalMessages = clients.Count * messagesPerClient;
+            // 全威胁TCP批发模式：所选分类全部为威胁检测TCP长连接时，每tick依次发送全部N种
+            // 对齐C++ SendThreatLog_ToserverTCP（File→Sleep50ms→ProcStart→Sleep50ms→Reg→...）
+            bool allThreatTcp = !useLogServer
+                && categories != null && categories.Count > 0
+                && categories.All(IsThreatDataCategory);
+
+            // allThreatTcp模式：每轮发N种，totalMessages反映实际平台记录数
+            var totalMessages = clients.Count * messagesPerClient * (allThreatTcp ? categories!.Count : 1);
             var success = 0;
             var fail = 0;
 
@@ -251,69 +258,110 @@ namespace SimulatorLib.Workers
                             }
                         }
 
-                        var cat = categoryList[msgIdx % categoryList.Count];
-                        var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
-                        bool ok;
-
+                        // allThreatTcp: 每tick依次发送全部N种（对齐C++ SendThreatLog_ToserverTCP）
+                        // 否则：按 msgIdx 轮转单种分类（原有行为）
                         var sendSw = Stopwatch.StartNew();
-                        try
+                        if (allThreatTcp)
                         {
-                            if (IsThreatDataCategory(cat))
+                            try
                             {
-                                var src = GetThreatDataJsonBytes(json);
-                                uint serial = unchecked(++clientSerial);
-                                var pt = PtProtocol.Pack(
-                                    src,
-                                    cmdId: socketCmd,
-                                    compressType: PtCompressType.Zlib,
-                                    encryptType: useLogServer ? PtEncryptType.Aes : PtEncryptType.None,
-                                    deviceId: c.DeviceId,
-                                    serialNumber: serial);
-                                TryDebugWriteSentPacket(c.ClientId, pt, json);
-
-                                if (useLogServer)
-                                    ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
-                                        ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
-                                        : false;
-                                else
+                                var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                for (int typeIdx = 0; typeIdx < categoryList.Count; typeIdx++)
                                 {
-                                    var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                    ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    var cat = categoryList[typeIdx];
+                                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                                    var src = GetThreatDataJsonBytes(json);
+                                    uint serial = unchecked(++clientSerial);
+                                    var pt = PtProtocol.Pack(
+                                        src,
+                                        cmdId: socketCmd,
+                                        compressType: PtCompressType.Zlib,
+                                        encryptType: PtEncryptType.None,
+                                        deviceId: c.DeviceId,
+                                        serialNumber: serial);
+                                    TryDebugWriteSentPacket(c.ClientId, pt, json);
+
+                                    bool typeOk = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    if (typeOk) Interlocked.Increment(ref success);
+                                    else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
+
+                                    // ~50ms 间隔，对齐C++ Sleep(50)（类型之间，最后一种后不等）
+                                    if (typeIdx < categoryList.Count - 1)
+                                        await Task.Delay(50, ct).ConfigureAwait(false);
                                 }
                             }
-                            else if (useLogServer)
+                            catch (OperationCanceledException) { return; }
+                            catch (Exception ex)
                             {
-                                if (IsHttpsOnlyCategory(cat))
+                                Interlocked.Increment(ref fail);
+                                TrackFailure(categoryList[0], ex.GetType().Name + ": " + ex.Message);
+                            }
+                        }
+                        else
+                        {
+                            var cat = categoryList[msgIdx % categoryList.Count];
+                            var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                            bool ok;
+
+                            try
+                            {
+                                if (IsThreatDataCategory(cat))
+                                {
+                                    var src = GetThreatDataJsonBytes(json);
+                                    uint serial = unchecked(++clientSerial);
+                                    var pt = PtProtocol.Pack(
+                                        src,
+                                        cmdId: socketCmd,
+                                        compressType: PtCompressType.Zlib,
+                                        encryptType: useLogServer ? PtEncryptType.Aes : PtEncryptType.None,
+                                        deviceId: c.DeviceId,
+                                        serialNumber: serial);
+                                    TryDebugWriteSentPacket(c.ClientId, pt, json);
+
+                                    if (useLogServer)
+                                        ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
+                                            ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
+                                            : false;
+                                    else
+                                    {
+                                        var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
+                                        ok = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    }
+                                }
+                                else if (useLogServer)
+                                {
+                                    if (IsHttpsOnlyCategory(cat))
+                                    {
+                                        var path = GetHttpsPathForCategory(cat);
+                                        ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
+                                    }
+                                    else
+                                    {
+                                        var src = GetSocketJsonBytes(json);
+                                        uint serial = unchecked(++clientSerial);
+                                        var pt = PtProtocol.Pack(src, cmdId: socketCmd, deviceId: c.DeviceId, serialNumber: serial);
+                                        TryDebugWriteSentPacket(c.ClientId, pt, json);
+
+                                        ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
+                                            ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
+                                            : false;
+                                    }
+                                }
+                                else
                                 {
                                     var path = GetHttpsPathForCategory(cat);
                                     ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                                 }
-                                else
-                                {
-                                    var src = GetSocketJsonBytes(json);
-                                    uint serial = unchecked(++clientSerial);
-                                    var pt = PtProtocol.Pack(src, cmdId: socketCmd, deviceId: c.DeviceId, serialNumber: serial);
-                                    TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    ok = _udpSender != null && !string.IsNullOrEmpty(logHost)
-                                        ? await _udpSender.SendUdpAsync(logHost, logPort, pt, 2000, ct).ConfigureAwait(false)
-                                        : false;
-                                }
+                                if (ok) Interlocked.Increment(ref success);
+                                else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
                             }
-                            else
+                            catch (OperationCanceledException) { return; }
+                            catch (Exception ex)
                             {
-                                var path = GetHttpsPathForCategory(cat);
-                                ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
+                                Interlocked.Increment(ref fail);
+                                TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                             }
-
-                            if (ok) Interlocked.Increment(ref success);
-                            else { Interlocked.Increment(ref fail); TrackFailure(cat, "non_ok_response"); }
-                        }
-                        catch (OperationCanceledException) { return; }
-                        catch (Exception ex)
-                        {
-                            Interlocked.Increment(ref fail);
-                            TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                         }
                         lastSendElapsedMs = sendSw.ElapsedMilliseconds;
 
