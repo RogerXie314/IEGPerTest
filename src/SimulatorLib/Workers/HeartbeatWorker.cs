@@ -298,6 +298,11 @@ namespace SimulatorLib.Workers
                             {
                                 await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
                                 await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
+                                // 防止 LogWorker 因 write_ex 调用 Unregister 后 TCP 仍存活、
+                                // 导致注册表永久空缺（stream_null 持续至连接自然死亡）。
+                                // 必须在 ReleaseWriteLock 之前注册：确保锁释放时注册表已有值，
+                                // 等锁的 LogWorker 拿到锁后能立即 TryGet 成功，消除竞态窗口。
+                                _streamRegistry?.Register(c.ClientId, stream!);
                             }
                             finally
                             {
