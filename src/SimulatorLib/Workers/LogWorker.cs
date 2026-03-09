@@ -896,7 +896,6 @@ namespace SimulatorLib.Workers
                     client.ClientId,
                     deviceType: devName,
                     logContent: logContent,
-                    state: 0,
                     usbType: usbType,
                     userName: userName));
             }
