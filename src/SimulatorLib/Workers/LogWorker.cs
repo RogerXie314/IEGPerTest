@@ -911,7 +911,7 @@ namespace SimulatorLib.Workers
 
                 LogCategory.Illegal => (CmdWords.SocketCmd.LogIllegal, LogJsonBuilder.BuildIllegalConnectLog(client.ClientId, host: $"test{messageIndex % 100}.example.com", ip: "93.184.216.34", state: 1)),
 
-                LogCategory.Usb => (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(client.ClientId, deviceType: "USB-Storage", logContent: "U盘使用被禁止", state: (messageIndex % 2), userName: userName)),
+                LogCategory.Usb => (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(client.ClientId, deviceType: "USB-Storage", logContent: "U盘使用被禁止", userName: userName)),
 
                 LogCategory.UsbWarning => (CmdWords.SocketCmd.LogUsbWarning, LogJsonBuilder.BuildUsbWarningLog(client.ClientId, filePath: $"E:\\{client.ClientId}\\file-{messageIndex}.exe", operation: "Copy", userName: userName)),
 

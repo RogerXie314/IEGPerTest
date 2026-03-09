@@ -578,7 +578,7 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.SysGuardLog, new[] { item });
     }
 
-    public static string BuildUsbDeviceLog(string computerId, string deviceType, string logContent, int state, int usbType = 2, string userName = "-")
+    public static string BuildUsbDeviceLog(string computerId, string deviceType, string logContent, int usbType = 2, string userName = "-")
     {
         // external: ExtDevLog_GetJsonByVector → /USM/clientULog.do
         // 字段: Time, UsbType(int=dwLogType), LogContent, UserName, FullPath
