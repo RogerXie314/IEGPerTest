@@ -1,3 +1,6 @@
+# NOTE: For normal releases, use publish_simulatorapp.ps1 instead.
+# This script rebuilds ALL 4 packages and should only be run when
+# SimulatorRunner / TestReceiver / DevRunner source code has changed.
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path

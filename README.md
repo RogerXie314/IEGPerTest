@@ -21,14 +21,11 @@ dotnet run --project src/SimulatorApp
 ### 发布独立可执行文件
 
 ```powershell
-# 发布所有组件
-.\scripts\publish_all.ps1
+# 常规发布（每次发版用这个）：bump 版本号 + 打包 + 更新文档 + git commit/push
+.\scripts\publish_simulatorapp.ps1
 
-# 或单独发布
-.\scripts\publish_simulatorapp.ps1      # 主应用
-.\scripts\publish_simulatorrunner.ps1   # 运行器
-.\scripts\publish_testreceiver.ps1      # 测试接收器
-.\scripts\publish_devrunner.ps1         # 开发工具
+# 全量发布（仅当 SimulatorRunner / TestReceiver / DevRunner 有代码改动时才用）
+.\scripts\publish_all.ps1
 ```
 
 发布产物位于 `artifacts/*Publish/` 目录。
