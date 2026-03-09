@@ -103,7 +103,7 @@
                         </StackPanel>
                         <TextBlock Style="{StaticResource Body}" Margin="18,0,0,10">
                             IEG 和 EDR 均支持的通用日志类型，两种项目类型下均可勾选使用。<LineBreak/>
-                            示例：客户端操作、操作系统、非法外联、防火墙、病毒告警、USB设备…
+                            示例：客户端操作、操作系统、非法外联、防火墙、病毒告警、U盘告警…
                         </TextBlock>
                         <!-- 蓝色 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -155,9 +155,9 @@
                             <Border Grid.Row="0" Grid.Column="1" Background="#F0F4F8" Padding="6,4">
                                 <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#555">说明</TextBlock>
                             </Border>
-                            <!-- USB设备 -->
+                            <!-- U盘告警 -->
                             <Border Grid.Row="1" Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,1,1,0" Padding="6,6">
-                                <TextBlock FontSize="12" FontWeight="SemiBold">USB设备</TextBlock>
+                                <TextBlock FontSize="12" FontWeight="SemiBold">U盘告警</TextBlock>
                             </Border>
                             <Border Grid.Row="1" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="6,6">
                                 <TextBlock Style="{StaticResource Body}">
@@ -170,8 +170,8 @@
                             </Border>
                             <Border Grid.Row="2" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="6,6" Background="#EEF3FF">
                                 <TextBlock Style="{StaticResource Body}">
-                                    IEG 新版精细化告警，每种外设有专属 UsbType 值（CDROM=4, 蓝牙=6, 串口=7…），<Run FontWeight="SemiBold">服务端可精确区分被禁设备种类</Run>。与"USB设备"共用同一接口 /USM/clientULog.do，但 UsbType 字段不同。<LineBreak/>
-                                    <Run Foreground="#1565C0" FontStyle="Italic">推荐：测试 IEG 外设策略时，优先勾选此区域的具体子类，不必再勾"USB设备"。</Run>
+                                    IEG 新版精细化告警，每种外设有专属 UsbType 值（CDROM=4, 蓝牙=6, 串口=7…），<Run FontWeight="SemiBold">服务端可精确区分被禁设备种类</Run>。与"U盘告警"共用同一接口 /USM/clientULog.do，但 UsbType 字段不同。<LineBreak/>
+                                    <Run Foreground="#1565C0" FontStyle="Italic">推荐：测试 IEG 外设策略时，优先勾选此区域的具体子类，不必再勾"U盘告警"。</Run>
                                 </TextBlock>
                             </Border>
                             <!-- USB访问告警 -->
@@ -216,7 +216,7 @@
 
                         <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 A：IEG 综合压测（HTTPS 短连接压力）</TextBlock>
                         <TextBlock Style="{StaticResource Body}" Margin="10,0,0,8">
-                            项目类型选 IEG，勾选黑色 + 蓝色分类。外设控制选具体子类（如禁USB接口 + 禁蓝牙），无需再勾"USB设备"。
+                            项目类型选 IEG，勾选黑色 + 蓝色分类。外设控制选具体子类（如禁USB接口 + 禁蓝牙），无需再勾"U盘告警"。
                         </TextBlock>
 
                         <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 B：EDR 威胁检测压测（TCP 长连接高频）</TextBlock>
@@ -231,7 +231,7 @@
 
                         <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 D：测试老版本 IEG 兼容性</TextBlock>
                         <TextBlock Style="{StaticResource Body}" Margin="10,0,0,8">
-                            勾选"USB设备"（通用 UsbType=2），模拟旧版客户端上报行为，验证服务端向后兼容性。
+                            勾选"U盘告警"（通用 UsbType=2），模拟旧版客户端上报行为，验证服务端向后兼容性。
                         </TextBlock>
 
                         <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 E：网口管控 / 网络准入验证</TextBlock>

@@ -852,7 +852,7 @@ namespace SimulatorApp.ViewModels
             if (CatMandatoryAccess) list.Add("强制访问控制");
             if (CatProcessAudit) list.Add("进程审计");
             if (CatVirusAlert) list.Add("病毒告警");
-            if (CatUsb) list.Add("USB设备");
+            if (CatUsb) list.Add("U盘告警");
             if (CatUsbWarning) list.Add("USB访问告警");
             if (CatUDiskPlug) list.Add("U盘插拔");
             if (CatFirewall) list.Add("防火墙");
