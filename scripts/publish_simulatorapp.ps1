@@ -1,25 +1,25 @@
-# 发布 SimulatorApp 为单个 exe 文件（自包含 + Brotli 压缩，约 73 MB）
-# 每次发布自动递增 patch 版本号并 git commit，无需手动维护版本
+# Publish SimulatorApp as a single self-contained exe (Brotli compressed, ~73 MB)
+# Automatically bumps patch version, updates docs, and git commits on each run.
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
 
-# ── 1. 自动 bump patch 版本号 ──────────────────────────────────────────────
+# -- 1. Auto-bump patch version -----------------------------------------------
 [xml]$csproj = Get-Content $projectPath
 $oldVer = $csproj.Project.PropertyGroup.Version
 if ($oldVer -match '^(\d+)\.(\d+)\.(\d+)$') {
     $newVer = "$($matches[1]).$($matches[2]).$([int]$matches[3] + 1)"
 } else {
-    Write-Warning "无法解析版本号 '$oldVer'，跳过自动 bump"
+    Write-Warning "Cannot parse version '$oldVer', skipping bump"
     $newVer = $oldVer
 }
 $csproj.Project.PropertyGroup.Version        = $newVer
 $csproj.Project.PropertyGroup.AssemblyVersion = "$newVer.0"
 $csproj.Project.PropertyGroup.FileVersion    = "$newVer.0"
 $csproj.Save((Resolve-Path $projectPath))
-Write-Host "版本号：$oldVer → $newVer" -ForegroundColor Cyan
+Write-Host "Version: $oldVer -> $newVer" -ForegroundColor Cyan
 
-# ── 2. 发布 ──────────────────────────────────────────────────────────────
-Write-Host "正在发布 SimulatorApp v$newVer (单文件压缩模式)..." -ForegroundColor Cyan
+# -- 2. Publish ---------------------------------------------------------------
+Write-Host "Publishing SimulatorApp v$newVer (single-file compressed)..." -ForegroundColor Cyan
 
 dotnet publish $projectPath `
     -c Release `
@@ -36,10 +36,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
-Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
+Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 
-# ── 3. 自动更新项目实施文档版本号 ─────────────────────────────────────────
-# 用 git ls-files 从索引获取文档路径，完全避免脚本内写中文路径
+# -- 3. Update docs version number -------------------------------------------
+# Use git ls-files to get doc path from index, avoiding Chinese literals in script
 Push-Location "$PSScriptRoot\.."
 $docRelPath = git ls-files docs/*.md | Where-Object { $_ -match 'docs/' } | Select-Object -First 1
 Pop-Location
@@ -50,19 +50,21 @@ if ($docRelPath) {
 $today = (Get-Date).ToString("yyyy-MM-dd")
 if ($docPath -and (Test-Path $docPath)) {
     $docContent = [System.IO.File]::ReadAllText($docPath, [System.Text.Encoding]::UTF8)
-    $docContent = $docContent -replace '(?<=\| 当前版本 \| \*\*v)[\d.]+(?=\*\*)', $newVer
-    $docContent = $docContent -replace '(?<=\| 上次更新 \| )[\d-]+', $today
+    $pat1 = "(?<=\| " + [char]0x5F53 + [char]0x524D + [char]0x7248 + [char]0x672C + " \| \*\*v)[\d.]+(?=\*\*)"
+    $pat2 = "(?<=\| " + [char]0x4E0A + [char]0x6B21 + [char]0x66F4 + [char]0x65B0 + " \| )[\d-]+"
+    $docContent = $docContent -replace $pat1, $newVer
+    $docContent = $docContent -replace $pat2, $today
     [System.IO.File]::WriteAllText($docPath, $docContent, [System.Text.Encoding]::UTF8)
-    Write-Host "文档版本号已更新：v$newVer  $today" -ForegroundColor Cyan
+    Write-Host "Docs updated: v$newVer  $today" -ForegroundColor Cyan
 } else {
-    Write-Warning "未找到 docs/*.md，跳过文档更新"
+    Write-Warning "No docs/*.md found, skipping doc update"
 }
 
-# ── 4. 自动 git commit + push csproj + 文档版本号变更 ────────────────────
+# -- 4. Git commit + push -----------------------------------------------------
 Push-Location "$PSScriptRoot\.."
 git add src/SimulatorApp/SimulatorApp.csproj
 if ($docRelPath) { git add $docRelPath }
 git commit -m "chore: bump SimulatorApp to v$newVer"
 git push
 Pop-Location
-Write-Host "版本号已提交并推送：v$newVer" -ForegroundColor Green
+Write-Host "Committed and pushed: v$newVer" -ForegroundColor Green
