@@ -161,7 +161,7 @@
                             </Border>
                             <Border Grid.Row="1" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="6,6">
                                 <TextBlock Style="{StaticResource Body}">
-                                    旧版通用外设禁用告警（UsbType=2），CDROM/WiFi/蓝牙/串口等被策略禁用时产生。适合模拟老版本 IEG 客户端或不关心具体设备类型时使用。
+                                    旧版通用 U 盘禁用告警（UsbType=2，LogContent="U盘使用被禁止"），模拟旧版 IEG 客户端上报行为。当前版本 IEG 源码产生的外设告警 UsbType 从 4 开始（外设控制9种子类），不再产生 UsbType=2，仅用于验证服务端向后兼容性。
                                 </TextBlock>
                             </Border>
                             <!-- 外设控制 -->

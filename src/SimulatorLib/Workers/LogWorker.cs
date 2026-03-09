@@ -912,7 +912,7 @@ namespace SimulatorLib.Workers
 
                 LogCategory.Usb => (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(client.ClientId, deviceType: "USB-Storage", logContent: "U盘使用被禁止", userName: userName)),
 
-                LogCategory.UsbWarning => (CmdWords.SocketCmd.LogUsbWarning, LogJsonBuilder.BuildUsbWarningLog(client.ClientId, filePath: $"E:\\{client.ClientId}\\file-{messageIndex}.exe", operation: "Copy", userName: userName)),
+                LogCategory.UsbWarning => (CmdWords.SocketCmd.LogUsbWarning, LogJsonBuilder.BuildUsbWarningLog(client.ClientId, filePath: $"E:\\{client.ClientId}\\file-{messageIndex}.exe", operationContent: (messageIndex % 6) + 1, userName: userName)),
 
                 LogCategory.UDiskPlug => (CmdWords.SocketCmd.LogUsbDiskPlug, LogJsonBuilder.BuildUDiskPlugLog(client.ClientId, diskType: "Removable", diskName: $"UDisk-{messageIndex % 50}", action: (messageIndex % 2))),
 

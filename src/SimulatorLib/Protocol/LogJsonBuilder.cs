@@ -596,20 +596,21 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });
     }
 
-    public static string BuildUsbWarningLog(string computerId, string filePath, string operation, string userName)
+    public static string BuildUsbWarningLog(string computerId, string filePath, int operationContent, string userName)
     {
         // external: UsbDiskWarningLog_GetJsonByVector → /USM/clientUSBLog.do (CMDVER=2)
         // 字段: Time, UserName, UDiskType, serialID, FullPath, ProcessName, OperationContent, Block
+        // OperationContent: 1=删除, 2=重命名, 3=修改, 4=读, 5=新建, 6=执行
         var item = new Dictionary<string, object?>
         {
-            ["Time"] = NowLocalTimeString(),
-            ["UserName"] = string.IsNullOrWhiteSpace(userName) ? "-" : userName,
-            ["UDiskType"] = 1,   // 1=普通U盘
-            ["serialID"] = "SIM-USB-001",
-            ["FullPath"] = string.IsNullOrWhiteSpace(filePath) ? "-" : filePath,
-            ["ProcessName"] = "explorer.exe",
-            ["OperationContent"] = 1,  // 1=读取
-            ["Block"] = 1,  // 1=拦截
+            ["Time"]             = NowLocalTimeString(),
+            ["UserName"]         = string.IsNullOrWhiteSpace(userName) ? "-" : userName,
+            ["UDiskType"]        = 1,   // 1=普通U盘
+            ["serialID"]         = "SIM-USB-001",
+            ["FullPath"]         = string.IsNullOrWhiteSpace(filePath) ? "-" : filePath,
+            ["ProcessName"]      = "explorer.exe",
+            ["OperationContent"] = operationContent,
+            ["Block"]            = 1,  // 1=拦截
         };
 
         // CMDVER=2 区别旧版本 USB 访问告警 JSON 规格
