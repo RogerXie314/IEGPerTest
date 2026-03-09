@@ -73,6 +73,8 @@ namespace SimulatorApp.ViewModels
         private bool _catExtDevBluetooth;
         private bool _catExtDevSerial;
         private bool _catExtDevParallel;
+        // 插拔 & 网口事件子类（共用 CMDID=204，CMDVER 区分）
+        private bool _catNetAdapterEvent;
 
         private int _regConcurrency = 20;
         private int _regRetryIntervalSec = 30;
@@ -200,6 +202,8 @@ namespace SimulatorApp.ViewModels
         public bool CatExtDevBluetooth { get => _catExtDevBluetooth; set { _catExtDevBluetooth = value; OnProp(); } }
         public bool CatExtDevSerial { get => _catExtDevSerial; set { _catExtDevSerial = value; OnProp(); } }
         public bool CatExtDevParallel { get => _catExtDevParallel; set { _catExtDevParallel = value; OnProp(); } }
+        // 插拔 & 网口事件子类
+        public bool CatNetAdapterEvent { get => _catNetAdapterEvent; set { _catNetAdapterEvent = value; OnProp(); } }
 
         public int RegConcurrency { get => _regConcurrency; set { _regConcurrency = value; OnProp(); } }
         public int RegRetryIntervalSec { get => _regRetryIntervalSec; set { _regRetryIntervalSec = value; OnProp(); } }
@@ -863,6 +867,8 @@ namespace SimulatorApp.ViewModels
             if (CatExtDevBluetooth) list.Add("禁蓝牙");
             if (CatExtDevSerial) list.Add("禁串口");
             if (CatExtDevParallel) list.Add("禁并口");
+            // 插拔 & 网口事件子类
+            if (CatNetAdapterEvent) list.Add("网口Up/Down");
             return list.Count == 0 ? new[] { "Default" } : list.ToArray();
         }
 

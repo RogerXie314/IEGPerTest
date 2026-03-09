@@ -915,6 +915,15 @@ namespace SimulatorLib.Workers
 
                 LogCategory.UDiskPlug => (CmdWords.SocketCmd.LogUsbDiskPlug, LogJsonBuilder.BuildUDiskPlugLog(client.ClientId, diskType: "Removable", diskName: $"UDisk-{messageIndex % 50}", action: (messageIndex % 2))),
 
+                // 网口 Up/Down 事件（CMDVER=4, OtherDevType=7），与 UDiskPlug 共用 CMDID=204
+                // PlugEvent: 2=UP变化触发, 4=DOWN变化触发（轮流模拟）
+                LogCategory.NetAdapterEvent => (CmdWords.SocketCmd.LogUsbDiskPlug, LogJsonBuilder.BuildNetAdapterLog(
+                    client.ClientId,
+                    adapterName: $"以太网 {(messageIndex % 4) + 1}",
+                    ip:          $"192.168.{(Math.Abs(client.DeviceId.GetHashCode()) % 10) + 1}.{(messageIndex % 200) + 10}",
+                    mac:         $"00:50:56:{(messageIndex % 0xFF):X2}:{(messageIndex / 256 % 0xFF):X2}:AA",
+                    plugEvent:   (messageIndex % 2 == 0) ? 2 : 4)),  // 2=UP变化触发, 4=DOWN变化触发
+
                 LogCategory.SafetyStore => (CmdWords.SocketCmd.LogSafetyAppStore, LogJsonBuilder.BuildSafetyStoreLog(client.ClientId, softwareName: $"TestApp{messageIndex % 20}", softwarePath: $"C:\\Program Files\\TestApp{messageIndex % 20}\\app.exe", installType: (messageIndex % 3))),
 
                 LogCategory.DP => (CmdWords.SocketCmd.LogProcess, LogJsonBuilder.BuildDataProtectLog(

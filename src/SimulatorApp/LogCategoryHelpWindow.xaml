@@ -103,7 +103,7 @@
                         </StackPanel>
                         <TextBlock Style="{StaticResource Body}" Margin="18,0,0,10">
                             IEG 和 EDR 均支持的通用日志类型，两种项目类型下均可勾选使用。<LineBreak/>
-                            示例：客户端操作、操作系统、非法外联、防火墙、病毒告警、USB设备、U盘插拔…
+                            示例：客户端操作、操作系统、非法外联、防火墙、病毒告警、USB设备…
                         </TextBlock>
                         <!-- 蓝色 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -113,7 +113,7 @@
                         <TextBlock Style="{StaticResource Body}" Margin="18,0,0,10">
                             <Run FontWeight="SemiBold">IEG 专属</Run>日志类型，仅在"项目类型 = IEG"时选用。<LineBreak/>
                             示例：漏洞防护(IEG)、进程审计(IEG)、非白名单(IEG)、白名单防篡改(IEG)、<LineBreak/>
-                            外设控制 9 种禁用子类（禁USB接口 / 禁手机平板 / 禁CDROM 等）、操作系统日志(IEG)。
+                            外设控制 9 种禁用子类（禁USB接口 / 禁手机平板 / 禁CDROM 等）、操作系统日志(IEG)、<Run FontWeight="SemiBold">网口Up/Down(IEG)</Run>。
                         </TextBlock>
                         <!-- 绿色 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -130,15 +130,16 @@
                 <!-- ③ USB相关分类 -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource CardTitle}">③ USB 相关：三类容易混淆的分类</TextBlock>
+                        <TextBlock Style="{StaticResource CardTitle}">③ USB / 网口：插拔相关分类说明</TextBlock>
 
                         <!-- 表格式说明 -->
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -183,12 +184,25 @@
                                 </TextBlock>
                             </Border>
                             <!-- U盘插拔 -->
-                            <Border Grid.Row="4" Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,1,1,1" Padding="6,6">
+                            <Border Grid.Row="4" Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,1,1,0" Padding="6,6">
                                 <TextBlock FontSize="12" FontWeight="SemiBold">U盘插拔</TextBlock>
                             </Border>
-                            <Border Grid.Row="4" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,1" Padding="6,6">
+                            <Border Grid.Row="4" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="6,6">
                                 <TextBlock Style="{StaticResource Body}">
-                                    U盘<Run FontWeight="SemiBold">物理插入/拔出动作本身</Run>的上报，V3R2 新增。接口：/USM/hotplugDevLog.do。与"USB访问告警"完全独立。
+                                    U盘<Run FontWeight="SemiBold">物理插入/拔出动作本身</Run>的上报，V3R2 新增。接口：/USM/hotplugDevLog.do。<LineBreak/>
+                                    <Run FontWeight="SemiBold">共用 CMDID=204，CMDVER=1</Run>，数据在 CMDContent 数组中。
+                                </TextBlock>
+                            </Border>
+                            <!-- 网口Up/Down -->
+                            <Border Grid.Row="5" Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,1,1,1" Padding="6,6" Background="#EEF3FF">
+                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="DarkBlue">网口Up/Down</TextBlock>
+                            </Border>
+                            <Border Grid.Row="5" Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="0,1,0,1" Padding="6,6" Background="#EEF3FF">
+                                <TextBlock Style="{StaticResource Body}">
+                                    网卡接口 Up/Down 状态变化事件。接口：/USM/hotplugDevLog.do，<LineBreak/>
+                                    <Run FontWeight="SemiBold">共用 CMDID=204，CMDVER=4</Run>，数据在 CMDContentOtherDev 中，OtherDevType=7。<LineBreak/>
+                                    PlugEvent 字段：2=UP变化触发，4=DOWN变化触发，1/3=状态轮询。<LineBreak/>
+                                    <Run Foreground="#1565C0" FontStyle="Italic">IEG 专属，对应 IEG 源码 WLCUDisk/WLNetAdapterEvent.cpp。</Run>
                                 </TextBlock>
                             </Border>
                         </Grid>
@@ -216,8 +230,13 @@
                         </TextBlock>
 
                         <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 D：测试老版本 IEG 兼容性</TextBlock>
-                        <TextBlock Style="{StaticResource Body}" Margin="10,0,0,0">
+                        <TextBlock Style="{StaticResource Body}" Margin="10,0,0,8">
                             勾选"USB设备"（通用 UsbType=2），模拟旧版客户端上报行为，验证服务端向后兼容性。
+                        </TextBlock>
+
+                        <TextBlock Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,0,0,4">场景 E：网口管控 / 网络准入验证</TextBlock>
+                        <TextBlock Style="{StaticResource Body}" Margin="10,0,0,0">
+                            勾选"网口Up/Down"，模拟终端网卡接口上下线事件上报（CMDVER=4，OtherDevType=7），验证服务端对网口状态变化的处理与审计能力。可与"U盘插拔"同时勾选，共同压测 /USM/hotplugDevLog.do 接口。
                         </TextBlock>
                     </StackPanel>
                 </Border>

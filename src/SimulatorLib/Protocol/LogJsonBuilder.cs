@@ -53,6 +53,25 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(root, JsonOptions);
     }
 
+    // 网口事件专用 Envelope（CMDVER=4，数据放在 CMDContentOtherDev，对齐 IEG 源码 NetAdapterLog_GetJsonByVector）
+    // CMDContent / CMDUsbContent 留空数组，CMDContentOtherDev 携带网口条目
+    private static string EnvelopeNetAdapter(string computerId, int cmdType, int cmdId, IReadOnlyList<Dictionary<string, object?>> otherDevContent)
+    {
+        var person = new Dictionary<string, object?>
+        {
+            ["ComputerID"]          = computerId,
+            ["CMDTYPE"]             = cmdType,
+            ["CMDID"]               = cmdId,
+            ["CMDVER"]              = 4,
+            ["CMDContent"]          = Array.Empty<object>(),
+            ["CMDUsbContent"]       = Array.Empty<object>(),
+            ["CMDContentOtherDev"]  = otherDevContent,
+        };
+
+        var root = new object[] { person };
+        return JsonSerializer.Serialize(root, JsonOptions);
+    }
+
     public static string BuildClientAdminLog(string computerId, string userName, string logContent, bool success)
     {
         // external: UserActionLog_GetJsonByVector
@@ -612,6 +631,35 @@ public static class LogJsonBuilder
 
         // CMDVER=1 表示普通/安全U盘/移动硬盘的插拔格式
         return EnvelopeWithVer(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, 1, new[] { item });
+    }
+
+    /// <summary>
+    /// 构建网口 Up/Down 事件日志（CMDVER=4, OtherDevType=7）。
+    /// 对齐 IEG 源码: WLCUDisk/WLNetAdapterEvent.cpp → NetAdapterLog_GetJsonByVector
+    /// + WLUtilities/WLJsonParse.cpp → UsbDiskPlugLog_GetJsonByVector (DEV_TYPE_NET 分支)
+    /// </summary>
+    /// <param name="plugEvent">
+    /// 1=UP状态轮询, 2=UP变化触发(推荐), 3=DOWN状态轮询, 4=DOWN变化触发(推荐)
+    /// 对应 NETWORK_ADAPTER_PLUGEVENT_* 宏
+    /// </param>
+    public static string BuildNetAdapterLog(string computerId, string adapterName, string ip, string mac, int plugEvent)
+    {
+        // external: WLJsonParse::NetAdapterLog_GetJsonByVector
+        //           (也可经由 UsbDiskPlugLog_GetJsonByVector 中 DEV_TYPE_NET 分支生成)
+        // URL: /USM/hotplugDevLog.do  CMDID=204(UDiskLog)  CMDVER=4
+        // 数据放在 CMDContentOtherDev；CMDContent/CMDUsbContent 为空数组
+        // OtherDevType=7 固定表示网口事件（接口文档 16.9）
+        var item = new Dictionary<string, object?>
+        {
+            ["Time"]         = NowLocalTimeString(),
+            ["Name"]         = string.IsNullOrWhiteSpace(adapterName) ? "以太网" : adapterName,
+            ["IP"]           = string.IsNullOrWhiteSpace(ip)          ? "0.0.0.0" : ip,
+            ["Mac"]          = string.IsNullOrWhiteSpace(mac)         ? "00:00:00:00:00:00" : mac,
+            ["PlugEvent"]    = plugEvent,  // 2=UP变化触发, 4=DOWN变化触发
+            ["OtherDevType"] = 7,          // 固定值:7 = 网口事件
+        };
+
+        return EnvelopeNetAdapter(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });
     }
 
     public static string BuildSafetyStoreLog(string computerId, string softwareName, string softwarePath, int installType)

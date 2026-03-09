@@ -232,7 +232,6 @@
                                             <CheckBox IsChecked="{Binding CatVirusAlert, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">病毒告警</CheckBox>
                                             <CheckBox IsChecked="{Binding CatUsb, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB设备</CheckBox>
                                             <CheckBox IsChecked="{Binding CatUsbWarning, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB访问告警</CheckBox>
-                                            <CheckBox IsChecked="{Binding CatUDiskPlug, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">U盘插拔</CheckBox>
                                             <CheckBox IsChecked="{Binding CatFirewall, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">防火墙</CheckBox>
                                             <CheckBox IsChecked="{Binding CatVulnProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">漏洞防护(IEG)</CheckBox>
                                             <CheckBox IsChecked="{Binding CatProcessAudit, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">进程审计(IEG)</CheckBox>
@@ -240,6 +239,17 @@
                                             <CheckBox IsChecked="{Binding CatWhitelistTamper, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">白名单防篡改(IEG)</CheckBox>
                                             <CheckBox IsChecked="{Binding CatSysGuard, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkGreen">系统防护(EDR)</CheckBox>
                                         </WrapPanel>
+                                        <!-- 插拔 & 网口事件分组 -->
+                                        <Border BorderBrush="#7BB0D0" BorderThickness="1" CornerRadius="3" Margin="0,4,0,0" Padding="6,4">
+                                            <StackPanel>
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#1A5070" Margin="0,0,0,4">插拔 &amp; 网口事件（IEG）— 共用 CMDID=204（hotplugDevLog），CMDVER 区分</TextBlock>
+                                                <WrapPanel>
+                                                    <CheckBox IsChecked="{Binding CatUDiskPlug, Mode=TwoWay}" Margin="0,0,16,4" MinWidth="100">U盘插拔 (CMDVER=1)</CheckBox>
+                                                    <CheckBox IsChecked="{Binding CatNetAdapterEvent, Mode=TwoWay}" Margin="0,0,12,4" MinWidth="120" Foreground="DarkBlue">网口Up/Down (CMDVER=4)</CheckBox>
+                                                </WrapPanel>
+                                                <TextBlock FontSize="10" Foreground="#888" Margin="0,2,0,0">U盘插拔：CMDContent；网口事件：CMDContentOtherDev + OtherDevType=7</TextBlock>
+                                            </StackPanel>
+                                        </Border>
                                         <!-- 外设控制分组 -->
                                         <Border BorderBrush="#B0C4DE" BorderThickness="1" CornerRadius="3" Margin="0,4,0,0" Padding="6,4">
                                             <StackPanel>

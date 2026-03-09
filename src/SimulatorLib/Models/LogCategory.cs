@@ -127,6 +127,16 @@ public enum LogCategory
 
     /// <summary>威胁检测-DLL加载/跨进程（EDR）THREAT_LOG_TYPE_PROC, EventType=61</summary>
     ThreatDllLoad = 28,
+
+    // ---- 插拔 & 网口事件子类（共享 /USM/hotplugDevLog.do + CMDID=204，区别仅在 CMDVER 和 CMDContentOtherDev.OtherDevType） ----
+
+    /// <summary>
+    /// 网口 Up/Down 事件（CMDVER=4, OtherDevType=7）。
+    /// 与 UDiskPlug 共用同一 CMDID（204），通过 CMDVER=4 + CMDContentOtherDev 区分。
+    /// PlugEvent: 1=UP状态轮询, 2=UP变化触发, 3=DOWN状态轮询, 4=DOWN变化触发。
+    /// 对应 IEG 源码: WLCUDisk/WLNetAdapterEvent.cpp → NetAdapterLog_GetJsonByVector
+    /// </summary>
+    NetAdapterEvent = 29,
 }
 
 /// <summary>
@@ -170,6 +180,7 @@ public static class LogCategoryHelper
             LogCategory.ExtDevBluetooth => "禁蓝牙",
             LogCategory.ExtDevSerial => "禁串口",
             LogCategory.ExtDevParallel => "禁并口",
+            LogCategory.NetAdapterEvent => "网口Up/Down",
             _ => "未知",
         };
     }
@@ -217,6 +228,8 @@ public static class LogCategoryHelper
             "禁蓝牙" => LogCategory.ExtDevBluetooth,
             "禁串口" => LogCategory.ExtDevSerial,
             "禁并口" => LogCategory.ExtDevParallel,
+            // 插拔 & 网口事件子类
+            "网口Up/Down" => LogCategory.NetAdapterEvent,
             _ => null,
         };
     }
