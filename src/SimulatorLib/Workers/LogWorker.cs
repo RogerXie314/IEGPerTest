@@ -889,14 +889,16 @@ namespace SimulatorLib.Workers
             // 外设控制子类（禁USB/CDROM/蓝牙等，共享同一URL和CMDID，仅UsbType字段不同）
             if (LogCategoryHelper.IsExtDevCategory(parsedCategory))
             {
-                var usbType = LogCategoryHelper.GetExtDevUsbType(parsedCategory) ?? 2;
-                var devName = LogCategoryHelper.GetDisplayName(parsedCategory);
+                var usbType    = LogCategoryHelper.GetExtDevUsbType(parsedCategory) ?? 2;
+                var devName    = LogCategoryHelper.GetDisplayName(parsedCategory);
+                var logContent = LogCategoryHelper.GetExtDevLogContent(parsedCategory); // 如"蓝牙使用被禁止"
                 return (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(
                     client.ClientId,
                     deviceType: devName,
-                    deviceName: $"{devName}-event-{messageIndex % 50}",
+                    logContent: logContent,
                     state: 0,
-                    usbType: usbType));
+                    usbType: usbType,
+                    userName: userName));
             }
 
             return parsedCategory switch
@@ -909,19 +911,22 @@ namespace SimulatorLib.Workers
 
                 LogCategory.Illegal => (CmdWords.SocketCmd.LogIllegal, LogJsonBuilder.BuildIllegalConnectLog(client.ClientId, host: $"test{messageIndex % 100}.example.com", ip: "93.184.216.34", state: 1)),
 
-                LogCategory.Usb => (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(client.ClientId, deviceType: "USB-Storage", deviceName: $"USB-Device-{messageIndex % 100}", state: (messageIndex % 2))),
+                LogCategory.Usb => (CmdWords.SocketCmd.LogUsb, LogJsonBuilder.BuildUsbDeviceLog(client.ClientId, deviceType: "USB-Storage", logContent: "U盘使用被禁止", state: (messageIndex % 2), userName: userName)),
 
                 LogCategory.UsbWarning => (CmdWords.SocketCmd.LogUsbWarning, LogJsonBuilder.BuildUsbWarningLog(client.ClientId, filePath: $"E:\\{client.ClientId}\\file-{messageIndex}.exe", operation: "Copy", userName: userName)),
 
                 LogCategory.UDiskPlug => (CmdWords.SocketCmd.LogUsbDiskPlug, LogJsonBuilder.BuildUDiskPlugLog(client.ClientId, diskType: "Removable", diskName: $"UDisk-{messageIndex % 50}", action: (messageIndex % 2))),
 
                 // 网口 Up/Down 事件（CMDVER=4, OtherDevType=7），与 UDiskPlug 共用 CMDID=204
-                // PlugEvent: 2=UP变化触发, 4=DOWN变化触发（轮流模拟）
+                // PlugEvent 交替: 偶数消息=UP变化触发(2), 奇数消息=DOWN变化触发(4)
+                // 同一网卡名称内必顺序交替出现 UP 和 DOWN，模拟真实网口状态履历
                 LogCategory.NetAdapterEvent => (CmdWords.SocketCmd.LogUsbDiskPlug, LogJsonBuilder.BuildNetAdapterLog(
                     client.ClientId,
                     adapterName: $"以太网 {(messageIndex % 4) + 1}",
-                    ip:          $"192.168.{(Math.Abs(client.DeviceId.GetHashCode()) % 10) + 1}.{(messageIndex % 200) + 10}",
-                    mac:         $"00:50:56:{(messageIndex % 0xFF):X2}:{(messageIndex / 256 % 0xFF):X2}:AA",
+                    ip:          (messageIndex % 2 == 0)
+                                     ? $"192.168.{(Math.Abs(client.DeviceId.GetHashCode()) % 10) + 1}.{(messageIndex % 200) + 10}"
+                                     : "0.0.0.0",   // DOWN 时 IP 已释放
+                    mac:         $"00:50:56:{(Math.Abs(client.DeviceId.GetHashCode()) % 0xFF):X2}:{(messageIndex % 4 + 1):X2}:AA",
                     plugEvent:   (messageIndex % 2 == 0) ? 2 : 4)),  // 2=UP变化触发, 4=DOWN变化触发
 
                 LogCategory.SafetyStore => (CmdWords.SocketCmd.LogSafetyAppStore, LogJsonBuilder.BuildSafetyStoreLog(client.ClientId, softwareName: $"TestApp{messageIndex % 20}", softwarePath: $"C:\\Program Files\\TestApp{messageIndex % 20}\\app.exe", installType: (messageIndex % 3))),

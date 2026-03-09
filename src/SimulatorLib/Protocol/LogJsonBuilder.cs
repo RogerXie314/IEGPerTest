@@ -578,18 +578,19 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.SysGuardLog, new[] { item });
     }
 
-    public static string BuildUsbDeviceLog(string computerId, string deviceType, string deviceName, int state, int usbType = 2)
+    public static string BuildUsbDeviceLog(string computerId, string deviceType, string logContent, int state, int usbType = 2, string userName = "-")
     {
         // external: ExtDevLog_GetJsonByVector → /USM/clientULog.do
         // 字段: Time, UsbType(int=dwLogType), LogContent, UserName, FullPath
         // usbType 对应 UDISK_LOG_TYPE_* 枚举值，区分具体禁用的外设类型
+        // logContent 应为标准描述格式，如 "蓝牙使用被禁止""CDROM使用被禁止" 等
         var item = new Dictionary<string, object?>
         {
-            ["Time"] = NowLocalTimeString(),
-            ["UsbType"] = usbType,
-            ["LogContent"] = string.IsNullOrWhiteSpace(deviceName) ? "-" : deviceName,
-            ["UserName"] = "-",
-            ["FullPath"] = "-",
+            ["Time"]       = NowLocalTimeString(),
+            ["UsbType"]    = usbType,
+            ["LogContent"] = string.IsNullOrWhiteSpace(logContent) ? "-" : logContent,
+            ["UserName"]   = string.IsNullOrWhiteSpace(userName)   ? "-" : userName,
+            ["FullPath"]   = "-",
         };
 
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.UDiskLog, new[] { item });

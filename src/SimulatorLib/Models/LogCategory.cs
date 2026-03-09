@@ -256,6 +256,24 @@ public static class LogCategoryHelper
     public static bool IsExtDevCategory(LogCategory category) => GetExtDevUsbType(category).HasValue;
 
     /// <summary>
+    /// 获取外设控制子类对应的标准日志描述（LogContent 字段）。
+    /// 对齐 IEG 源码注释: "U盘使用被禁止,cdrom使用被禁止,wifi使用被禁止"
+    /// </summary>
+    public static string GetExtDevLogContent(LogCategory category) => category switch
+    {
+        LogCategory.ExtDevUsbPort      => "USB接口使用被禁止",
+        LogCategory.ExtDevWpd          => "移动设备使用被禁止",
+        LogCategory.ExtDevCdrom        => "CDROM使用被禁止",
+        LogCategory.ExtDevWlan         => "wifi使用被禁止",
+        LogCategory.ExtDevUsbEthernet  => "USB网卡使用被禁止",
+        LogCategory.ExtDevFloppy       => "软盘使用被禁止",
+        LogCategory.ExtDevBluetooth    => "蓝牙使用被禁止",
+        LogCategory.ExtDevSerial       => "串口使用被禁止",
+        LogCategory.ExtDevParallel     => "并口使用被禁止",
+        _ => "设备使用被禁止",
+    };
+
+    /// <summary>
     /// 判断是否为威胁检测类别（5种事件均使用 TCP 长连接 + PtProtocol 封装，CMDID=21）
     /// </summary>
     public static bool IsThreatDataCategory(LogCategory category)
