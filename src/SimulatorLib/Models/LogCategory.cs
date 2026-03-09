@@ -152,7 +152,7 @@ public static class LogCategoryHelper
         return category switch
         {
             LogCategory.Process => "进程控制",
-            LogCategory.Usb => "U盘告警",
+            LogCategory.Usb => "U盘告警(老版本)",
             LogCategory.Admin => "客户端操作",
             LogCategory.HostDefence => "强制访问控制",
             LogCategory.FireWall => "防火墙",
@@ -197,7 +197,7 @@ public static class LogCategoryHelper
             "非白名单" => LogCategory.Process, // 对应进程白名单告警 (WARNING_LOG_STRUCT, OPTYPE_PWL_CONTROL)
             "非白名单告警" => LogCategory.Process, // 别名
             "白名单防篡改" => LogCategory.Process, // 对应白名单文件防篡改 (WARNING_LOG_STRUCT, OPTYPE_PWL_MODIFY_FILE)
-            "U盘告警" => LogCategory.Usb,
+            "U盘告警(老版本)" => LogCategory.Usb,
             "客户端操作" => LogCategory.Admin,
             "强制访问控制" => LogCategory.HostDefence,
             "防火墙" => LogCategory.FireWall,

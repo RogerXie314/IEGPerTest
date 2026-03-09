@@ -230,7 +230,7 @@
                                             <CheckBox IsChecked="{Binding CatRegProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">注册表保护</CheckBox>
                                             <CheckBox IsChecked="{Binding CatMandatoryAccess, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">强制访问控制</CheckBox>
                                             <CheckBox IsChecked="{Binding CatVirusAlert, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">病毒告警</CheckBox>
-                                            <CheckBox IsChecked="{Binding CatUsb, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">U盘告警</CheckBox>
+                                            <CheckBox IsChecked="{Binding CatUsb, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">U盘告警(老版本)</CheckBox>
                                             <CheckBox IsChecked="{Binding CatUsbWarning, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">USB访问告警</CheckBox>
                                             <CheckBox IsChecked="{Binding CatFirewall, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100">防火墙</CheckBox>
                                             <CheckBox IsChecked="{Binding CatVulnProtect, Mode=TwoWay}" Margin="0,0,12,6" MinWidth="100" Foreground="DarkBlue">漏洞防护(IEG)</CheckBox>
