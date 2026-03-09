@@ -1010,6 +1010,8 @@ namespace SimulatorApp.ViewModels
                     finally
                     {
                         logTaskRec.MarkStopped();
+                        _logCts?.Dispose();
+                        _logCts = null;  // 任务自然结束后释放，允许下次直接添加任务
                     }
                     RunOnUi(() =>
                         AppendStatus($"日志发送完成: 总数={LogTotalMessages} 成功={LogSuccess} 失败={LogFailed}"));
@@ -1137,6 +1139,11 @@ namespace SimulatorApp.ViewModels
                         taskRec.Detail = "异常: " + ex.Message;
                         taskRec.Status = SimulatorLib.Models.TaskStatus.Error;
                         RunOnUi(() => AppendStatus("白名单上传异常: " + ex.Message));
+                    }
+                    finally
+                    {
+                        _uploadCts?.Dispose();
+                        _uploadCts = null;  // 任务自然结束后释放，允许下次直接添加任务
                     }
                 });
             }
