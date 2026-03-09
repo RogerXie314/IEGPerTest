@@ -1,0 +1,9 @@
+{
+    "workbench.colorTheme": "Default Dark+",
+    "chat.tools.terminal.autoApprove": {
+        "/^git checkout main; git pull$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
