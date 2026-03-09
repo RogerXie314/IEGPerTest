@@ -9,3 +9,5 @@ artifacts/
 **/obj/
 GUI.png
 external/
+temp/
+.venv/
