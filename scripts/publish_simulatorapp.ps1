@@ -1,8 +1,25 @@
 # 发布 SimulatorApp 为单个 exe 文件（自包含 + Brotli 压缩，约 73 MB）
+# 每次发布自动递增 patch 版本号并 git commit，无需手动维护版本
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
 
-Write-Host "正在发布 SimulatorApp (单文件压缩模式)..." -ForegroundColor Cyan
+# ── 1. 自动 bump patch 版本号 ──────────────────────────────────────────────
+[xml]$csproj = Get-Content $projectPath
+$oldVer = $csproj.Project.PropertyGroup.Version
+if ($oldVer -match '^(\d+)\.(\d+)\.(\d+)$') {
+    $newVer = "$($matches[1]).$($matches[2]).$([int]$matches[3] + 1)"
+} else {
+    Write-Warning "无法解析版本号 '$oldVer'，跳过自动 bump"
+    $newVer = $oldVer
+}
+$csproj.Project.PropertyGroup.Version        = $newVer
+$csproj.Project.PropertyGroup.AssemblyVersion = "$newVer.0"
+$csproj.Project.PropertyGroup.FileVersion    = "$newVer.0"
+$csproj.Save((Resolve-Path $projectPath))
+Write-Host "版本号：$oldVer → $newVer" -ForegroundColor Cyan
+
+# ── 2. 发布 ──────────────────────────────────────────────────────────────
+Write-Host "正在发布 SimulatorApp v$newVer (单文件压缩模式)..." -ForegroundColor Cyan
 
 dotnet publish $projectPath `
     -c Release `
@@ -13,10 +30,18 @@ dotnet publish $projectPath `
     /p:EnableCompressionInSingleFile=true `
     -o $outputPath
 
-if ($LASTEXITCODE -eq 0) {
-    $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
-    Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
-} else {
+if ($LASTEXITCODE -ne 0) {
     Write-Error "Publish failed"
     exit $LASTEXITCODE
 }
+
+$exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
+Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
+
+# ── 3. 自动 git commit + push csproj 版本号变更 ──────────────────────────
+Push-Location "$PSScriptRoot\.."
+git add src/SimulatorApp/SimulatorApp.csproj
+git commit -m "chore: bump SimulatorApp to v$newVer"
+git push
+Pop-Location
+Write-Host "版本号已提交并推送：v$newVer" -ForegroundColor Green
