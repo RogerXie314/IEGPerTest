@@ -39,17 +39,25 @@ $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 
 # ── 3. 自动更新项目实施文档版本号 ─────────────────────────────────────────
-$docPath = "$PSScriptRoot\..\docs\项目实施文档.md"
+$docPath = Get-ChildItem "$PSScriptRoot\..\docs\" -Filter "*.md" |
+           Where-Object { $_.Name -match "\u5b9e\u65bd" } |
+           Select-Object -ExpandProperty FullName
 $today   = (Get-Date).ToString("yyyy-MM-dd")
-$docContent = Get-Content $docPath -Raw -Encoding UTF8
-$docContent = $docContent -replace '(?<=\| 当前版本 \| \*\*v)[\d.]+(?=\*\*)', $newVer
-$docContent = $docContent -replace '(?<=\| 上次更新 \| )[\d-]+', $today
-[System.IO.File]::WriteAllText((Resolve-Path $docPath), $docContent, [System.Text.Encoding]::UTF8)
-Write-Host "文档版本号已更新：v$newVer  $today" -ForegroundColor Cyan
+if ($docPath) {
+    $docContent = [System.IO.File]::ReadAllText($docPath, [System.Text.Encoding]::UTF8)
+    $docContent = $docContent -replace '(?<=\| 当前版本 \| \*\*v)[\d.]+(?=\*\*)', $newVer
+    $docContent = $docContent -replace '(?<=\| 上次更新 \| )[\d-]+', $today
+    [System.IO.File]::WriteAllText($docPath, $docContent, [System.Text.Encoding]::UTF8)
+    Write-Host "文档版本号已更新：v$newVer  $today" -ForegroundColor Cyan
+} else {
+    Write-Warning "未找到项目实施文档，跳过文档更新"
+}
 
 # ── 4. 自动 git commit + push csproj + 文档版本号变更 ────────────────────
 Push-Location "$PSScriptRoot\.."
-git add src/SimulatorApp/SimulatorApp.csproj docs/项目实施文档.md
+$docRelPath = git ls-files --others --cached --modified docs/ | Where-Object { $_ -match "\u5b9e\u65bd" }
+git add src/SimulatorApp/SimulatorApp.csproj
+if ($docRelPath) { git add $docRelPath }
 git commit -m "chore: bump SimulatorApp to v$newVer"
 git push
 Pop-Location
