@@ -55,9 +55,13 @@ if ($docPath) {
 
 # ── 4. 自动 git commit + push csproj + 文档版本号变更 ────────────────────
 Push-Location "$PSScriptRoot\.."
-$docRelPath = git ls-files --others --cached --modified docs/ | Where-Object { $_ -match "\u5b9e\u65bd" }
 git add src/SimulatorApp/SimulatorApp.csproj
-if ($docRelPath) { git add $docRelPath }
+if ($docPath) {
+    # 用绝对路径转相对路径，避免中文文件名编码问题
+    $repoRoot   = (git rev-parse --show-toplevel)
+    $docRelPath = [System.IO.Path]::GetRelativePath($repoRoot, $docPath) -replace '\\', '/'
+    git add $docRelPath
+}
 git commit -m "chore: bump SimulatorApp to v$newVer"
 git push
 Pop-Location
