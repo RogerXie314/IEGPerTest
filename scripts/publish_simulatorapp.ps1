@@ -39,16 +39,13 @@ $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 
 # -- 3. Update docs version number -------------------------------------------
-# Use git ls-files to get doc path from index, avoiding Chinese literals in script
-Push-Location "$PSScriptRoot\.."
-$docRelPath = git ls-files docs/*.md | Where-Object { $_ -match 'docs/' } | Select-Object -First 1
-Pop-Location
-$docPath = $null
-if ($docRelPath) {
-    $docPath = Join-Path (Resolve-Path "$PSScriptRoot\..") $docRelPath.Replace('/', '\')
-}
+# Construct Chinese filename via [char] codes to avoid any console encoding issues:
+# docs/项目实施文档.md
+# 项=9879 目=76EE 实=5B9E 施=65BD 文=6587 档=6863
+$docFileName = [char]0x9879 + [char]0x76EE + [char]0x5B9E + [char]0x65BD + [char]0x6587 + [char]0x6863 + ".md"
+$docPath = [System.IO.Path]::Combine((Resolve-Path "$PSScriptRoot\..").Path, "docs", $docFileName)
 $today = (Get-Date).ToString("yyyy-MM-dd")
-if ($docPath -and (Test-Path $docPath)) {
+if ([System.IO.File]::Exists($docPath)) {
     $docContent = [System.IO.File]::ReadAllText($docPath, [System.Text.Encoding]::UTF8)
     $pat1 = "(?<=\| " + [char]0x5F53 + [char]0x524D + [char]0x7248 + [char]0x672C + " \| \*\*v)[\d.]+(?=\*\*)"
     $pat2 = "(?<=\| " + [char]0x4E0A + [char]0x6B21 + [char]0x66F4 + [char]0x65B0 + " \| )[\d-]+"
@@ -57,13 +54,13 @@ if ($docPath -and (Test-Path $docPath)) {
     [System.IO.File]::WriteAllText($docPath, $docContent, [System.Text.Encoding]::UTF8)
     Write-Host "Docs updated: v$newVer  $today" -ForegroundColor Cyan
 } else {
-    Write-Warning "No docs/*.md found, skipping doc update"
+    Write-Warning "Doc not found at $docPath, skipping"
 }
 
 # -- 4. Git commit + push -----------------------------------------------------
 Push-Location "$PSScriptRoot\.."
 git add src/SimulatorApp/SimulatorApp.csproj
-if ($docRelPath) { git add $docRelPath }
+git add docs/
 git commit -m "chore: bump SimulatorApp to v$newVer"
 git push
 Pop-Location
