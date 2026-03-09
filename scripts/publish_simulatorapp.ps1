@@ -38,9 +38,18 @@ if ($LASTEXITCODE -ne 0) {
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 Write-Host "发布成功！$outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 
-# ── 3. 自动 git commit + push csproj 版本号变更 ──────────────────────────
+# ── 3. 自动更新项目实施文档版本号 ─────────────────────────────────────────
+$docPath = "$PSScriptRoot\..\docs\项目实施文档.md"
+$today   = (Get-Date).ToString("yyyy-MM-dd")
+$docContent = Get-Content $docPath -Raw -Encoding UTF8
+$docContent = $docContent -replace '(?<=\| 当前版本 \| \*\*v)[\d.]+(?=\*\*)', $newVer
+$docContent = $docContent -replace '(?<=\| 上次更新 \| )[\d-]+', $today
+[System.IO.File]::WriteAllText((Resolve-Path $docPath), $docContent, [System.Text.Encoding]::UTF8)
+Write-Host "文档版本号已更新：v$newVer  $today" -ForegroundColor Cyan
+
+# ── 4. 自动 git commit + push csproj + 文档版本号变更 ────────────────────
 Push-Location "$PSScriptRoot\.."
-git add src/SimulatorApp/SimulatorApp.csproj
+git add src/SimulatorApp/SimulatorApp.csproj docs/项目实施文档.md
 git commit -m "chore: bump SimulatorApp to v$newVer"
 git push
 Pop-Location
