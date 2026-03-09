@@ -22,6 +22,11 @@ namespace SimulatorApp
             var win = new TcpDiagWindow(vm: vm) { Owner = this };
             win.ShowDialog();
         }
+
+        private void ShowLogCategoryHelp_Click(object sender, RoutedEventArgs e)
+        {
+            new LogCategoryHelpWindow { Owner = this }.ShowDialog();
+        }
     }
 }
 
