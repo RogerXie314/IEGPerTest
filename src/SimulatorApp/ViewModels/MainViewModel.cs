@@ -36,6 +36,7 @@ namespace SimulatorApp.ViewModels
         private int _logHttpsEps = 10;
         private int _logThreatClientCount = 5;
         private int _logThreatEps = 1;
+        private int _logThreatHitEvery = 71;
         private long _logTotalMessages;
         private long _logSuccess;
         private long _logFailed;
@@ -165,6 +166,8 @@ namespace SimulatorApp.ViewModels
         public int LogThreatClientCount { get => _logThreatClientCount; set { _logThreatClientCount = value; OnProp(); } }
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get => _logThreatEps; set { _logThreatEps = value; OnProp(); } }
+        /// <summary>威胁命中轮比：每 N 轮仅第 1 轮发 hit 包，其余发 miss 包（对齐老工具 bHit=1/71）；0 或 1 = 每轮均 hit</summary>
+        public int LogThreatHitEvery { get => _logThreatHitEvery; set { _logThreatHitEvery = value; OnProp(); } }
         public long LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
         public long LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
         public long LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
@@ -365,6 +368,7 @@ namespace SimulatorApp.ViewModels
                 LogHttpsEps = cfg.LogHttpsEps;
                 LogThreatClientCount = cfg.LogThreatClientCount;
                 LogThreatEps = cfg.LogThreatEps;
+                LogThreatHitEvery = cfg.LogThreatHitEvery;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
                 WhitelistClientCount = cfg.WhitelistClientCount;
@@ -404,6 +408,7 @@ namespace SimulatorApp.ViewModels
                 LogHttpsEps = LogHttpsEps,
                 LogThreatClientCount = LogThreatClientCount,
                 LogThreatEps = LogThreatEps,
+                LogThreatHitEvery = LogThreatHitEvery,
                 WhitelistFilePath = WhitelistFilePath,
                 WhitelistClientCount = WhitelistClientCount,
                 WhitelistConcurrency = WhitelistConcurrency,
@@ -1000,7 +1005,8 @@ namespace SimulatorApp.ViewModels
                             stressMode:                 false,
                             localIps:                   null,
                             ct:                         _logCts.Token,
-                            progress:                   threatProgress));
+                            progress:                   threatProgress,
+                            threatHitEvery:             LogThreatHitEvery));
                     }
 
                     try

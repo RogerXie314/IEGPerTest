@@ -438,6 +438,12 @@
                                 <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="4,0,0,0">每秒：</TextBlock>
                                 <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
                                 <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">轮/秒</TextBlock>
+                                <!-- 命中轮比：对齐老工具 bHit=1/71，避免告警风暴熔断 -->
+                                <StackPanel Grid.Row="4" Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock VerticalAlignment="Center">命中每</TextBlock>
+                                    <TextBox Text="{Binding LogThreatHitEvery, Mode=TwoWay}" Width="45" Margin="4,2" />
+                                    <TextBlock VerticalAlignment="Center" Foreground="#666" FontSize="11">轮（0=均命中，默认71）</TextBlock>
+                                </StackPanel>
 
                                 <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>

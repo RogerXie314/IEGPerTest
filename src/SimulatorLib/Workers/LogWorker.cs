@@ -96,7 +96,7 @@ namespace SimulatorLib.Workers
         /// - messagesPerSecondPerClient：每客户端每秒条数（<=0 或 null 表示不做速率控制）
         /// - categories：日志分类（为空则用 Default）；会按消息序号轮转
         /// </summary>
-        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress = null)
+        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress = null, int threatHitEvery = 0)
         {
             await StartCoreAsync(
                 messagesPerClient: messagesPerClient,
@@ -112,10 +112,11 @@ namespace SimulatorLib.Workers
                 stressMode: stressMode,
                 localIps: localIps,
                 ct: ct,
-                progress: progress).ConfigureAwait(false);
+                progress: progress,
+                threatHitEvery: threatHitEvery).ConfigureAwait(false);
         }
 
-        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress)
+        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress, int threatHitEvery = 0)
         {
             var clientsAll = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             var clients = (maxClients.HasValue && maxClients.Value > 0)
@@ -269,7 +270,9 @@ namespace SimulatorLib.Workers
                                 for (int typeIdx = 0; typeIdx < categoryList.Count; typeIdx++)
                                 {
                                     var cat = categoryList[typeIdx];
-                                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                                    // 对齐老工具 bHit逻辑：threatHitEvery 轮中仅第 1 轮发 hit，其余发 miss
+                                    bool isHit = threatHitEvery <= 1 || (msgIdx % threatHitEvery == 0);
+                                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx, isHit: isHit);
                                     var src = GetThreatDataJsonBytes(json);
                                     uint serial = unchecked(++clientSerial);
                                     var pt = PtProtocol.Pack(
@@ -307,7 +310,9 @@ namespace SimulatorLib.Workers
                         else
                         {
                             var cat = categoryList[msgIdx % categoryList.Count];
-                            var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                            // 对齐老工具 bHit逻辑：threatHitEvery 轮中仅第 1 轮发 hit，其余发 miss
+                            bool isHit = threatHitEvery <= 1 || (msgIdx % threatHitEvery == 0);
+                            var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx, isHit: isHit);
                             bool ok;
                             string? tcpSendFail = null; // TCP 通道失败时记录具体原因，传入 TrackFailure
 
@@ -733,7 +738,7 @@ namespace SimulatorLib.Workers
             catch { }
         }
 
-        private static (uint SocketCmd, string Json) BuildLogByCategory(string category, ClientRecord client, int messageIndex)
+        private static (uint SocketCmd, string Json) BuildLogByCategory(string category, ClientRecord client, int messageIndex, bool isHit = true)
         {
             // UI 分类 -> external em_LogType + (SOCKET_CMD_LOG_*) + JSON结构
             // 未覆盖/未知的分类，优先回落到 ProcessAlert（平台通常能展示）。
@@ -952,28 +957,32 @@ namespace SimulatorLib.Workers
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    commandLine: $"{exeName} /c whoami idx={messageIndex}")),
+                    commandLine: $"{exeName} /c whoami idx={messageIndex}",
+                    isHit: isHit)),
 
                 LogCategory.ThreatDllLoad => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventDllLoadLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    targetDll: $"C:\\Windows\\System32\\malware-{messageIndex % 50}.dll")),
+                    targetDll: $"C:\\Windows\\System32\\malware-{messageIndex % 50}.dll",
+                    isHit: isHit)),
 
                 LogCategory.ThreatFileAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventFileAccessLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    filePath: $"C:\\Sensitive\\{client.ClientId}\\doc-{messageIndex % 200}.docx")),
+                    filePath: $"C:\\Sensitive\\{client.ClientId}\\doc-{messageIndex % 200}.docx",
+                    isHit: isHit)),
 
                 LogCategory.ThreatRegAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventRegAccessLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    regKey: $"HKLM\\SOFTWARE\\{client.ClientId}\\Config\\Key{messageIndex % 100}")),
+                    regKey: $"HKLM\\SOFTWARE\\{client.ClientId}\\Config\\Key{messageIndex % 100}",
+                    isHit: isHit)),
 
                 LogCategory.ThreatOsEvent => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventOsEventLog(
                     client.ClientId,
