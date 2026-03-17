@@ -327,39 +327,22 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // 加写锁：防止与 LogWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
-                            bool lockAcq = _streamRegistry != null
-                                ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, ct).ConfigureAwait(false)
-                                : true; // 无 registry 时不需要额外锁
-                            if (!lockAcq)
+                            // 对齐老工具 C++：同步 lock + Write()，OS TCP 层负责串行化。
+                            // 不设超时，背压时阻塞线程而非跳过心跳（LockBusy 问题根本消除）。
+                            var writeLock = _streamRegistry?.GetWriteLock(c.ClientId);
+                            if (writeLock != null)
                             {
-                                // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
-                                // 短暂等待 200ms 让 LogWorker 完成写操作后，立即补发心跳。
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.LockBusy;
-                                try { await Task.Delay(200, ct).ConfigureAwait(false); }
-                                catch (OperationCanceledException) { break; }
-                                bool retryLock = _streamRegistry != null
-                                    ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 500, ct).ConfigureAwait(false)
-                                    : true;
-                                if (!retryLock)
+                                lock (writeLock)
                                 {
-                                    continue;
+                                    // 锁内重取 stream（锁等待期间可能已重连，stream 已更新）
+                                    var s = _streamRegistry!.TryGet(c.ClientId) ?? stream!;
+                                    s.Write(payload, 0, payload.Length);
+                                    _streamRegistry.Register(c.ClientId, s);
                                 }
-                                lockAcq = retryLock;
                             }
-                            try
+                            else
                             {
-                                // Fix 2: 不向 WriteAsync/FlushAsync 传 CancellationToken。
-                                // 老工具 send() 无超时、不 Abort socket；.NET CT 超时会 RST socket 导致掉线。
-                                // 死连接由 TCP KeepAlive（5s+2s探测）约 15s 内自然触发 IOException。
-                                await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
-                                await stream.FlushAsync().ConfigureAwait(false);
-                                _streamRegistry?.Register(c.ClientId, stream!);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId, lockAcq);
+                                stream!.Write(payload, 0, payload.Length);
                             }
 
                             lastResult[idx] = 1;

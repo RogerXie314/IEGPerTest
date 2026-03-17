@@ -292,7 +292,7 @@ namespace SimulatorLib.Workers
                                         serialNumber: serial);
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                    var typeFailR = SendLogTcpLikeExternal(c.ClientId, pt);
                                     if (typeFailR == null) IncSuccess();
                                     else
                                     {
@@ -346,7 +346,7 @@ namespace SimulatorLib.Workers
                                     else
                                     {
                                         var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                        tcpSendFail = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                        tcpSendFail = SendLogTcpLikeExternal(c.ClientId, pt);
                                         ok = tcpSendFail == null;
                                     }
                                 }
@@ -1010,44 +1010,36 @@ namespace SimulatorLib.Workers
             };
         }
 
-        private async Task<string?> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
+        private string? SendLogTcpLikeExternal(string clientId, byte[] payload)
         {
             // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回失败原因。
             // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
-            // 返回 null = 成功；返回非 null 字符串 = 失败原因（stream_null / lock_timeout / write_ex:类型名）。
+            // 返回 null = 成功；返回非 null 字符串 = 失败原因（no_registry / stream_null / write_ex:类型名）。
             if (_streamRegistry == null) return "no_registry";
 
-            // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
-            // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
-            // LogWorker 无法安全读 ACK（drain 会抢先消费字节）。
-            // 背压由 TCP 发送缓冲区满时 WriteAsync 自然阻塞提供；
-            // 200ms 超时保证高 EPS 时快速失败而非无限堆积。
-            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 200, ct).ConfigureAwait(false);
+            var writeLock = _streamRegistry.GetWriteLock(clientId);
+            if (writeLock == null) return "stream_null";
+
             try
             {
-                if (!lockAcq) return "lock_timeout";
-                // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
-                var hbStream = _streamRegistry.TryGet(clientId);
-                if (hbStream == null) return "stream_null";
+                lock (writeLock)
+                {
+                    // 锁内重取 stream（锁等待期间可能已重连，stream 已更新）
+                    var hbStream = _streamRegistry.TryGet(clientId);
+                    if (hbStream == null) return "stream_null";
 
-                // Fix 1: 不向 WriteAsync 传 CancellationToken，避免 3s 超时触发 .NET RST socket。
-                // 老工具 C++ send() 无超时、不 Abort socket；.NET CT 超时会 RST 导致心跳连接断开。
-                // 死连接由 HeartbeatWorker 建连时配置的 TCP KeepAlive（5s+2s）约 15s 内自然检测。
-                await hbStream.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
-                await hbStream.FlushAsync().ConfigureAwait(false);
+                    // 对齐老工具 C++ send()：同步写，OS TCP 层负责串行化与背压控制。
+                    // 无超时，背压时阻塞线程，不丢弃日志也不 RST socket（消除 LockBusy 振荡根因）。
+                    hbStream.Write(payload, 0, payload.Length);
+                }
                 return null; // success
             }
             catch (Exception ex)
             {
                 // write_ex：半截报文已写入 stream，继续使用会导致协议帧错位。
-                // 主动 Unregister 通知 HeartbeatWorker 此 stream 已损坏，
-                // 触发快速重连（避免等待 SessionStale 超时 90s 才发现问题）。
+                // 主动 Unregister 通知 HeartbeatWorker 此 stream 已损坏，触发快速重连。
                 _streamRegistry.Unregister(clientId);
                 return "write_ex:" + ex.GetType().Name;
-            }
-            finally
-            {
-                _streamRegistry.ReleaseWriteLock(clientId, lockAcq);
             }
         }
 
