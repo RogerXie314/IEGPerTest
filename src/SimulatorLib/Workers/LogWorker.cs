@@ -61,6 +61,17 @@ namespace SimulatorLib.Workers
         // 共享心跳流注册表（对齐原项目 SetWLTcpConnectInstance 复用同一 TCP 连接）
         private readonly HeartbeatStreamRegistry? _streamRegistry;
 
+        // 可选吞吐量统计器（默认不启用，调用 Metrics.Enable() 激活）
+        private readonly ThroughputMetrics _metrics = new();
+
+        /// <summary>
+        /// 可选吞吐量统计器。调用 <see cref="ThroughputMetrics.Enable"/> 启用定时输出。
+        /// <code>
+        ///   logWorker.Metrics.Enable(reportIntervalSeconds: 30);
+        /// </code>
+        /// </summary>
+        public ThroughputMetrics Metrics => _metrics;
+
         public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, HeartbeatStreamRegistry? streamRegistry = null)
         {
             _tcpSender = tcpSender;
@@ -152,6 +163,10 @@ namespace SimulatorLib.Workers
             long success = 0L;
             long fail = 0L;
 
+            // 局部辅助方法：计数同时通知可选吞吐量统计器（高并发热路径，无额外分配）
+            void IncSuccess() { Interlocked.Increment(ref success); _metrics.RecordSuccess(); }
+            void IncFail()    { Interlocked.Increment(ref fail);    _metrics.RecordFail(); }
+
             // 任务启动即上报一次，避免 UI 长时间显示 0。
             try { progress?.Report(new LogSendStats(totalMessages, 0, 0)); } catch { }
 
@@ -204,6 +219,10 @@ namespace SimulatorLib.Workers
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
             int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
+            // 启动可选吞吐量统计后台循环（未调用 Enable() 时立即返回）
+            using var metricsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var metricsTask = _metrics.RunReportLoopAsync(sw, metricsCts.Token);
+
             var clientTasks = new List<Task>(clients.Count);
             for (int ci = 0; ci < clients.Count; ci++)
             {
@@ -221,39 +240,29 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) { return; }
                     }
 
-                    // deadline 模式：目标时刻按固定步长递增，HTTP 耗时从等待中扣除，不叠加。
-                    // 超期分两种情况处理：
-                    //   慢响应（耗时 >= fastFailThresholdMs）：正常压力大，重置基准直接继续。
-                    //   快速失败（耗时 < fastFailThresholdMs，如 TLS 握手被拒 ~1ms）：
-                    //     额外等 intervalMs，防止多主机叠加产生握手风暴打垮服务端。
-                    var intervalTicks = intervalMs > 0 ? (long)(intervalMs * (double)Stopwatch.Frequency / 1000.0) : 0L;
-                    const int fastFailThresholdMs = 50; // 低于此值视为快速失败，需要 floor 限速
-                    var nextDeadlineTick = Stopwatch.GetTimestamp(); // 第1条立即发送
-                    long lastSendElapsedMs = intervalMs; // 首条假设"正常耗时"
+                    // 绝对基准时刻：spread 等待完成后立即固定，后续所有消息的目标时刻均从此算起。
+                    // 绝对 deadline 方案：目标 = clientStartTick + n×interval，与发送耗时无关。
+                    // 区别于 Sleep(interval)（后者累积漂移）：此方案确保初始 spread 间距在整轮
+                    // 压测中始终保持，EPS 曲线平坦，不出现集中爆发-空档-爆发的振荡模式。
+                    var clientStartTick  = Stopwatch.GetTimestamp();
+                    var intervalTicksAbs = intervalMs > 0
+                        ? (long)(intervalMs * (double)Stopwatch.Frequency / 1000.0)
+                        : 0L;
 
                     for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
                     {
-                        if (msgIdx > 0 && intervalTicks > 0)
+                        // 绝对 deadline：第 n 条目标时刻 = clientStartTick + n×interval
+                        // 超期（发送过慢）直接发下一条，不累积欠债，不重置基准。
+                        if (intervalTicksAbs > 0 && msgIdx > 0)
                         {
-                            nextDeadlineTick += intervalTicks;
-                            var remainTicks = nextDeadlineTick - Stopwatch.GetTimestamp();
-                            if (remainTicks > 0)
+                            var targetTick = clientStartTick + (long)msgIdx * intervalTicksAbs;
+                            var waitTicks  = targetTick - Stopwatch.GetTimestamp();
+                            if (waitTicks > 0)
                             {
-                                var waitMs = (int)(remainTicks * 1000L / Stopwatch.Frequency);
-                                if (waitMs > 0)
+                                var waitMs = (int)(waitTicks * 1000L / Stopwatch.Frequency);
+                                if (waitMs > 1)
                                 {
                                     try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { return; }
-                                }
-                            }
-                            else
-                            {
-                                // 超期：重置基准，不累积欠债。
-                                nextDeadlineTick = Stopwatch.GetTimestamp();
-                                // 仅快速失败时加 floor 等待，正常慢响应直接继续。
-                                if (lastSendElapsedMs < fastFailThresholdMs)
-                                {
-                                    try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
                                     catch (OperationCanceledException) { return; }
                                 }
                             }
@@ -261,7 +270,6 @@ namespace SimulatorLib.Workers
 
                         // allThreatTcp: 每tick依次发送全部N种（对齐C++ SendThreatLog_ToserverTCP）
                         // 否则：按 msgIdx 轮转单种分类（原有行为）
-                        var sendSw = Stopwatch.StartNew();
                         if (allThreatTcp)
                         {
                             try
@@ -285,10 +293,10 @@ namespace SimulatorLib.Workers
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
                                     var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
-                                    if (typeFailR == null) Interlocked.Increment(ref success);
+                                    if (typeFailR == null) IncSuccess();
                                     else
                                     {
-                                        Interlocked.Increment(ref fail);
+                                        IncFail();
                                         TrackFailure(cat, typeFailR);
                                         // 对齐C++ goto END：任一类型发送失败立即停止本轮，
                                         // 避免用已损坏的 stream 继续发后续类型（失败膨胀×N倍）。
@@ -303,7 +311,7 @@ namespace SimulatorLib.Workers
                             catch (OperationCanceledException) { return; }
                             catch (Exception ex)
                             {
-                                Interlocked.Increment(ref fail);
+                                IncFail();
                                 TrackFailure(categoryList[0], ex.GetType().Name + ": " + ex.Message);
                             }
                         }
@@ -367,18 +375,16 @@ namespace SimulatorLib.Workers
                                     ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                                 }
 
-                                if (ok) Interlocked.Increment(ref success);
-                                else { Interlocked.Increment(ref fail); TrackFailure(cat, tcpSendFail ?? "non_ok_response"); }
+                                if (ok) IncSuccess();
+                                else { IncFail(); TrackFailure(cat, tcpSendFail ?? "non_ok_response"); }
                             }
                             catch (OperationCanceledException) { return; }
                             catch (Exception ex)
                             {
-                                Interlocked.Increment(ref fail);
+                                IncFail();
                                 TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                             }
                         }
-                        lastSendElapsedMs = sendSw.ElapsedMilliseconds;
-
                         MaybeReportProgress();
                     }
                 }, ct));
@@ -390,6 +396,9 @@ namespace SimulatorLib.Workers
             }
             finally
             {
+                // 停止吞吐量统计循环（触发最终汇总行输出后退出）
+                metricsCts.Cancel();
+                await metricsTask.ConfigureAwait(false);
             }
 
             WriteFailureSummary();
@@ -1021,10 +1030,11 @@ namespace SimulatorLib.Workers
                 var hbStream = _streamRegistry.TryGet(clientId);
                 if (hbStream == null) return "stream_null";
 
-                using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts2.CancelAfter(3000);
-                await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
-                await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
+                // Fix 1: 不向 WriteAsync 传 CancellationToken，避免 3s 超时触发 .NET RST socket。
+                // 老工具 C++ send() 无超时、不 Abort socket；.NET CT 超时会 RST 导致心跳连接断开。
+                // 死连接由 HeartbeatWorker 建连时配置的 TCP KeepAlive（5s+2s）约 15s 内自然检测。
+                await hbStream.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+                await hbStream.FlushAsync().ConfigureAwait(false);
                 return null; // success
             }
             catch (Exception ex)

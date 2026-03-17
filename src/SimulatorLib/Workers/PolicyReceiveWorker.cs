@@ -37,6 +37,7 @@ namespace SimulatorLib.Workers
         // TCP 心跳响应 cmdId 常量（WLServerTest.h / WLCmdWordDef.h）
         private const uint CmdHeartbeat             = 1;   // HEARTBEAT_CMD_BACK
         private const uint CmdHeartbeatPolicyNotify = 17;  // HEARTBEAT_CMD_POLCY
+        private const uint CmdHeartbeatNoRegister   = 18;  // HEARTBEAT_CMD_NOREGISTER（平台通知客户端未注册，需重新注册）
 
         /// <summary>统计：收到策略数量</summary>
         public int ReceivedCount => _receivedCount;
@@ -67,7 +68,8 @@ namespace SimulatorLib.Workers
             string clientId,
             uint deviceId,
             CancellationToken ct,
-            Action? onDataReceived = null)
+            Action? onDataReceived = null,
+            Action? onNeedReregister = null)
         {
             // 用于累积不完整 TCP 片段的缓冲区
             var buf = new byte[65536];
@@ -86,7 +88,7 @@ namespace SimulatorLib.Workers
                     accumulated.Write(buf, 0, n);
 
                     // 尝试从 accumulated 中解析完整的 PT 包
-                    await TryProcessPackets(accumulated, clientId, ct).ConfigureAwait(false);
+                    await TryProcessPackets(accumulated, clientId, ct, onNeedReregister).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException) { }
@@ -113,7 +115,8 @@ namespace SimulatorLib.Workers
         private Task TryProcessPackets(
             System.IO.MemoryStream buf,
             string clientId,
-            CancellationToken ct)
+            CancellationToken ct,
+            Action? onNeedReregister = null)
         {
             buf.Position = 0;
             var data = buf.ToArray();
@@ -146,6 +149,13 @@ namespace SimulatorLib.Workers
                     // TCP 包本身无策略内容；须发 HTTPS 心跳从响应体拿策略 JSON。
                     // 对应老工具：g_WLServerTestDlg->SendHeartbeat(*cclient) → ParseRevData。
                     _ = FetchPolicyViaHttpsAsync(clientId, ct);
+                }
+                else if (headerCmdId == CmdHeartbeatNoRegister)
+                {
+                    // cmdId==18（HEARTBEAT_CMD_NOREGISTER）：平台通知该客户端未注册。
+                    // 对应老工具：CloseConnection → RegisterClientToServer → CreateConnection → SendHeartbeatToserver_TCP。
+                    // 收到后立即通知 HeartbeatWorker 执行重注册+重连（不等下一个心跳周期）。
+                    onNeedReregister?.Invoke();
                 }
                 // cmdId==1（HEARTBEAT_CMD_BACK）及其他值均忽略
 

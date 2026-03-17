@@ -351,30 +351,28 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WhitelistClientCount, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                          IsChecked="{Binding EnableWhitelistOnReg, Mode=TwoWay}"
+                                          Margin="0,2,0,6"
+                                          ToolTip="对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单&#xa;等效 WLServerTestDlg 注册线程中立即调用 Send_FileLog_WL_ToServer">注册后自动上传（全量一次）</CheckBox>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">并发度：</TextBlock>
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding WhitelistCycleIntervalSec, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
-                                         ToolTip="每轮随机上传后等待的秒数（默认900=15分钟）" />
-
-                                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="75" Height="28" Command="{Binding StartWhitelistUploadCommand}">添加任务</Button>
+                                    <Button Grid.Column="0" Width="90" Height="28" Command="{Binding StartWhitelistUploadCommand}"
+                                            ToolTip="立即对全部已注册客户端上传一次白名单">立即上传全量</Button>
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
                                 </Grid>
                             </Grid>
@@ -438,14 +436,15 @@
                                 <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Margin="4,0,0,0">每秒：</TextBlock>
                                 <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
                                 <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">轮/秒</TextBlock>
+
                                 <!-- 命中轮比：对齐老工具 bHit=1/71，避免告警风暴熔断 -->
-                                <StackPanel Grid.Row="4" Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,0">
                                     <TextBlock VerticalAlignment="Center">命中每</TextBlock>
                                     <TextBox Text="{Binding LogThreatHitEvery, Mode=TwoWay}" Width="45" Margin="4,2" />
-                                    <TextBlock VerticalAlignment="Center" Foreground="#666" FontSize="11">轮（0=均命中，默认71）</TextBlock>
+                                    <TextBlock VerticalAlignment="Center" Foreground="#666" FontSize="11">轮中发 1 轮 hit 包（0=均命中，默认 71）</TextBlock>
                                 </StackPanel>
 
-                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
+                                <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -455,7 +454,7 @@
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
+                                <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
                                            Foreground="Gray" FontSize="11"
                                            Text="威胁检测：每轮依次发送全部勾选类型（对齐C++ SendThreatLog），轮/秒=EPS/N种" />
                             </Grid>

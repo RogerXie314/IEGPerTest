@@ -42,8 +42,9 @@ namespace SimulatorLib.Persistence
         public int RegTimeoutMs { get; set; } = 60000;
 
         public string WhitelistFilePath { get; set; } = string.Empty;
-        public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;
+        /// <summary>对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单</summary>
+        public bool EnableWhitelistOnReg { get; set; } = false;
 
         // ── SSH 日志收集 ────────────────────────────────────────────────────
         /// <summary>模拟客户端的操作系统类型："Windows" 或 "Linux"</summary>

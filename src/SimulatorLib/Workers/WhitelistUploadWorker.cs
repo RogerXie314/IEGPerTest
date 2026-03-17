@@ -17,16 +17,12 @@ namespace SimulatorLib.Workers
     public record UploadStats(int Total, int Success, int Failed);
 
     /// <summary>
-    /// 白名单上传 Worker — 随机轮转策略：
-    ///   • 每轮从已注册客户端中，随机选取尚未上传过的 N 台进行上传
-    ///   • 每台客户端在一个任务生命周期内只上传一次（除非重新 AddTask）
-    ///   • 每 cycleIntervalMs（默认15分钟）自动切换到下一批
-    ///   • 所有客户端都上传完后自动结束
+    /// 白名单上传 Worker。
     ///
-    /// 协议对齐 SendInfoToServer.cpp::Send_FileLog_WL_ToServer：
+    /// 协议对齐 WLCurl::UploadFile（老工具 WLNetComm.dll 实际实现）：
     ///   ① 上传前：POST /USM/clientScanStatus.do  SolidifyStatus=11（WL_SOLIDIFY_UPLOAD）
     ///   ② 文件上传：POST https://{host}:{port}/USM/upLoadSysWhiteFile.do?id={b64url(computerID)}&filepath={b64url(modPath)}
-    ///      multipart/form-data，字段名 "file"，使用用户选择的白名单原始文件
+    ///      Content-Type: application/octet-stream，文件二进制直接作为请求体（无 multipart 包装，与老工具一致）
     ///   ③ 上传成功后：POST /USM/clientScanStatus.do  SolidifyStatus=10（WL_SOLIDIFY_UPDATE）
     /// </summary>
     public class WhitelistUploadWorker
@@ -114,6 +110,40 @@ namespace SimulatorLib.Workers
             record.MarkStopped();
         }
 
+        /// <summary>
+        /// 对齐老工具逻辑：一次性上传全部已注册客户端，每台上传一次，完成即结束，无轮转。
+        /// 对应 WLServerTestDlg.cpp：注册成功后每台客户端立即调用 Send_FileLog_WL_ToServer。
+        /// </summary>
+        public async Task RunAllOnceAsync(
+            string filePath,
+            IReadOnlyList<ClientRecord> clients,
+            string platformHost, int platformPort,
+            int concurrency,
+            TaskRecord record,
+            CancellationToken ct)
+        {
+            if (!File.Exists(filePath)) throw new FileNotFoundException("白名单文件不存在", filePath);
+
+            var targets = clients.Where(c => c.Status == "Registered").ToList();
+            if (targets.Count == 0)
+            {
+                record.Detail = "没有已注册的客户端可上传";
+                record.MarkCompleted();
+                return;
+            }
+
+            record.Detail = $"开始全量上传 {targets.Count} 台（并发={concurrency}）";
+
+            var stats = await RunBatchAsync(filePath, targets, platformHost, platformPort, concurrency, ct)
+                .ConfigureAwait(false);
+
+            record.SuccessCount = stats.Success;
+            record.FailCount    = stats.Failed;
+            await WriteLogAsync(filePath, stats).ConfigureAwait(false);
+            record.Detail = $"全量上传完成：成功={stats.Success} 失败={stats.Failed}（共{targets.Count}台）";
+            record.MarkCompleted();
+        }
+
         // ── 内部实现 ────────────────────────────────────────────────────────────
 
         private static HttpClient CreateHttpClient()
@@ -124,10 +154,20 @@ namespace SimulatorLib.Workers
                 ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
                 AllowAutoRedirect = false,
             };
-            return new HttpClient(handler, disposeHandler: true)
+            var http = new HttpClient(handler, disposeHandler: true)
             {
-                Timeout = TimeSpan.FromSeconds(30),
+                // 对齐老工具 CURLOPT_TIMEOUT=3600s，文件较大或并发时 30s 易超时
+                Timeout = TimeSpan.FromMinutes(10),
+                // 老工具 libcurl 使用 HTTP/1.1（未设置 CURLOPT_HTTP_VERSION，CURLOPT_POST 不会触发 HTTP/2）
+                // .NET 8 HttpClientHandler 在 HTTPS 下会通过 ALPN 尝试协商 HTTP/2，
+                // 平台服务端（老旧 Tomcat）ALPN 实现可能不完善，导致 TLS 握手偶发失败（并发 5 路时 2 路失败）
+                // 明确锁定 HTTP/1.1，与老工具行为完全一致
+                DefaultRequestVersion = System.Net.HttpVersion.Version11,
+                DefaultVersionPolicy  = System.Net.Http.HttpVersionPolicy.RequestVersionExact,
             };
+            // 对齐老工具 libcurl 请求头：User-Agent: White List Agent
+            http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "White List Agent");
+            return http;
         }
 
         private async Task<UploadStats> RunBatchAsync(
@@ -139,9 +179,7 @@ namespace SimulatorLib.Workers
             int statsSuccess = 0, statsFail = 0;
             var tasks = new List<Task>(targets.Count);
 
-            // 每批共享一个 HttpClient（连接复用），跨批不复用（避免连接池积压）
-            using var http = CreateHttpClient();
-
+            // 每个并发任务使用独立 HttpClient，避免多路 FileStream 共享同一连接池导致请求体错乱
             var fileName = Path.GetFileName(filePath);
 
             foreach (var c in targets)
@@ -150,6 +188,7 @@ namespace SimulatorLib.Workers
                 await sem.WaitAsync(ct).ConfigureAwait(false);
                 tasks.Add(Task.Run(async () =>
                 {
+                    using var http = CreateHttpClient();
                     try
                     {
                         var ok = await UploadOneClientAsync(
@@ -168,9 +207,9 @@ namespace SimulatorLib.Workers
         }
 
         /// <summary>
-        /// 对齐 Send_FileLog_WL_ToServer：
+        /// 对齐 WLCurl::UploadFile（老工具 WLNetComm.dll 实现）：
         ///   1. 上报状态 UPLOADING(11)
-        ///   2. multipart 上传白名单文件
+        ///   2. POST application/octet-stream 上传白名单文件（文件二进制直接作为请求体）
         ///   3. 上传成功后上报状态 UPDATED(10)
         /// </summary>
         private static async Task<bool> UploadOneClientAsync(
@@ -192,19 +231,28 @@ namespace SimulatorLib.Workers
             var pathB64     = Base64UrlEncode(modPath);
             var uploadUrl   = $"{baseUrl}/USM/upLoadSysWhiteFile.do?id={idB64}&filepath={pathB64}";
 
-            // ③ multipart/form-data 上传（对齐 libcurl puploadFile）
+            // ③ 原始 POST + application/octet-stream（对齐老工具 WLCurl::UploadFile）
+            //   老工具：CURLOPT_POST=1, Content-Type: application/octet-stream, 文件二进制直接作为请求体，无 multipart 包装
+            //   失败最多重试 1 次（每次重新打开 FileStream 保证流从头读取）
             bool uploadOk = false;
-            try
+            const int maxAttempts = 2;
+            for (int attempt = 1; attempt <= maxAttempts && !uploadOk; attempt++)
             {
-                await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
-                using var multipart = new MultipartFormDataContent();
-                using var sc = new StreamContent(fs);
-                multipart.Add(sc, "file", fileName);
+                try
+                {
+                    if (attempt > 1)
+                        await Task.Delay(3000, ct).ConfigureAwait(false); // 重试前等待 3s
 
-                var resp = await http.PostAsync(uploadUrl, multipart, ct).ConfigureAwait(false);
-                uploadOk = resp.IsSuccessStatusCode;
+                    await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+                    using var sc = new StreamContent(fs);
+                    sc.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+                    var resp = await http.PostAsync(uploadUrl, sc, ct).ConfigureAwait(false);
+                    uploadOk = resp.IsSuccessStatusCode;
+                }
+                catch (OperationCanceledException) { break; } // 用户取消，不重试
+                catch { /* 网络异常，继续下一次重试（若还有）*/ }
             }
-            catch { /* 上传异常计为失败，不再上报 UPDATED */ }
 
             // ④ 上传成功后状态通知
             if (uploadOk)
