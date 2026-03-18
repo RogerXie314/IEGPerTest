@@ -444,8 +444,8 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // IEG如属：威胁检测操作系统日志 + 进程启动/注册表/文件访问
-                CatThreatOsEvent = true;
+                // IEG如属：威胁检测进程启动/注册表/文件访问（默认不勾选操作系统日志）
+                CatThreatOsEvent = false;
                 CatThreatProcStart = true;
                 CatThreatRegAccess = true;
                 CatThreatFileAccess = true;
@@ -469,12 +469,12 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // EDR如属：威胁检测全部5种事件（EDR 4种 + IEG操作系统日志）
+                // EDR如属：威胁检测全部4种EDR事件（默认不勾选操作系统日志）
                 CatThreatProcStart = true;
                 CatThreatRegAccess = true;
                 CatThreatFileAccess = true;
                 CatThreatDllLoad = true;
-                CatThreatOsEvent = true;
+                CatThreatOsEvent = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
                 CatVirusAlert = true;
