@@ -97,7 +97,19 @@ namespace SimulatorLib.Workers
             return true;
         }
 
-        // ── 公开辅助：供 HeartbeatWorker HTTPS 路径调用 ──────────────────────────
+        // ── 公开辅助：供 HeartbeatWorker 调用 ─────────────────────────────────
+
+        /// <summary>
+        /// 处理 TCP 心跳回包中的 cmdId，供 HeartbeatWorker native 内联 recv 后调用。
+        /// cmdId==17（HEARTBEAT_CMD_POLCY）→ 触发 HTTPS 策略拉取（对齐老工具 TCP 路径）。
+        /// cmdId==18 由 HeartbeatWorker 自行处理（needReregister），此处不重复。
+        /// </summary>
+        public Task HandleTcpPolicyCmdAsync(uint cmdId, string clientId, CancellationToken ct)
+        {
+            if (cmdId == CmdHeartbeatPolicyNotify)
+                return FetchPolicyViaHttpsAsync(clientId, ct);
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// 解析 HTTPS 心跳响应体中的策略命令并回包。

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
+using SimulatorLib.Network;
 
 namespace SimulatorLib.Workers
 {
@@ -20,6 +21,9 @@ namespace SimulatorLib.Workers
     public sealed class HeartbeatStreamRegistry
     {
         private readonly ConcurrentDictionary<string, NetworkStream> _streams = new();
+
+        /// <summary>Native SOCKET 句柄注册表（v3.7.30 NativeSender DLL 路径）。</summary>
+        private readonly ConcurrentDictionary<string, ulong> _nativeSockets = new();
 
         /// <summary>每客户端 TCP 写锁：HeartbeatWorker + LogWorker 共用，SemaphoreSlim(1,1) 异步互斥。</summary>
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks = new();
@@ -47,6 +51,31 @@ namespace SimulatorLib.Workers
         /// <summary>注销心跳连接（连接关闭时调用）。写锁和日志队列保留，避免重连期间 NPE。</summary>
         public void Unregister(string clientId)
             => _streams.TryRemove(clientId, out _);
+
+        // ── Native Socket 注册/注销（v3.7.30 NativeSender DLL）────────────────
+
+        /// <summary>注册 native SOCKET 句柄（每次重连时覆盖旧值），同时确保写锁已存在。</summary>
+        public void RegisterNative(string clientId, ulong sock)
+        {
+            _nativeSockets[clientId] = sock;
+            _writeLocks.GetOrAdd(clientId, _ => new SemaphoreSlim(1, 1));
+            _logQueues.GetOrAdd(clientId, _ => Channel.CreateBounded<byte[]>(
+                new BoundedChannelOptions(2000)
+                {
+                    FullMode                      = BoundedChannelFullMode.DropOldest,
+                    SingleReader                  = true,
+                    SingleWriter                  = false,
+                    AllowSynchronousContinuations = false,
+                }));
+        }
+
+        /// <summary>注销 native SOCKET（连接关闭时调用）。</summary>
+        public void UnregisterNative(string clientId)
+            => _nativeSockets.TryRemove(clientId, out _);
+
+        /// <summary>获取 native SOCKET 句柄，不存在返回 INVALID_SOCKET。</summary>
+        public ulong GetNativeSocket(string clientId)
+            => _nativeSockets.TryGetValue(clientId, out var s) ? s : NativeSenderInterop.INVALID_SOCKET;
 
         // ── Stream 读取 ────────────────────────────────────────────────────────
 
@@ -86,6 +115,23 @@ namespace SimulatorLib.Workers
         /// </summary>
         public async Task<string?> DirectSendAsync(string clientId, byte[] payload, CancellationToken ct)
         {
+            // ── Native DLL 路径优先（v3.7.30）──
+            if (_nativeSockets.TryGetValue(clientId, out var nativeSock))
+            {
+                if (!_writeLocks.TryGetValue(clientId, out var nsem)) return "no_lock";
+                if (!await nsem.WaitAsync(2000, ct).ConfigureAwait(false)) return "lock_timeout";
+                try
+                {
+                    return NativeSenderInterop.NS_SendData(nativeSock, payload, payload.Length) == 0
+                        ? null : "send_failed";
+                }
+                finally
+                {
+                    try { nsem.Release(); } catch (SemaphoreFullException) { }
+                }
+            }
+
+            // ── 托管 NetworkStream 路径（fallback）──
             if (!_streams.TryGetValue(clientId, out var stream)) return "disconnected";
             if (!_writeLocks.TryGetValue(clientId, out var sem)) return "no_lock";
 
@@ -136,6 +182,6 @@ namespace SimulatorLib.Workers
             return ch?.Reader;
         }
 
-        public int Count => _streams.Count;
+        public int Count => _streams.Count + _nativeSockets.Count;
     }
 }

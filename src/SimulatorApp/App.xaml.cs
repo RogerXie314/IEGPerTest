@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using SimulatorLib.Network;
 
 namespace SimulatorApp
 {
@@ -7,12 +8,18 @@ namespace SimulatorApp
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            // 400+ 客户端 × (HB task + drain task + LogWorker task) = 1200+ 并发异步操作。
-            // .NET ThreadPool 默认 MinThreads = CPU核数（~8），每 500ms 才创建 1 个新线程。
-            // 如果不提前设置，Task.Delay / WriteAsync 的回调排不上线程，
-            // 导致 HB 超时 → 平台关连接 → LogWorker 空转紧循环 → CPU/内存炸裂 → 雪崩。
-            ThreadPool.SetMinThreads(500, 500);
+            // v3.7.30: 初始化 Winsock（NativeSender DLL 需要）
+            NativeSenderInterop.NS_Init();
+
+            // 400 客户端 × (HB task + LogWorker task) = 800+ 并发任务，P/Invoke 阻塞调用需要足够线程。
+            ThreadPool.SetMinThreads(1000, 1000);
             base.OnStartup(e);
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            NativeSenderInterop.NS_Cleanup();
+            base.OnExit(e);
         }
     }
 }
