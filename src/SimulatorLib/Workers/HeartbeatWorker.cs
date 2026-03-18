@@ -348,10 +348,20 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // HeartbeatWorker 是本连接唯一 TCP 写入方（Channel 架构），直接写，无需任何锁。
-                            // 等价于老工具 HB 线程直接 send(g_sock[i])，OS Winsock 在内核层串行化。
-                            await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
-                            await stream.FlushAsync().ConfigureAwait(false);
+                            // 直写架构：HB 也走写锁，和 LogWorker DirectSendAsync 共享同一 SemaphoreSlim(1,1)。
+                            // HB 1次/30s vs Log 3次/s → 冲突概率 < 0.5%，微秒级持有时间。
+                            bool lockAcquired = false;
+                            if (_streamRegistry != null)
+                                lockAcquired = await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 2000, ct).ConfigureAwait(false);
+                            try
+                            {
+                                await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+                                await stream.FlushAsync().ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                if (lockAcquired) _streamRegistry!.ReleaseWriteLock(c.ClientId);
+                            }
                             _streamRegistry?.Register(c.ClientId, stream!);
                             // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
                             nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
@@ -386,75 +396,54 @@ namespace SimulatorLib.Workers
                             continue; // 重连等待由循环顶部的 nextCycleTargetMs 门控处理
                         }
 
-                        // HB 间隙：drain 日志包队列，直到下次 HB 截止前 100ms。
-                        // 写超时：3s CancellationToken，防止 TCP 背压时 drain WriteAsync 无限阻塞导致 HB 周期拖延。
-                        // 速率门控：读取 registry.LogDrainIntervalMs，匹配 LogWorker 生产速率，对齐老工具
-                        // C++ log 线程 Sleep(interval/N) 的稳定节奏，避免 burst 触发平台 wl_limit 限速。
+                        // HB 间隙：直写架构下 LogWorker 自行写 TCP，drain 仅处理 Channel fallback 积压。
+                        // 简化为：快速清空 Channel 残留（若有），然后 wakeupSem 等待到下次 HB。
                         if (alive && stream != null)
                         {
-                            var drainUntil = DateTime.UtcNow.AddMilliseconds(intervalMs - 100);
-                            var logReader  = _streamRegistry?.GetLogReader(c.ClientId);
+                            var logReader = _streamRegistry?.GetLogReader(c.ClientId);
                             if (logReader != null)
                             {
-                                long lastDrainSendMs = 0L; // 上次成功写入的时间戳（Unix ms）
-                                while (alive && !ct.IsCancellationRequested && DateTime.UtcNow < drainUntil)
+                                // 快速清空 fallback Channel 积压（非 allThreatTcp 路径可能残留少量包）
+                                while (alive && !ct.IsCancellationRequested && logReader.TryRead(out var logPayload))
                                 {
-                                    // 速率门控：若设置了 drain 间隔，等到距上次发送已满 drainIntervalMs 再读队列
-                                    int drainIntervalMs = _streamRegistry?.LogDrainIntervalMs ?? 0;
-                                    if (drainIntervalMs > 0 && lastDrainSendMs > 0)
+                                    try
                                     {
-                                        long waitMs = drainIntervalMs - (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - lastDrainSendMs);
-                                        if (waitMs > 0)
-                                        {
-                                            var remainUntil = (long)(drainUntil - DateTime.UtcNow).TotalMilliseconds;
-                                            int delayMs = (int)Math.Min(waitMs, remainUntil);
-                                            if (delayMs <= 0) break;
-                                            try { await Task.Delay(delayMs, ct).ConfigureAwait(false); }
-                                            catch (OperationCanceledException) { break; }
-                                            continue;
-                                        }
-                                    }
-
-                                    if (logReader.TryRead(out var logPayload))
-                                    {
+                                        bool drainLock = false;
+                                        if (_streamRegistry != null)
+                                            drainLock = await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 2000, ct).ConfigureAwait(false);
                                         try
                                         {
-                                            // 每次写入独立创建关联 CTS（避免旧 CTS 被取消后后续写入全部立即失败的 bug）
                                             using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                             writeCts.CancelAfter(3000);
                                             await stream.WriteAsync(logPayload, 0, logPayload.Length, writeCts.Token).ConfigureAwait(false);
-                                            lastDrainSendMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                         }
-                                        catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-                                        catch
+                                        finally
                                         {
-                                            tcp?.Dispose();
-                                            tcp    = null;
-                                            stream = null;
-                                            alive  = false;
-                                            Interlocked.Exchange(ref connectedFlags[idx], 0);
-                                            _streamRegistry?.Unregister(c.ClientId);
-                                            lastResult[idx] = 0;
-                                            lastReason[idx] = Reason.WriteFailed;
-                                            eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(LogDrain) 客户端#{idx} {c.ClientId}");
-                                            Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                                            hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=日志写入失败");
-                                            break;
+                                            if (drainLock) _streamRegistry!.ReleaseWriteLock(c.ClientId);
                                         }
                                     }
-                                    else
+                                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                                    catch
                                     {
-                                        // 队列暂时为空，短暂等待（10ms 轮询以便及时响应 alive=false）
-                                        var remainMs2 = (int)(drainUntil - DateTime.UtcNow).TotalMilliseconds;
-                                        if (remainMs2 <= 0) break;
-                                        try { await Task.Delay(Math.Min(remainMs2, 10), ct).ConfigureAwait(false); }
-                                        catch (OperationCanceledException) { break; }
+                                        tcp?.Dispose();
+                                        tcp    = null;
+                                        stream = null;
+                                        alive  = false;
+                                        Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                        _streamRegistry?.Unregister(c.ClientId);
+                                        lastResult[idx] = 0;
+                                        lastReason[idx] = Reason.WriteFailed;
+                                        eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(LogDrain) 客户端#{idx} {c.ClientId}");
+                                        Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=日志写入失败");
+                                        break;
                                     }
                                 }
                             }
-                            else
+
+                            // 等待下次 HB 周期（wakeupSem 可被 drain task 断连事件提前唤醒）
+                            if (alive)
                             {
-                                // 日志队列尚未初始化（极罕见：首次连接 Register 前已完成 HB），等待一个心跳周期
                                 try { await wakeupSem.WaitAsync(intervalMs, ct).ConfigureAwait(false); }
                                 catch (OperationCanceledException) { break; }
                             }

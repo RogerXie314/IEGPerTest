@@ -219,11 +219,9 @@ namespace SimulatorLib.Workers
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
             int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
-            // allThreatTcp 速率限制：通知 HeartbeatWorker drain 循环按此间隔发包，对齐老工具
-            // C++ log 线程 Sleep(interval) 后发 N 包的稳定节奏，避免 burst 触发平台 wl_limit 限速。
-            // drain 间隔 = intervalMs / categoryCount（EPS=1, 3类型 → 1000/3 ≈ 333ms/包）。
-            if (allThreatTcp && _streamRegistry != null && intervalMs > 0 && categoryList.Count > 0)
-                _streamRegistry.LogDrainIntervalMs = intervalMs / categoryList.Count;
+            // 直写架构：allThreatTcp 路径 LogWorker 直接写 TCP（经 DirectSendAsync 获取写锁），
+            // 不再经过 Channel → HeartbeatWorker drain 间接层。发送节奏由 LogWorker 自身的
+            // 绝对 deadline + Sleep(50) 类型间隔控制，完全对齐 C++ log 线程直接 send(sock) 模式。
 
             // 启动可选吞吐量统计后台循环（未调用 Enable() 时立即返回）
             using var metricsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -278,6 +276,9 @@ namespace SimulatorLib.Workers
                         // 否则：按 msgIdx 轮转单种分类（原有行为）
                         if (allThreatTcp)
                         {
+                            // 直写架构：LogWorker 直接写 TCP stream（经 DirectSendAsync 获取写锁），
+                            // 还原 C++ Log 线程直接 send(sock) 的数据路径。
+                            // IncSuccess/IncFail 现在统计的是真实 TCP 写入结果，不再是 Channel 入队结果。
                             try
                             {
                                 var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
@@ -298,7 +299,7 @@ namespace SimulatorLib.Workers
                                         serialNumber: serial);
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    var typeFailR = TryEnqueueLog(c.ClientId, pt);
+                                    var typeFailR = await DirectSendAsync(c.ClientId, pt, ct).ConfigureAwait(false);
                                     if (typeFailR == null) IncSuccess();
                                     else
                                     {
@@ -352,7 +353,8 @@ namespace SimulatorLib.Workers
                                     else
                                     {
                                         var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                        tcpSendFail = TryEnqueueLog(c.ClientId, pt);
+                                        // 直写架构：单分类威胁TCP也走 DirectSendAsync，统计真实发送结果
+                                        tcpSendFail = await DirectSendAsync(c.ClientId, pt, ct).ConfigureAwait(false);
                                         ok = tcpSendFail == null;
                                     }
                                 }
@@ -402,9 +404,6 @@ namespace SimulatorLib.Workers
             }
             finally
             {
-                // allThreatTcp 结束：清零 drain 间隔，避免残留影响后续任务
-                if (allThreatTcp && _streamRegistry != null)
-                    _streamRegistry.LogDrainIntervalMs = 0;
                 // 停止吞吐量统计循环（触发最终汇总行输出后退出）
                 metricsCts.Cancel();
                 await metricsTask.ConfigureAwait(false);
@@ -1020,8 +1019,18 @@ namespace SimulatorLib.Workers
         }
 
         /// <summary>
-        /// 将日志包投入每客户端的 Channel 队列（非阻塞），由 HeartbeatWorker 在 HB 间隙统一写入 TCP。
-        /// 返回 null = 入队成功；返回非 null 字符串 = 失败原因（no_registry / no_queue）。
+        /// 直接将日志包写入 TCP stream（获取写锁 → WriteAsync → 释放写锁）。
+        /// 返回 null = 发送成功；返回非 null 字符串 = 失败原因。
+        /// 对齐 C++ Log 线程直接 send(sock) 的数据路径，统计真实 TCP 写入结果。
+        /// </summary>
+        private async Task<string?> DirectSendAsync(string clientId, byte[] payload, CancellationToken ct)
+        {
+            if (_streamRegistry == null) return "no_registry";
+            return await _streamRegistry.DirectSendAsync(clientId, payload, ct).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 将日志包投入每客户端的 Channel 队列（非阻塞，fallback 路径）。
         /// </summary>
         private string? TryEnqueueLog(string clientId, byte[] payload)
         {
