@@ -3,6 +3,27 @@
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
 
+# -- 0. Pre-flight: working tree must be clean --------------------------------
+# 正确发布流程：功能代码改完 → 写变更记录 → git commit → 再跑此脚本。
+# 此检查确保"写记录+commit"步骤不被跳过。
+Push-Location "$PSScriptRoot\.."
+$gitStatus = git status --porcelain 2>&1
+Pop-Location
+if ($gitStatus) {
+    Write-Error @"
+发布中止：工作区有未提交的改动：
+
+$gitStatus
+
+正确流程：
+  1. 功能代码改完
+  2. 在 docs/项目实施文档.md 写好变更记录
+  3. git add . && git commit
+  4. 再运行此脚本
+"@
+    exit 1
+}
+
 # -- 1. Auto-bump patch version -----------------------------------------------
 [xml]$csproj = Get-Content $projectPath
 $oldVer = $csproj.Project.PropertyGroup.Version
