@@ -93,7 +93,10 @@ namespace SimulatorLib.Workers
             if (!await sem.WaitAsync(2000, ct).ConfigureAwait(false)) return "lock_timeout";
             try
             {
-                await stream.WriteAsync(payload, 0, payload.Length, ct).ConfigureAwait(false);
+                // !! 不传 CancellationToken 给 WriteAsync：CT 取消会导致 .NET RST socket，
+                // 对齐 v3.7.3 Fix 1（去除 WriteAsync/FlushAsync 的 CT，背压时不再 RST socket）。
+                // 若连接已死，TCP KeepAlive（idle=5s, interval=2s）会在 ~15s 内触发 IOException。
+                await stream.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
                 return null;
             }
             catch (Exception ex)

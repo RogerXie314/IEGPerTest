@@ -348,11 +348,16 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // 直写架构：HB 也走写锁，和 LogWorker DirectSendAsync 共享同一 SemaphoreSlim(1,1)。
-                            // HB 1次/30s vs Log 3次/s → 冲突概率 < 0.5%，微秒级持有时间。
-                            bool lockAcquired = false;
+                            // 直写架构：HB 写入必须获取写锁，与 LogWorker DirectSendAsync 互斥。
+                            // 超时（5s）= LogWorker 写入卡住（TCP 背压），走 catch → 强制重连
+                            // （对齐 v3.7.15 策略：Dispose 打断 LogWorker 卡住的 WriteAsync）。
+                            // !! 绝不能在没拿到锁的情况下写 stream，否则两个 Writer 并发写同一 TCP 流，
+                            //    PT 包字节交错 → 平台收到垃圾数据 → 关闭连接（v3.7.27 的根因）。
                             if (_streamRegistry != null)
-                                lockAcquired = await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 2000, ct).ConfigureAwait(false);
+                            {
+                                if (!await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 5000, ct).ConfigureAwait(false))
+                                    throw new TimeoutException("HB write lock timeout — force reconnect");
+                            }
                             try
                             {
                                 await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
@@ -360,7 +365,7 @@ namespace SimulatorLib.Workers
                             }
                             finally
                             {
-                                if (lockAcquired) _streamRegistry!.ReleaseWriteLock(c.ClientId);
+                                _streamRegistry?.ReleaseWriteLock(c.ClientId);
                             }
                             _streamRegistry?.Register(c.ClientId, stream!);
                             // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
