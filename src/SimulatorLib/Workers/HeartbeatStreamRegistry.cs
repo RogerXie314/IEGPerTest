@@ -57,6 +57,13 @@ namespace SimulatorLib.Workers
         // ── 日志队列 API ───────────────────────────────────────────────────────
 
         /// <summary>
+        /// drain 速率间隔（ms/包）：LogWorker 在 allThreatTcp 任务启动时写入，任务结束时清零。
+        /// 0 = 不限速（无 log 任务时）。HeartbeatWorker drain 循环读取此值控制发包节奏，
+        /// 对齐老工具 C++ log 线程 Sleep(1000ms/N类型) 的稳定发送速率，避免 burst 触发平台限速。
+        /// </summary>
+        public volatile int LogDrainIntervalMs = 0;
+
+        /// <summary>
         /// LogWorker 调用：将日志包非阻塞投入队列，立即返回。
         /// 返回 null：成功；"no_queue"：clientId 尚未注册（客户端还未完成首次握手）。
         /// 队列已满时自动丢弃最旧条目（BoundedChannelFullMode.DropOldest），永不阻塞。

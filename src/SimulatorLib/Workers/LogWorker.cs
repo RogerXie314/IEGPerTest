@@ -219,6 +219,12 @@ namespace SimulatorLib.Workers
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
             int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
+            // allThreatTcp 速率限制：通知 HeartbeatWorker drain 循环按此间隔发包，对齐老工具
+            // C++ log 线程 Sleep(interval) 后发 N 包的稳定节奏，避免 burst 触发平台 wl_limit 限速。
+            // drain 间隔 = intervalMs / categoryCount（EPS=1, 3类型 → 1000/3 ≈ 333ms/包）。
+            if (allThreatTcp && _streamRegistry != null && intervalMs > 0 && categoryList.Count > 0)
+                _streamRegistry.LogDrainIntervalMs = intervalMs / categoryList.Count;
+
             // 启动可选吞吐量统计后台循环（未调用 Enable() 时立即返回）
             using var metricsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var metricsTask = _metrics.RunReportLoopAsync(sw, metricsCts.Token);
@@ -396,6 +402,9 @@ namespace SimulatorLib.Workers
             }
             finally
             {
+                // allThreatTcp 结束：清零 drain 间隔，避免残留影响后续任务
+                if (allThreatTcp && _streamRegistry != null)
+                    _streamRegistry.LogDrainIntervalMs = 0;
                 // 停止吞吐量统计循环（触发最终汇总行输出后退出）
                 metricsCts.Cancel();
                 await metricsTask.ConfigureAwait(false);

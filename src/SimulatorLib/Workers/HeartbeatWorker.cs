@@ -388,14 +388,33 @@ namespace SimulatorLib.Workers
 
                         // HB 间隙：drain 日志包队列，直到下次 HB 截止前 100ms。
                         // 写超时：3s CancellationToken，防止 TCP 背压时 drain WriteAsync 无限阻塞导致 HB 周期拖延。
+                        // 速率门控：读取 registry.LogDrainIntervalMs，匹配 LogWorker 生产速率，对齐老工具
+                        // C++ log 线程 Sleep(interval/N) 的稳定节奏，避免 burst 触发平台 wl_limit 限速。
                         if (alive && stream != null)
                         {
                             var drainUntil = DateTime.UtcNow.AddMilliseconds(intervalMs - 100);
                             var logReader  = _streamRegistry?.GetLogReader(c.ClientId);
                             if (logReader != null)
                             {
+                                long lastDrainSendMs = 0L; // 上次成功写入的时间戳（Unix ms）
                                 while (alive && !ct.IsCancellationRequested && DateTime.UtcNow < drainUntil)
                                 {
+                                    // 速率门控：若设置了 drain 间隔，等到距上次发送已满 drainIntervalMs 再读队列
+                                    int drainIntervalMs = _streamRegistry?.LogDrainIntervalMs ?? 0;
+                                    if (drainIntervalMs > 0 && lastDrainSendMs > 0)
+                                    {
+                                        long waitMs = drainIntervalMs - (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - lastDrainSendMs);
+                                        if (waitMs > 0)
+                                        {
+                                            var remainUntil = (long)(drainUntil - DateTime.UtcNow).TotalMilliseconds;
+                                            int delayMs = (int)Math.Min(waitMs, remainUntil);
+                                            if (delayMs <= 0) break;
+                                            try { await Task.Delay(delayMs, ct).ConfigureAwait(false); }
+                                            catch (OperationCanceledException) { break; }
+                                            continue;
+                                        }
+                                    }
+
                                     if (logReader.TryRead(out var logPayload))
                                     {
                                         try
@@ -404,6 +423,7 @@ namespace SimulatorLib.Workers
                                             using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                             writeCts.CancelAfter(3000);
                                             await stream.WriteAsync(logPayload, 0, logPayload.Length, writeCts.Token).ConfigureAwait(false);
+                                            lastDrainSendMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                         }
                                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                                         catch
