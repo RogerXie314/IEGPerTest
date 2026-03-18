@@ -292,7 +292,7 @@ namespace SimulatorLib.Workers
                                         serialNumber: serial);
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    var typeFailR = SendLogTcpLikeExternal(c.ClientId, pt);
+                                    var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, pt, ct).ConfigureAwait(false);
                                     if (typeFailR == null) IncSuccess();
                                     else
                                     {
@@ -346,7 +346,7 @@ namespace SimulatorLib.Workers
                                     else
                                     {
                                         var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                        tcpSendFail = SendLogTcpLikeExternal(c.ClientId, pt);
+                                        tcpSendFail = await SendLogTcpLikeExternalAsync(c.ClientId, pt, ct).ConfigureAwait(false);
                                         ok = tcpSendFail == null;
                                     }
                                 }
@@ -1010,28 +1010,26 @@ namespace SimulatorLib.Workers
             };
         }
 
-        private string? SendLogTcpLikeExternal(string clientId, byte[] payload)
+        private async Task<string?> SendLogTcpLikeExternalAsync(string clientId, byte[] payload, CancellationToken ct)
         {
             // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回失败原因。
             // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
             // 返回 null = 成功；返回非 null 字符串 = 失败原因（no_registry / stream_null / write_ex:类型名）。
             if (_streamRegistry == null) return "no_registry";
 
-            var writeLock = _streamRegistry.GetWriteLock(clientId);
-            if (writeLock == null) return "stream_null";
-
+            // 写锁：不设超时，背压时 await 等待（不阻塞线程池线程）。
+            // 对齐 C++：HeartbeatWorker 持锁时，LogWorker 异步挂起等待，不丢弃本条日志。
+            // 死连接：WriteAsync 抛 IOException → 释放锁 → LogWorker/HB 均感知并重连。
+            await _streamRegistry.AcquireWriteLockAsync(clientId, ct).ConfigureAwait(false);
             try
             {
-                lock (writeLock)
-                {
-                    // 锁内重取 stream（锁等待期间可能已重连，stream 已更新）
-                    var hbStream = _streamRegistry.TryGet(clientId);
-                    if (hbStream == null) return "stream_null";
+                // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
+                var hbStream = _streamRegistry.TryGet(clientId);
+                if (hbStream == null) return "stream_null";
 
-                    // 对齐老工具 C++ send()：同步写，OS TCP 层负责串行化与背压控制。
-                    // 无超时，背压时阻塞线程，不丢弃日志也不 RST socket（消除 LockBusy 振荡根因）。
-                    hbStream.Write(payload, 0, payload.Length);
-                }
+                // 不向 WriteAsync 传 CancellationToken（避免 CT 超时触发 .NET RST socket）。
+                await hbStream.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+                await hbStream.FlushAsync().ConfigureAwait(false);
                 return null; // success
             }
             catch (Exception ex)
@@ -1040,6 +1038,10 @@ namespace SimulatorLib.Workers
                 // 主动 Unregister 通知 HeartbeatWorker 此 stream 已损坏，触发快速重连。
                 _streamRegistry.Unregister(clientId);
                 return "write_ex:" + ex.GetType().Name;
+            }
+            finally
+            {
+                _streamRegistry.ReleaseWriteLock(clientId);
             }
         }
 
