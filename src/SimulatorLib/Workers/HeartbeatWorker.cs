@@ -441,17 +441,19 @@ namespace SimulatorLib.Workers
                         }
 
                         //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
-                        //  如果 TCP 仍连接，但自本次连接建立后一直收不到平台回包，
-                        //  说明平台 session 已失效（被踢或连接没经过认证）。
-                        //  主动断开重连，否则即使其他主机释放了槽位，我们也永远占着僵尸连接出不来。
+                        //  触发条件：曾经收到过平台回包（lastReply>0），但最近 staleMs 内没有再收到。
+                        //  对齐老工具 C++ 行为：RecvHeartBeatBack_TCP 2s 超时后直接继续下一周期，
+                        //  从不因"未收到回包"主动断线。只有曾有回包、后来停止时才处理。
+                        //  !! lastReply==0（本次连接从未收到回包）= 平台忙/容量限制，不等于 session 失效。
+                        //  旧逻辑（refTime=connectedAtMs 当 lastReply==0 时）会在 90s 后触发断线，
+                        //  造成 ~2min 振荡周期（90s等待 + 30s重连），这是之前版本 EPS 振荡的根因。
                         if (alive)
                         {
                             long staleMs   = Math.Max((long)intervalMs * 3, 30_000L);
                             long nowCheck  = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                             long lastReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                            // refTime: 收到过回包就用最后回包时间，否则用连接建立时间
-                            long refTime   = lastReply > 0 ? lastReply : connectedAtMs;
-                            if (refTime > 0 && (nowCheck - refTime) > staleMs)
+                            // 只有收到过回包、且最近又停止回包，才判定 session 失效（对齐老工具）
+                            if (lastReply > 0 && (nowCheck - lastReply) > staleMs)
                             {
                                 // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接。
                                 // 加随机 jitter（0~5s）打散重连潮：同批注册的客户端可能同时触发
