@@ -307,6 +307,14 @@ namespace SimulatorLib.Workers
                                         TrackFailure(cat, typeFailR);
                                         // 对齐C++ goto END：任一类型发送失败立即停止本轮，
                                         // 避免用已损坏的 stream 继续发后续类型（失败膨胀×N倍）。
+                                        // !! 流不存在（HB 未连接/正在重连）时必须等待，否则空转紧循环狂吃 CPU：
+                                        // JSON 构建 + Zlib 压缩在 400 并发 Task 中全速运行 → ThreadPool 饥饿
+                                        // → HB Task 排不上 → 平台超时关连接 → 更多空转 → 雪崩。
+                                        if (typeFailR == "disconnected" || typeFailR == "no_lock")
+                                        {
+                                            try { await Task.Delay(Math.Max(intervalMs, 1000), ct).ConfigureAwait(false); }
+                                            catch (OperationCanceledException) { return; }
+                                        }
                                         break;
                                     }
 
@@ -384,7 +392,17 @@ namespace SimulatorLib.Workers
                                 }
 
                                 if (ok) IncSuccess();
-                                else { IncFail(); TrackFailure(cat, tcpSendFail ?? "non_ok_response"); }
+                                else
+                                {
+                                    IncFail();
+                                    TrackFailure(cat, tcpSendFail ?? "non_ok_response");
+                                    // 同 allThreatTcp 路径：流断开时等待 interval 避免空转紧循环
+                                    if (tcpSendFail == "disconnected" || tcpSendFail == "no_lock")
+                                    {
+                                        try { await Task.Delay(Math.Max(intervalMs, 1000), ct).ConfigureAwait(false); }
+                                        catch (OperationCanceledException) { return; }
+                                    }
+                                }
                             }
                             catch (OperationCanceledException) { return; }
                             catch (Exception ex)
