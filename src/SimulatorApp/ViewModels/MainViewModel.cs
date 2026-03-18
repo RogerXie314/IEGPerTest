@@ -32,8 +32,8 @@ namespace SimulatorApp.ViewModels
         private string _projectType = "IEG";
 
         private int _logMessagesPerClient = 50;
-        private int _logHttpsClientCount = 5;
-        private int _logHttpsEps = 10;
+        private int _logHttpsClientCount = 0;
+        private int _logHttpsEps = 0;
         private int _logThreatClientCount = 5;
         private int _logThreatEps = 1;
         private int _logThreatHitEvery = 71;
@@ -47,9 +47,9 @@ namespace SimulatorApp.ViewModels
         private bool _catOs;
         private bool _catOutbound;
         // 威胁检测5种事件（均通过 TCP 长连接）
-        private bool _catThreatProcStart;   // 进程启动（EDR）
-        private bool _catThreatRegAccess;    // 注册表访问（EDR）
-        private bool _catThreatFileAccess;   // 文件访问（EDR）
+        private bool _catThreatProcStart = true;   // 进程启动（EDR）
+        private bool _catThreatRegAccess  = true;   // 注册表访问（EDR）
+        private bool _catThreatFileAccess = true;   // 文件访问（EDR）
         private bool _catThreatOsEvent;      // 操作系统日志（IEG）
         private bool _catThreatDllLoad;      // DLL加载（EDR）
         private bool _catNonWhitelist;
@@ -444,11 +444,11 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // IEG如属：威胁检测中只有操作系统日志
+                // IEG如属：威胁检测操作系统日志 + 进程启动/注册表/文件访问
                 CatThreatOsEvent = true;
-                CatThreatProcStart = false;
-                CatThreatRegAccess = false;
-                CatThreatFileAccess = false;
+                CatThreatProcStart = true;
+                CatThreatRegAccess = true;
+                CatThreatFileAccess = true;
                 CatThreatDllLoad = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
@@ -576,7 +576,9 @@ namespace SimulatorApp.ViewModels
                 // 将统计追加写入 RegistrationStats.log 文件
                 try
                 {
-                    var statsPath = Path.Combine(AppContext.BaseDirectory, "RegistrationStats.log");
+                    var statsLogDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                    Directory.CreateDirectory(statsLogDir);
+                    var statsPath = Path.Combine(statsLogDir, "RegistrationStats.log");
                     var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {summary.ToLogString()}";
                     await File.AppendAllTextAsync(statsPath, line + Environment.NewLine, Encoding.UTF8).ConfigureAwait(false);
                 }

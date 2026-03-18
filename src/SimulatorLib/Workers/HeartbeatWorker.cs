@@ -464,7 +464,9 @@ namespace SimulatorLib.Workers
             // 监控日志：定时写文件，记录离线数量与断线原因分布（供开发分析）
             // 间隔：max(30s, intervalMs)，确保即使心跳间隔30s、测试刚开始3分钟内也能捕获异常
             int monitorIntervalMs = Math.Max(30_000, intervalMs);
-            var monitorFile = Path.Combine(AppContext.BaseDirectory,
+            var hbLogDir = Path.Combine(AppContext.BaseDirectory, "logs");
+            Directory.CreateDirectory(hbLogDir);
+            var monitorFile = Path.Combine(hbLogDir,
                 $"heartbeat_monitor_{DateTime.Now:yyyyMMdd_HHmmss}.log");
             var monitorTask = Task.Run(async () =>
             {
@@ -543,7 +545,7 @@ namespace SimulatorLib.Workers
             }, ct);
 
             // 事件日志任务：实时将 hbEventLog 写入 heartbeat-events-YYYYMMDD.log（500ms 刷新）
-            var hbEventLogFile = Path.Combine(AppContext.BaseDirectory, $"heartbeat-events-{DateTime.UtcNow:yyyyMMdd}.log");
+            var hbEventLogFile = Path.Combine(hbLogDir, $"heartbeat-events-{DateTime.UtcNow:yyyyMMdd}.log");
             _ = Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
