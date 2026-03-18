@@ -404,7 +404,6 @@ namespace SimulatorLib.Workers
                                             using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                             writeCts.CancelAfter(3000);
                                             await stream.WriteAsync(logPayload, 0, logPayload.Length, writeCts.Token).ConfigureAwait(false);
-                                            lastDrainWrite = DateTime.UtcNow;
                                         }
                                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                                         catch
