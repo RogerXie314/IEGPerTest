@@ -327,12 +327,30 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // 对齐老工具 C++：写锁等待不设超时，背压时延迟心跳而非跳过心跳。
-                            // await WaitAsync() 不阻塞线程池线程（与 lock 不同）；
-                            // await WriteAsync() 也不阻塞线程池线程；两者加在一起零线程消耗。
-                            // 最坏情况：LogWorker 写超慢 → HB 等待数秒 → 仍被发送 → 平台不断连。
-                            if (_streamRegistry != null)
-                                await _streamRegistry.AcquireWriteLockAsync(c.ClientId, ct).ConfigureAwait(false);
+                            // 写锁等待：5s 超时。
+                            // 正常情况 LogWorker 每次持锁 << 10ms，不会触发超时。
+                            // 超时意味着 TCP 发送缓冲区满（平台流控背压），LogWorker 的 WriteAsync 被卡住。
+                            // 此时不能无限等（心跳会饿死），也不能只是跳过（LockBusy 振荡）。
+                            // 唯一正确做法：tcp.Dispose() 强制重连，让 LogWorker 的 WriteAsync 抛异常，
+                            // 刷新连接状态，下一轮心跳在新鲜连接上发出。
+                            bool lockAcq = _streamRegistry == null
+                                || await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 5000, ct).ConfigureAwait(false);
+                            if (!lockAcq)
+                            {
+                                // TCP 背压导致锁等待超时 → 强制重连，不是跳过
+                                tcp?.Dispose();
+                                tcp    = null;
+                                stream = null;
+                                alive  = false;
+                                Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                _streamRegistry?.Unregister(c.ClientId);
+                                lastResult[idx] = 0;
+                                lastReason[idx] = Reason.LockBusy; // 复用现有统计项，含义升级为"背压强制重连"
+                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 锁等待超时→强制重连(LockBusy) 客户端#{idx} {c.ClientId}");
+                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} RECONNECT client={c.ClientId} reason=锁等待超时背压重连");
+                                continue; // 立即进入下一轮重连
+                            }
                             try
                             {
                                 // 不向 WriteAsync/FlushAsync 传 CancellationToken：

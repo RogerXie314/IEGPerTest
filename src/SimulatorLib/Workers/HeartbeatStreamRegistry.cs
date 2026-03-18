@@ -57,9 +57,7 @@ namespace SimulatorLib.Workers
         // ── 写锁 API ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 异步获取指定 clientId 的写锁（不设超时，等到能拿为止）。
-        /// 异步等待不阻塞线程池线程，背压时本 Task 挂起，其他 Task 继续运行。
-        /// 调用方须在 finally 块中调用 <c>ReleaseWriteLock</c>。
+        /// 异步获取写锁（不设超时，等到能拿为止）。用于 LogWorker：日志必须发出，宁可等也不丢。
         /// </summary>
         public async Task AcquireWriteLockAsync(string clientId, CancellationToken ct)
         {
@@ -67,7 +65,18 @@ namespace SimulatorLib.Workers
             await sem.WaitAsync(ct).ConfigureAwait(false);
         }
 
-        /// <summary>释放指定 clientId 的写锁。</summary>
+        /// <summary>
+        /// 异步获取写锁（带超时）。用于 HeartbeatWorker：
+        /// 超时说明 LogWorker 的 WriteAsync 被 TCP 背压卡住，返回 false 由调用方决定强制重连。
+        /// </summary>
+        public async Task<bool> AcquireWriteLockAsync(string clientId, int timeoutMs, CancellationToken ct)
+        {
+            if (!_writeLocks.TryGetValue(clientId, out var sem)) return true; // 无锁时视为成功
+            try { return await sem.WaitAsync(timeoutMs, ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return false; }
+        }
+
+        /// <summary>释放写锁。</summary>
         public void ReleaseWriteLock(string clientId)
         {
             if (_writeLocks.TryGetValue(clientId, out var sem))
