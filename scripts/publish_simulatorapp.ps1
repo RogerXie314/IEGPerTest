@@ -33,6 +33,31 @@ if ($oldVer -match '^(\d+)\.(\d+)\.(\d+)$') {
     Write-Warning "Cannot parse version '$oldVer', skipping bump"
     $newVer = $oldVer
 }
+
+# -- 1b. Pre-flight: changelog entry must exist for the new version ----------
+# 发布前必须在 docs/项目实施文档.md 里写好 "### v{新版本}" 条目，否则中止。
+$docFileName2 = [char]0x9879 + [char]0x76EE + [char]0x5B9E + [char]0x65BD + [char]0x6587 + [char]0x6863 + ".md"
+$docPath2 = [System.IO.Path]::Combine((Resolve-Path "$PSScriptRoot\..").Path, "docs", $docFileName2)
+if ([System.IO.File]::Exists($docPath2)) {
+    $docLines = [System.IO.File]::ReadAllLines($docPath2, [System.Text.Encoding]::UTF8)
+    $hasEntry = $docLines | Where-Object { $_ -match "^###\s+v$([regex]::Escape($newVer))\b" }
+    if (-not $hasEntry) {
+        Write-Error @"
+发布中止：docs/项目实施文档.md 中缺少 v$newVer 的变更记录。
+
+请先在变更记录区域添加：
+
+  ### v$newVer — $(Get-Date -Format 'yyyy-MM-dd')：<本次改动标题>
+
+  <改动说明>
+
+然后 git add docs/ && git commit，再运行此脚本。
+"@
+        exit 1
+    }
+} else {
+    Write-Warning "Doc not found, skipping changelog check"
+}
 $csproj.Project.PropertyGroup.Version        = $newVer
 $csproj.Project.PropertyGroup.AssemblyVersion = "$newVer.0"
 $csproj.Project.PropertyGroup.FileVersion    = "$newVer.0"
