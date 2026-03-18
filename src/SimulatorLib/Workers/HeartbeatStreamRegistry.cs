@@ -1,86 +1,80 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Threading.Channels;
 
 namespace SimulatorLib.Workers
 {
     /// <summary>
-    /// 心跳 TCP 连接的 stream 注册表。
+    /// 心跳 TCP 连接的 stream 注册表 + 每客户端日志包队列。
     /// <para>
-    /// 原项目（WLData.cpp）：威胁检测日志通过 <c>SetWLTcpConnectInstance</c> 注入
-    /// 与心跳共用的同一个 <c>CWLTcpConnect</c> 实例，日志发送直接在心跳 socket 上 send()。
+    /// <b>架构原则（对齐老工具 C++ 行为）：</b>
+    /// HeartbeatWorker 是每个客户端 TCP 连接的唯一写入方。
+    /// LogWorker 通过 <c>TryEnqueueLog</c> 将日志包投入每客户端的
+    /// <c>Channel&lt;byte[]&gt;</c>，再由 HeartbeatWorker 在心跳间隙
+    /// （写完 HB 之后到下次 HB 截止前 100ms）统一 drain 并写入 TCP。
     /// </para>
     /// <para>
-    /// 本工具的对齐实现：HeartbeatWorker 每次成功建立 TCP 连接后，将
-    /// <c>clientId → NetworkStream</c> 注册到此表；连接断开时注销。
-    /// LogWorker 威胁检测通道发送前先从此表取 stream，若有则直接写入，
-    /// 避免为同一 clientId 新建额外 TCP 连接导致平台踢掉心跳 session。
-    /// </para>
-    /// <para>
-    /// 线程安全：每个 clientId 对应一把 <c>SemaphoreSlim(1,1)</c> 写锁。
-    /// 获取方式：<c>await AcquireWriteLockAsync(clientId, ct)</c>（不设超时）。
-    /// 背压时异步等待（不阻塞线程池线程）；写完后在 finally 块释放。
-    /// 对齐 C++ 互斥语义：心跳或日志被延迟，而非被丢弃（无 LockBusy skip）。
+    /// 这彻底消除并发 TCP 写：无锁、无超时、无 LockBusy。
+    /// 与老工具对应：HeartbeatThread + MsgLogThread 都用 g_sock[i]，
+    /// OS Winsock 在内核层串行化；本工具由 HeartbeatWorker 统一串行写，效果等价。
     /// </para>
     /// </summary>
     public sealed class HeartbeatStreamRegistry
     {
         private readonly ConcurrentDictionary<string, NetworkStream> _streams = new();
 
-        /// <summary>每个 clientId 独占一把异步写锁，重连时复用（锁与连接生命周期无关）。</summary>
-        private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks = new();
+        /// <summary>每个 clientId 的日志包队列：LogWorker 生产，HeartbeatWorker 消费。</summary>
+        private readonly ConcurrentDictionary<string, Channel<byte[]>> _logQueues = new();
 
         // ── 注册 / 注销 ────────────────────────────────────────────────────────
 
-        /// <summary>注册心跳连接的 stream（每次重连时覆盖旧值）。</summary>
+        /// <summary>注册心跳连接的 stream（每次重连时覆盖旧值），同时确保日志队列已存在。</summary>
         public void Register(string clientId, NetworkStream stream)
         {
             _streams[clientId] = stream;
-            _writeLocks.GetOrAdd(clientId, _ => new SemaphoreSlim(1, 1));
+            _logQueues.GetOrAdd(clientId, _ => Channel.CreateBounded<byte[]>(
+                new BoundedChannelOptions(2000)
+                {
+                    FullMode                      = BoundedChannelFullMode.DropOldest,
+                    SingleReader                  = true,   // HeartbeatWorker 单消费者
+                    SingleWriter                  = false,  // LogWorker 多线程并发入队
+                    AllowSynchronousContinuations = false,
+                }));
         }
 
-        /// <summary>注销心跳连接（连接关闭时调用）。</summary>
+        /// <summary>注销心跳连接（连接关闭时调用）。日志队列保留，避免重连期间入队失败。</summary>
         public void Unregister(string clientId)
             => _streams.TryRemove(clientId, out _);
-        // _writeLocks 的 SemaphoreSlim 故意不删除，避免重连期间等锁的一方出现 KeyNotFoundException。
 
-        // ── 读取 stream ────────────────────────────────────────────────────────
+        // ── Stream 读取（HeartbeatWorker 内部用）────────────────────────────────
 
-        /// <summary>尝试获取心跳 stream；不存在时返回 null。</summary>
         public NetworkStream? TryGet(string clientId)
         {
             _streams.TryGetValue(clientId, out var s);
             return s;
         }
 
-        // ── 写锁 API ───────────────────────────────────────────────────────────
+        // ── 日志队列 API ───────────────────────────────────────────────────────
 
         /// <summary>
-        /// 异步获取写锁（不设超时，等到能拿为止）。用于 LogWorker：日志必须发出，宁可等也不丢。
+        /// LogWorker 调用：将日志包非阻塞投入队列，立即返回。
+        /// 返回 null：成功；"no_queue"：clientId 尚未注册（客户端还未完成首次握手）。
+        /// 队列已满时自动丢弃最旧条目（BoundedChannelFullMode.DropOldest），永不阻塞。
         /// </summary>
-        public async Task AcquireWriteLockAsync(string clientId, CancellationToken ct)
+        public string? TryEnqueueLog(string clientId, byte[] payload)
         {
-            if (!_writeLocks.TryGetValue(clientId, out var sem)) return;
-            await sem.WaitAsync(ct).ConfigureAwait(false);
+            if (!_logQueues.TryGetValue(clientId, out var ch)) return "no_queue";
+            ch.Writer.TryWrite(payload); // DropOldest 模式下必然成功
+            return null;
         }
 
         /// <summary>
-        /// 异步获取写锁（带超时）。用于 HeartbeatWorker：
-        /// 超时说明 LogWorker 的 WriteAsync 被 TCP 背压卡住，返回 false 由调用方决定强制重连。
+        /// HeartbeatWorker 调用：获取日志队列读端，用于 drain 循环。
         /// </summary>
-        public async Task<bool> AcquireWriteLockAsync(string clientId, int timeoutMs, CancellationToken ct)
+        public ChannelReader<byte[]>? GetLogReader(string clientId)
         {
-            if (!_writeLocks.TryGetValue(clientId, out var sem)) return true; // 无锁时视为成功
-            try { return await sem.WaitAsync(timeoutMs, ct).ConfigureAwait(false); }
-            catch (OperationCanceledException) { return false; }
-        }
-
-        /// <summary>释放写锁。</summary>
-        public void ReleaseWriteLock(string clientId)
-        {
-            if (_writeLocks.TryGetValue(clientId, out var sem))
-                sem.Release();
+            _logQueues.TryGetValue(clientId, out var ch);
+            return ch?.Reader;
         }
 
         public int Count => _streams.Count;

@@ -327,42 +327,11 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // 写锁等待：5s 超时。
-                            // 正常情况 LogWorker 每次持锁 << 10ms，不会触发超时。
-                            // 超时意味着 TCP 发送缓冲区满（平台流控背压），LogWorker 的 WriteAsync 被卡住。
-                            // 此时不能无限等（心跳会饿死），也不能只是跳过（LockBusy 振荡）。
-                            // 唯一正确做法：tcp.Dispose() 强制重连，让 LogWorker 的 WriteAsync 抛异常，
-                            // 刷新连接状态，下一轮心跳在新鲜连接上发出。
-                            bool lockAcq = _streamRegistry == null
-                                || await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 5000, ct).ConfigureAwait(false);
-                            if (!lockAcq)
-                            {
-                                // TCP 背压导致锁等待超时 → 强制重连，不是跳过
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                alive  = false;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
-                                _streamRegistry?.Unregister(c.ClientId);
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.LockBusy; // 复用现有统计项，含义升级为"背压强制重连"
-                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 锁等待超时→强制重连(LockBusy) 客户端#{idx} {c.ClientId}");
-                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} RECONNECT client={c.ClientId} reason=锁等待超时背压重连");
-                                continue; // 立即进入下一轮重连
-                            }
-                            try
-                            {
-                                // 不向 WriteAsync/FlushAsync 传 CancellationToken：
-                                // .NET CT 超时会 RST socket；老工具 send() 无超时，死连接由 KeepAlive 检测。
-                                await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
-                                await stream.FlushAsync().ConfigureAwait(false);
-                                _streamRegistry?.Register(c.ClientId, stream!);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId);
-                            }
+                            // HeartbeatWorker 是本连接唯一 TCP 写入方（Channel 架构），直接写，无需任何锁。
+                            // 等价于老工具 HB 线程直接 send(g_sock[i])，OS Winsock 在内核层串行化。
+                            await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+                            await stream.FlushAsync().ConfigureAwait(false);
+                            _streamRegistry?.Register(c.ClientId, stream!);
 
                             lastResult[idx] = 1;
                             lastReason[idx] = Reason.Ok;
@@ -393,9 +362,56 @@ namespace SimulatorLib.Workers
                             continue; // 跳过 intervalMs 等待，立即进入下一轮重连
                         }
 
-                        // 等待下一个心跳周期，或被 drain 提前唤醒（服务端关闭 / NOREGISTER）
-                        try { await wakeupSem.WaitAsync(intervalMs, ct).ConfigureAwait(false); }
-                        catch (OperationCanceledException) { break; }
+                        // HB 间隙：drain 日志包队列，直到下次 HB 截止前 100ms。
+                        // HeartbeatWorker 是唯一 TCP 写入方，无锁无竞争。
+                        // 等价关系：老工具 HB 线程 + MsgLog 线程共用 g_sock[i]，OS Winsock 串行 send()。
+                        if (alive && stream != null)
+                        {
+                            var drainUntil = DateTime.UtcNow.AddMilliseconds(intervalMs - 100);
+                            var logReader  = _streamRegistry?.GetLogReader(c.ClientId);
+                            if (logReader != null)
+                            {
+                                while (alive && !ct.IsCancellationRequested && DateTime.UtcNow < drainUntil)
+                                {
+                                    if (logReader.TryRead(out var logPayload))
+                                    {
+                                        try
+                                        {
+                                            await stream.WriteAsync(logPayload, 0, logPayload.Length).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            tcp?.Dispose();
+                                            tcp    = null;
+                                            stream = null;
+                                            alive  = false;
+                                            Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                            _streamRegistry?.Unregister(c.ClientId);
+                                            lastResult[idx] = 0;
+                                            lastReason[idx] = Reason.WriteFailed;
+                                            eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(LogDrain) 客户端#{idx} {c.ClientId}");
+                                            Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                            hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=日志写入失败");
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // 队列暂时为空，短暂等待（10ms 轮询以便及时响应 alive=false）
+                                        var remainMs2 = (int)(drainUntil - DateTime.UtcNow).TotalMilliseconds;
+                                        if (remainMs2 <= 0) break;
+                                        try { await Task.Delay(Math.Min(remainMs2, 10), ct).ConfigureAwait(false); }
+                                        catch (OperationCanceledException) { break; }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // 日志队列尚未初始化（极罕见：首次连接 Register 前已完成 HB），等待一个心跳周期
+                                try { await wakeupSem.WaitAsync(intervalMs, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { break; }
+                            }
+                        }
 
                         //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
                         //  如果 TCP 仍连接，但自本次连接建立后一直收不到平台回包，
