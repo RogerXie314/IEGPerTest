@@ -178,6 +178,21 @@ namespace SimulatorLib.Workers
                                 }
                             }
 
+                            // ServerClosed / WriteFailed 重连：加 0-2s jitter，打散批量断线后的同步重连潮。
+                            // 背景：平台在做 session 清理时会同时踢掉几十个连接，若全部立即重连
+                            // 将形成 ConnectAsync 并发冲击，延长平台响应，加剧断线雪崩。
+                            // SessionStale 已有 0-5s jitter（见下方），此处针对突发服务端关闭。
+                            if (hasConnectedBefore &&
+                                (lastReason[idx] == Reason.ServerClosed || lastReason[idx] == Reason.WriteFailed))
+                            {
+                                int reconnJitter = Random.Shared.Next(0, 2000);
+                                if (reconnJitter > 0)
+                                {
+                                    try { await Task.Delay(reconnJitter, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                            }
+
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
@@ -373,7 +388,6 @@ namespace SimulatorLib.Workers
                             var lastDrainWrite = DateTime.UtcNow.AddDays(-1); // 初始化为很久以前，第一包立即可发
                             if (logReader != null)
                             {
-                                using var drainWriteCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                 while (alive && !ct.IsCancellationRequested && DateTime.UtcNow < drainUntil)
                                 {
                                     // 速率限制：与上次写入时间间隔不足时等待
@@ -395,10 +409,10 @@ namespace SimulatorLib.Workers
                                     {
                                         try
                                         {
-                                            // 3s 写超时：防止 TCP 背压时无限阻塞 HB 周期
-                                            drainWriteCts.CancelAfter(3000);
-                                            await stream.WriteAsync(logPayload, 0, logPayload.Length, drainWriteCts.Token).ConfigureAwait(false);
-                                            drainWriteCts.TryReset();
+                                            // 每次写入独立创建关联 CTS（避免旧 CTS 被取消后后续写入全部立即失败的 bug）
+                                            using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                            writeCts.CancelAfter(3000);
+                                            await stream.WriteAsync(logPayload, 0, logPayload.Length, writeCts.Token).ConfigureAwait(false);
                                             lastDrainWrite = DateTime.UtcNow;
                                         }
                                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
