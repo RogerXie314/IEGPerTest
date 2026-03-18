@@ -22,7 +22,7 @@ namespace SimulatorLib.Workers
     ///   - 开启 TCP KeepAlive，由 OS 自动探测网络层死连接
     ///   - 连接超时 2s（对应原始 stcTime.tv_sec = 2）
     ///   - 连接失败/超时：等待一个心跳周期 intervalMs 后重试（原始靠定时器间隔天然节流）
-    ///   - 无额外 jitter / reconnectNotBefore 机制——心跳间隔本身就是重连节奏
+    ///   - 相位对齐重连：错峰启动让各客户端占据不同时间槽，断线后等到自己的下一个自然时刻再重连
     /// </summary>
     public class HeartbeatWorker
     {
@@ -111,8 +111,10 @@ namespace SimulatorLib.Workers
             // 每客户端最近断线时间戳（ms），用于计算 RECONNECT 延迟
             var evtDisconnAtMs = new long[clients.Count];
 
-            // 错峰启动：在 spreadMs 内均匀错开首次连接
-            int spreadMs = Math.Min(intervalMs, 3000);
+            // 错峰启动：在整个 intervalMs 窗口内均匀错开首次连接（对齐老工具 500ms×50批≈25s 的启动散布）。
+            // 上限等于 intervalMs 而非固定 3s，确保 500 个客户端的相位散布覆盖完整心跳周期，
+            // 重连时相位天然不重叠，不需要额外 jitter。
+            int spreadMs = intervalMs;
 
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
@@ -139,6 +141,10 @@ namespace SimulatorLib.Workers
                     bool           needReregister = false;
                     // 立即唤醒信号：drain 检测到断连或 NOREGISTER 时 Release，使主循环提前退出 intervalMs 等待
                     var wakeupSem = new SemaphoreSlim(0, 1);
+                    // 相位对齐重连门控：记录本客户端"自然下一次 HB 时刻"（Unix ms），
+                    // 每次 HB 写入成功后更新为 now+intervalMs。断线后重连时等到此刻，
+                    // 保持各客户端重连时刻的相位差，天然散布在整个 intervalMs 窗口内。
+                    long nextCycleTargetMs = 0L;
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -178,17 +184,17 @@ namespace SimulatorLib.Workers
                                 }
                             }
 
-                            // ServerClosed / WriteFailed 重连：加 0-2s jitter，打散批量断线后的同步重连潮。
-                            // 背景：平台在做 session 清理时会同时踢掉几十个连接，若全部立即重连
-                            // 将形成 ConnectAsync 并发冲击，延长平台响应，加剧断线雪崩。
-                            // SessionStale 已有 0-5s jitter（见下方），此处针对突发服务端关闭。
-                            if (hasConnectedBefore &&
-                                (lastReason[idx] == Reason.ServerClosed || lastReason[idx] == Reason.WriteFailed))
+                            // 相位对齐重连：等到本客户端"自然下一次 HB 时刻"再发起 ConnectAsync。
+                            // 原理：500 个客户端的 startDelay 均匀散布在 [0, intervalMs) 内，
+                            // 每次 HB 写入后 nextCycleTargetMs = hbTime+intervalMs，各客户端值不同。
+                            // 平台批量发 FIN 时，各客户端等待剩余时间各异，重连自然散布在整个周期窗口，
+                            // 等价于老工具 C++ Sleep(30000) 保留的相位差，无需随机 jitter。
+                            if (hasConnectedBefore && nextCycleTargetMs > 0)
                             {
-                                int reconnJitter = Random.Shared.Next(0, 2000);
-                                if (reconnJitter > 0)
+                                long waitMs = nextCycleTargetMs - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                if (waitMs > 0)
                                 {
-                                    try { await Task.Delay(reconnJitter, ct).ConfigureAwait(false); }
+                                    try { await Task.Delay((int)Math.Min(waitMs, intervalMs), ct).ConfigureAwait(false); }
                                     catch (OperationCanceledException) { return; }
                                 }
                             }
@@ -348,6 +354,8 @@ namespace SimulatorLib.Workers
                             await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
                             await stream.FlushAsync().ConfigureAwait(false);
                             _streamRegistry?.Register(c.ClientId, stream!);
+                            // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
+                            nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
 
                             lastResult[idx] = 1;
                             lastReason[idx] = Reason.Ok;
@@ -375,7 +383,8 @@ namespace SimulatorLib.Workers
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
                             Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                             hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=写入失败");
-                            continue; // 跳过 intervalMs 等待，立即进入下一轮重连
+                            nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs; // 相位门控：重连等待一个完整周期
+                            continue; // 重连等待由循环顶部的 nextCycleTargetMs 门控处理
                         }
 
                         // HB 间隙：drain 日志包队列，直到下次 HB 截止前 100ms。
@@ -483,13 +492,7 @@ namespace SimulatorLib.Workers
                                 eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
                                 Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
-                                // 随机 jitter 0~5000ms，打散多客户端同时重连对平台的冲击
-                                int reconnJitter = Random.Shared.Next(0, 5000);
-                                if (reconnJitter > 0)
-                                {
-                                    try { await Task.Delay(reconnJitter, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { break; }
-                                }
+                                // 相位对齐：重连由循环顶部的 nextCycleTargetMs 门控，无需额外随机 jitter
                             }
                         }
                     }
