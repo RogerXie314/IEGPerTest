@@ -77,7 +77,8 @@ namespace SimulatorLib.Workers
             CancellationToken ct,
             IProgress<HeartbeatStats>? progress = null,
             string? osVersion = null,
-            string? clientVersion = null)
+            string? clientVersion = null,
+            int logDrainMinIntervalMs = 0)
         {
             var clientList = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             if (clientList.Count == 0) return;
@@ -363,22 +364,44 @@ namespace SimulatorLib.Workers
                         }
 
                         // HB 间隙：drain 日志包队列，直到下次 HB 截止前 100ms。
-                        // HeartbeatWorker 是唯一 TCP 写入方，无锁无竞争。
-                        // 等价关系：老工具 HB 线程 + MsgLog 线程共用 g_sock[i]，OS Winsock 串行 send()。
+                        // 速率控制：logDrainMinIntervalMs > 0 时每包间强制小等待，防止积压日志骤放形成 EPS 尖峰压坐平台。
+                        // 写超时：3s CancellationToken，防止 TCP 背压时 drain WriteAsync 无限阻塞导致 HB 周期拖延。
                         if (alive && stream != null)
                         {
-                            var drainUntil = DateTime.UtcNow.AddMilliseconds(intervalMs - 100);
-                            var logReader  = _streamRegistry?.GetLogReader(c.ClientId);
+                            var drainUntil     = DateTime.UtcNow.AddMilliseconds(intervalMs - 100);
+                            var logReader      = _streamRegistry?.GetLogReader(c.ClientId);
+                            var lastDrainWrite = DateTime.UtcNow.AddDays(-1); // 初始化为很久以前，第一包立即可发
                             if (logReader != null)
                             {
+                                using var drainWriteCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                 while (alive && !ct.IsCancellationRequested && DateTime.UtcNow < drainUntil)
                                 {
+                                    // 速率限制：与上次写入时间间隔不足时等待
+                                    if (logDrainMinIntervalMs > 0)
+                                    {
+                                        var elapsed = (int)(DateTime.UtcNow - lastDrainWrite).TotalMilliseconds;
+                                        if (elapsed < logDrainMinIntervalMs)
+                                        {
+                                            var waitMs = logDrainMinIntervalMs - elapsed;
+                                            var remMs  = (int)(drainUntil - DateTime.UtcNow).TotalMilliseconds;
+                                            if (remMs <= 0) break;
+                                            try { await Task.Delay(Math.Min(waitMs, remMs), ct).ConfigureAwait(false); }
+                                            catch (OperationCanceledException) { break; }
+                                            continue;
+                                        }
+                                    }
+
                                     if (logReader.TryRead(out var logPayload))
                                     {
                                         try
                                         {
-                                            await stream.WriteAsync(logPayload, 0, logPayload.Length).ConfigureAwait(false);
+                                            // 3s 写超时：防止 TCP 背压时无限阻塞 HB 周期
+                                            drainWriteCts.CancelAfter(3000);
+                                            await stream.WriteAsync(logPayload, 0, logPayload.Length, drainWriteCts.Token).ConfigureAwait(false);
+                                            drainWriteCts.TryReset();
+                                            lastDrainWrite = DateTime.UtcNow;
                                         }
+                                        catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                                         catch
                                         {
                                             tcp?.Dispose();

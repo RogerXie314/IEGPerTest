@@ -734,8 +734,18 @@ namespace SimulatorApp.ViewModels
                                 }
                             });
                         });
+                        // drain 速率限制：让 HeartbeatWorker 的日志 drain 与 LogWorker 配置的 EPS 对齐，
+                        // 防止积压日志骤放形成 EPS 尖峰（测试结果：无限速时积压包在 <1s 内全部冲出导致 5× EPS 尖峰）。
+                        int enabledThreatCount = new[] {
+                            CatThreatProcStart, CatThreatRegAccess, CatThreatFileAccess,
+                            CatThreatOsEvent,   CatThreatDllLoad
+                        }.Count(x => x);
+                        int hbDrainMinIntervalMs = enabledThreatCount > 0 && LogThreatEps > 0
+                            ? Math.Max(1, 1000 / (enabledThreatCount * Math.Max(1, LogThreatEps)))
+                            : 0;
                         await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
-                            osVersion: null).ConfigureAwait(false);
+                            osVersion: null,
+                            logDrainMinIntervalMs: hbDrainMinIntervalMs).ConfigureAwait(false);
                         hbTaskRec.MarkStopped();
                     });
                     // 定时将策略接收统计同步到 UI
