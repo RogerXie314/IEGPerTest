@@ -63,6 +63,10 @@ namespace SimulatorLib.Workers
         /// </summary>
         public string? TryEnqueueLog(string clientId, byte[] payload)
         {
+            // 客户端断线期间 _streams 中无该条目：静默丢弃，对齐老工具 C++ 行为——
+            // 老工具 Log 线程握有重连前的 stale socket，send() 直接返回 SOCKET_ERROR，
+            // 相当于断线窗口内所有包静默失败，重连后无积压 burst，平台不触发 FIN。
+            if (!_streams.ContainsKey(clientId)) return "disconnected";
             if (!_logQueues.TryGetValue(clientId, out var ch)) return "no_queue";
             ch.Writer.TryWrite(payload); // DropOldest 模式下必然成功
             return null;
