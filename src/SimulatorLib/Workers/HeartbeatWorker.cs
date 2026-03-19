@@ -218,6 +218,13 @@ namespace SimulatorLib.Workers
                                 try
                                 {
                                     newTcp = new TcpClient { NoDelay = true };
+                                    // v3.7.38: SendTimeout=2s — 对齐 C++ 非阻塞 socket 行为。
+                                    // C++ CreateConnection 中 ioctlsocket(FIONBIO, ul=1) 使 socket 终身非阻塞，
+                                    // send() 遇到 TCP 窗口缩小时立即返回 WSAEWOULDBLOCK 而非无限阻塞。
+                                    // C# Socket.Send() 默认阻塞模式 + SendTimeout=0（无限阻塞），
+                                    // 当 400 个 Log 线程同时发送导致平台处理延迟→TCP 窗口收缩时，
+                                    // HB 的 Send 也被卡住→平台收不到 HB→session 超时→在线数骤降。
+                                    newTcp.Client.SendTimeout = 2000;
                                     newTcp.Client.SetSocketOption(
                                         SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                                     using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -241,8 +248,8 @@ namespace SimulatorLib.Workers
                                     var json0       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName0, c.IP, mac0, osVersion);
                                     var jsonBytes0  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json0));
                                     var payload0    = PtProtocol.Pack(jsonBytes0, cmdId: 1, deviceId: c.DeviceId);
-                                    await newStream.WriteAsync(payload0, 0, payload0.Length).ConfigureAwait(false);
-                                    await newStream.FlushAsync().ConfigureAwait(false);
+                                    // v3.7.35: Socket.Send — 对齐 C++ send(g_sock[i])，OS 内核保证原子性
+                                    newTcp.Client.Send(payload0, SocketFlags.None);
 
                                     // 500ms 冷却间隔，对齐老工具 Sleep(500)
                                     await Task.Delay(500, ct).ConfigureAwait(false);
@@ -257,7 +264,7 @@ namespace SimulatorLib.Workers
                                 alive  = true;
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
-                                _streamRegistry?.Register(c.ClientId, stream);
+                                _streamRegistry?.Register(c.ClientId, stream, tcp.Client);
                                 // 首HB 已在门控内发送，更新相位目标
                                 nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
                                 lastResult[idx] = 1;
@@ -382,26 +389,11 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // 直写架构：HB 写入必须获取写锁，与 LogWorker DirectSendAsync 互斥。
-                            // 超时（5s）= LogWorker 写入卡住（TCP 背压），走 catch → 强制重连
-                            // （对齐 v3.7.15 策略：Dispose 打断 LogWorker 卡住的 WriteAsync）。
-                            // !! 绝不能在没拿到锁的情况下写 stream，否则两个 Writer 并发写同一 TCP 流，
-                            //    PT 包字节交错 → 平台收到垃圾数据 → 关闭连接（v3.7.27 的根因）。
-                            if (_streamRegistry != null)
-                            {
-                                if (!await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 5000, ct).ConfigureAwait(false))
-                                    throw new TimeoutException("HB write lock timeout — force reconnect");
-                            }
-                            try
-                            {
-                                await stream!.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
-                                await stream.FlushAsync().ConfigureAwait(false);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId);
-                            }
-                            _streamRegistry?.Register(c.ClientId, stream!);
+                            // v3.7.35: 无锁直写 — Socket.Send() 对齐 C++ send(g_sock[i])。
+                            // Winsock send() 在 TCP socket 上线程安全，OS 内核保证并发 send()
+                            // 的字节不交错。无应用层锁、无超时、无不必要的重连。
+                            tcp!.Client.Send(payload, SocketFlags.None);
+                            _streamRegistry?.Register(c.ClientId, stream!, tcp!.Client);
                             // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
                             nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
 
@@ -447,19 +439,8 @@ namespace SimulatorLib.Workers
                                 {
                                     try
                                     {
-                                        bool drainLock = false;
-                                        if (_streamRegistry != null)
-                                            drainLock = await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 2000, ct).ConfigureAwait(false);
-                                        try
-                                        {
-                                            using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                            writeCts.CancelAfter(3000);
-                                            await stream.WriteAsync(logPayload, 0, logPayload.Length, writeCts.Token).ConfigureAwait(false);
-                                        }
-                                        finally
-                                        {
-                                            if (drainLock) _streamRegistry!.ReleaseWriteLock(c.ClientId);
-                                        }
+                                        // v3.7.35: 无锁 Socket.Send，对齐 C++ send(g_sock[i])
+                                        tcp!.Client.Send(logPayload, SocketFlags.None);
                                     }
                                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                                     catch
@@ -488,44 +469,13 @@ namespace SimulatorLib.Workers
                             }
                         }
 
-                        //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
-                        //  触发条件：曾经收到过平台回包（lastReply>0），但最近 staleMs 内没有再收到。
-                        //  对齐老工具 C++ 行为：RecvHeartBeatBack_TCP 2s 超时后直接继续下一周期，
-                        //  从不因"未收到回包"主动断线。只有曾有回包、后来停止时才处理。
-                        //  !! lastReply==0（本次连接从未收到回包）= 平台忙/容量限制，不等于 session 失效。
-                        //  旧逻辑（refTime=connectedAtMs 当 lastReply==0 时）会在 90s 后触发断线，
-                        //  造成 ~2min 振荡周期（90s等待 + 30s重连），这是之前版本 EPS 振荡的根因。
-                        if (alive)
-                        {
-                            long staleMs   = Math.Max((long)intervalMs * 3, 30_000L);
-                            long nowCheck  = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                            long lastReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                            // 只有收到过回包、且最近又停止回包，才判定 session 失效（对齐老工具）
-                            if (lastReply > 0 && (nowCheck - lastReply) > staleMs)
-                            {
-                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接。
-                                // 加随机 jitter（0~5s）打散重连潮：同批注册的客户端可能同时触发
-                                // SessionStale，若同时重连则 270 个 ConnectAsync 并发冲击平台，
-                                // 导致更多拒绝 → 雪崩。
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                alive  = false;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.SessionStale;
-                                _streamRegistry?.Unregister(c.ClientId);
-                                // snapshot 一次，避免 drain task 并发修改导致双重读取结果不一致
-                                long snapReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                                string snapReplyStr = snapReply > 0
-                                    ? DateTimeOffset.FromUnixTimeMilliseconds(snapReply).LocalDateTime.ToString("HH:mm:ss")
-                                    : "从未";
-                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
-                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
-                                // 相位对齐：重连由循环顶部的 nextCycleTargetMs 门控，无需额外随机 jitter
-                            }
-                        }
+                        //  4. SessionStale 检测已移除（v3.7.38）
+                        //  老 C++ 工具没有此机制却完全稳定。平台踢 session 的三种场景全部已覆盖：
+                        //  - 平台发 cmdId==18 (NOREGISTER) → drain/PolicyReceiveWorker 处理重注册
+                        //  - 平台发 FIN → drain ReadAsync n==0 → 重连
+                        //  - Send 失败 → SocketException → WriteFailed → 重连
+                        //  v3.7.37 在线骤降的根因是 SendTimeout=0（无限阻塞）而非缺少 SessionStale。
+                        //  v3.7.38 加 SendTimeout=2s 后 HB 不再被阻塞，无需 SessionStale 兜底。
                     }
 
                     tcp?.Dispose();
