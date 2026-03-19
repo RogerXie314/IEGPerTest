@@ -115,6 +115,13 @@ namespace SimulatorLib.Workers
             // 重连时相位天然不重叠，不需要额外 jitter。
             int spreadMs = intervalMs;
 
+            // v3.7.31: 连接门控 — 同一时刻只允许 1 个 NS_CreateConnection 执行。
+            // 对齐老工具 C++ 行为：50 线程×Sleep(500)+每线程 10 客户端串行连接 = 平台看到连接"一个一个上"。
+            // 新工具 500 Task.Run 同时发射 → NS_CreateConnection(blocking P/Invoke) 阻塞 ThreadPool
+            // → 线程注入批量发生 → 平台看到"几十个几十个上" → wl_limit 限流 → 断线振荡。
+            // SemaphoreSlim(1) 确保连接严格串行，自然连接耗时(~50-200ms)提供节拍 ≈ 5-20 连接/秒。
+            var connectGate = new SemaphoreSlim(1, 1);
+
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
             {
@@ -206,9 +213,19 @@ namespace SimulatorLib.Workers
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                // v3.7.30: Winsock 同步连接（DLL 内部 non-blocking connect + select(2s)，100%对齐C++老工具）
-                                // 不设 TCP_NODELAY、不设 SO_KEEPALIVE（对齐老工具 CreateConnection）
-                                nativeSock = NativeSenderInterop.NS_CreateConnection(platformHost, tcpPort);
+                                // v3.7.31: 连接门控 — 串行化所有 NS_CreateConnection 调用。
+                                // NS_CreateConnection 是 blocking P/Invoke（内部 non-blocking connect + select(2s)），
+                                // 500 个 Task 同时调用会阻塞 ThreadPool → 线程注入产生连接洪峰。
+                                // 门控确保同时只有 1 个连接在建立，完全对齐老工具"一个一个上"的行为。
+                                await connectGate.WaitAsync(ct).ConfigureAwait(false);
+                                try
+                                {
+                                    nativeSock = NativeSenderInterop.NS_CreateConnection(platformHost, tcpPort);
+                                }
+                                finally
+                                {
+                                    connectGate.Release();
+                                }
                                 if (nativeSock == NativeSenderInterop.INVALID_SOCKET)
                                     throw new SocketException((int)SocketError.TimedOut);
 
