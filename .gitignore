@@ -12,3 +12,4 @@ external/
 temp/
 .venv/
 src/NativeEngine/build/
+src/NativeSender/build/
