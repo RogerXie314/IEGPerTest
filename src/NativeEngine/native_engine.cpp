@@ -219,6 +219,7 @@ static void HBDoSendRecv(ClientSlot& slot) {
         hbLen = g_onBuildHBPayload(slot.clientId, slot.deviceId, hbBuf, sizeof(hbBuf));
     if (hbLen <= 0) return;
 
+    // 对齐老工具：发送失败 → 重连 → 重试发送 → 继续接收（不 return）
     bool sendOk = SendAll(slot.sock, hbBuf, hbLen);
     if (!sendOk) {
         s_hbSendFail++;
@@ -228,23 +229,32 @@ static void HBDoSendRecv(ClientSlot& slot) {
         if (slot.sock != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
             s_reconnects++;
-            if (SendAll(slot.sock, hbBuf, hbLen)) s_hbSendOk++;
-            else { s_hbSendFail++; closesocket(slot.sock);
-                   slot.sock = INVALID_SOCKET;
-                   InterlockedExchange(&slot.connected, 0); s_disconnects++; }
+            if (SendAll(slot.sock, hbBuf, hbLen)) {
+                s_hbSendOk++;
+                // 继续往下接收（老工具在重连+重发后同样调用 RecvHeartBeatBack_TCP）
+            } else {
+                s_hbSendFail++;
+                closesocket(slot.sock);
+                slot.sock = INVALID_SOCKET;
+                InterlockedExchange(&slot.connected, 0);
+                s_disconnects++;
+                return;  // 重试也失败，此轮放弃
+            }
         } else {
             InterlockedExchange(&slot.connected, 0);
             s_disconnects++;
+            return;  // 重连失败，此轮放弃
         }
-        return;
+    } else {
+        s_hbSendOk++;
     }
-    s_hbSendOk++;
 
     uint32_t cmdId = RecvHeartbeatReply(slot.sock);
     if (cmdId == 1 || cmdId == 17) {
         s_hbRecvOk++;
         InterlockedExchange(&slot.lastReplyOk, 1);
     } else if (cmdId == 18) {
+        // 对齐老工具：NOREGISTER → 关连 → 回调重注册 → 重连 → 重发 HB
         s_hbRecvNoReg++;
         closesocket(slot.sock);
         slot.sock = INVALID_SOCKET;
@@ -257,9 +267,14 @@ static void HBDoSendRecv(ClientSlot& slot) {
         if (slot.sock != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
             s_reconnects++;
+            // 老工具在 NOREGISTER 后重连并重发一次 HB（不接收回包，继续下轮）
+            if (SendAll(slot.sock, hbBuf, hbLen)) s_hbSendOk++;
+            else { s_hbSendFail++; closesocket(slot.sock);
+                   slot.sock = INVALID_SOCKET;
+                   InterlockedExchange(&slot.connected, 0); s_disconnects++; }
         }
     }
-    // cmdId 其他值（超时=0，策略等）：不断连，直接继续（对齐老工具）
+    // cmdId 其他值（0=超时, 策略等）：不断连，直接继续（对齐老工具）
 }
 
 // ============================================================
