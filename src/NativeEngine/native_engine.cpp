@@ -34,6 +34,15 @@ struct ClientSlot {
     volatile long lastReplyOk;  // 最近一次HB是否收到回包（1=是）
 };
 
+// 对齐老工具 HB_CLIENTCOUNT_PER_THREAD = 10
+#define HB_CLIENTS_PER_THREAD  10
+
+// HB 线程组参数（堆分配，线程启动后 delete）
+struct HBGroupArg {
+    int startIdx;
+    int count;
+};
+
 // 全局状态
 static NE_Config             g_config;
 static std::vector<ClientSlot> g_clients;
@@ -198,132 +207,121 @@ static uint32_t RecvHeartbeatReply(SOCKET s) {
 //  心跳线程（对齐 ThreadFunc_HeartbeatSend_New）
 // ============================================================
 
-static DWORD WINAPI HBThreadProc(LPVOID param) {
-    int idx = (int)(intptr_t)param;
-    ClientSlot& slot = g_clients[idx];
+// ============================================================
+//  HB 单客户端发送+接收（提取为辅助函数）
+// ============================================================
+static void HBDoSendRecv(ClientSlot& slot) {
+    InterlockedExchange(&slot.lastReplyOk, 0);
 
-    // 1. 创建连接（对齐老工具：HB线程负责创建 socket）
-    slot.sock = CreateConnection(g_config.platformHost,
-                                 slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-    if (slot.sock == INVALID_SOCKET) {
-        // 失败 → 等一个 HB 周期后在循环里重试
-        InterlockedExchange(&slot.connected, 0);
-    } else {
-        InterlockedExchange(&slot.connected, 1);
-        s_reconnects++;
+    uint8_t hbBuf[4096];
+    int32_t hbLen = 0;
+    if (g_onBuildHBPayload)
+        hbLen = g_onBuildHBPayload(slot.clientId, slot.deviceId, hbBuf, sizeof(hbBuf));
+    if (hbLen <= 0) return;
 
-        // 门控内发送首个 HB（对齐老工具线程创建间隔500ms）
-        // connectGateMs 由外层 Sleep 控制，这里直接发首 HB
-        uint8_t hbBuf[4096];
-        int32_t hbLen = 0;
-        if (g_onBuildHBPayload) {
-            hbLen = g_onBuildHBPayload(slot.clientId, slot.deviceId, hbBuf, sizeof(hbBuf));
+    bool sendOk = SendAll(slot.sock, hbBuf, hbLen);
+    if (!sendOk) {
+        s_hbSendFail++;
+        closesocket(slot.sock);
+        slot.sock = CreateConnection(g_config.platformHost,
+                                     slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
+        if (slot.sock != INVALID_SOCKET) {
+            InterlockedExchange(&slot.connected, 1);
+            s_reconnects++;
+            if (SendAll(slot.sock, hbBuf, hbLen)) s_hbSendOk++;
+            else { s_hbSendFail++; closesocket(slot.sock);
+                   slot.sock = INVALID_SOCKET;
+                   InterlockedExchange(&slot.connected, 0); s_disconnects++; }
+        } else {
+            InterlockedExchange(&slot.connected, 0);
+            s_disconnects++;
         }
-        if (hbLen > 0) {
-            if (SendAll(slot.sock, hbBuf, hbLen)) {
-                s_hbSendOk++;
-            } else {
-                s_hbSendFail++;
-            }
+        return;
+    }
+    s_hbSendOk++;
+
+    uint32_t cmdId = RecvHeartbeatReply(slot.sock);
+    if (cmdId == 1 || cmdId == 17) {
+        s_hbRecvOk++;
+        InterlockedExchange(&slot.lastReplyOk, 1);
+    } else if (cmdId == 18) {
+        s_hbRecvNoReg++;
+        closesocket(slot.sock);
+        slot.sock = INVALID_SOCKET;
+        InterlockedExchange(&slot.connected, 0);
+        s_disconnects++;
+        if (g_onNeedReregister) g_onNeedReregister(slot.clientId);
+        Sleep(1000);
+        slot.sock = CreateConnection(g_config.platformHost,
+                                     slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
+        if (slot.sock != INVALID_SOCKET) {
+            InterlockedExchange(&slot.connected, 1);
+            s_reconnects++;
+        }
+    }
+    // cmdId 其他值（超时=0，策略等）：不断连，直接继续（对齐老工具）
+}
+
+// ============================================================
+//  HB 线程（每线程管理 HB_CLIENTS_PER_THREAD=10 个客户端，对齐老工具）
+//  老工具 ThreadFunc_HeartbeatSend_New：每线程10个客户端，顺序建连+发HB
+// ============================================================
+static DWORD WINAPI HBThreadProc(LPVOID param) {
+    HBGroupArg* args = (HBGroupArg*)param;
+    int startIdx = args->startIdx;
+    int count    = args->count;
+    delete args;
+
+    // 1. 初始建连 + 首个 HB（顺序处理本组所有客户端）
+    for (int i = startIdx; i < startIdx + count; i++) {
+        if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
+        ClientSlot& slot = g_clients[i];
+        slot.sock = CreateConnection(g_config.platformHost,
+                                     slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
+        if (slot.sock != INVALID_SOCKET) {
+            InterlockedExchange(&slot.connected, 1);
+            s_reconnects++;
+            HBDoSendRecv(slot);
+        } else {
+            InterlockedExchange(&slot.connected, 0);
         }
     }
 
-    // 2. 主循环（对齐老工具 do { ... Sleep(30000) } while）
+    // 2. 主循环：Sleep(interval) → 顺序处理本组所有客户端
     while (!InterlockedCompareExchange(&g_stopHB, 0, 0)) {
         Sleep(g_config.hbIntervalMs);
         if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
 
-        // 如果断线，尝试重连
-        if (slot.sock == INVALID_SOCKET || !InterlockedCompareExchange(&slot.connected, 1, 1)) {
-            if (slot.sock != INVALID_SOCKET) {
-                closesocket(slot.sock);
-                slot.sock = INVALID_SOCKET;
-            }
-            slot.sock = CreateConnection(g_config.platformHost,
-                                         slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-            if (slot.sock == INVALID_SOCKET) {
-                InterlockedExchange(&slot.connected, 0);
-                s_disconnects++;
-                continue;
-            }
-            InterlockedExchange(&slot.connected, 1);
-            s_reconnects++;
-        }
+        for (int i = startIdx; i < startIdx + count; i++) {
+            if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
+            ClientSlot& slot = g_clients[i];
 
-        // 构建 HB payload（通过回调让 C# 打包）
-        uint8_t hbBuf[4096];
-        int32_t hbLen = 0;
-        if (g_onBuildHBPayload) {
-            hbLen = g_onBuildHBPayload(slot.clientId, slot.deviceId, hbBuf, sizeof(hbBuf));
-        }
-        if (hbLen <= 0) continue;
-
-        // 发送前重置回包标志
-        InterlockedExchange(&slot.lastReplyOk, 0);
-
-        // 发送 HB（对齐老工具 SendHeartbeatToserver_TCP）
-        bool sendOk = SendAll(slot.sock, hbBuf, hbLen);
-        if (!sendOk) {
-            s_hbSendFail++;
-            // 发送失败 → 重连后再试一次（对齐老工具）
-            closesocket(slot.sock);
-            slot.sock = CreateConnection(g_config.platformHost,
-                                         slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-            if (slot.sock != INVALID_SOCKET) {
-                s_reconnects++;
-                InterlockedExchange(&slot.connected, 1);
-                sendOk = SendAll(slot.sock, hbBuf, hbLen);
-                if (sendOk) s_hbSendOk++;
-                else { s_hbSendFail++; s_disconnects++; }
-            } else {
-                InterlockedExchange(&slot.connected, 0);
-                s_disconnects++;
-            }
-            continue;
-        }
-        s_hbSendOk++;
-
-        // 接收回包（对齐老工具 RecvHeartBeatBack_TCP）
-        uint32_t cmdId = RecvHeartbeatReply(slot.sock);
-        if (cmdId == 1) {
-            // 正常回包
-            s_hbRecvOk++;
-            InterlockedExchange(&slot.lastReplyOk, 1);
-        } else if (cmdId == 18) {
-            // NOREGISTER — 关闭连接，通知 C# 重注册
-            s_hbRecvNoReg++;
-            closesocket(slot.sock);
-            slot.sock = INVALID_SOCKET;
-            InterlockedExchange(&slot.connected, 0);
-            s_disconnects++;
-            if (g_onNeedReregister) {
-                g_onNeedReregister(slot.clientId);
-            }
-            // 重新创建连接（对齐老工具：CloseConnection → Register → CreateConnection）
-            // 这里只做连接，注册由 C# 回调处理
-            Sleep(1000);
-            slot.sock = CreateConnection(g_config.platformHost,
-                                         slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-            if (slot.sock != INVALID_SOCKET) {
+            // 断线重连
+            if (slot.sock == INVALID_SOCKET || !InterlockedCompareExchange(&slot.connected, 1, 1)) {
+                if (slot.sock != INVALID_SOCKET) { closesocket(slot.sock); slot.sock = INVALID_SOCKET; }
+                slot.sock = CreateConnection(g_config.platformHost,
+                                             slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
+                if (slot.sock == INVALID_SOCKET) {
+                    InterlockedExchange(&slot.connected, 0);
+                    s_disconnects++;
+                    continue;
+                }
                 InterlockedExchange(&slot.connected, 1);
                 s_reconnects++;
             }
-        } else if (cmdId == 17) {
-            // 策略变更 — 忽略（模拟器不需要处理策略）
-            s_hbRecvOk++;
-            InterlockedExchange(&slot.lastReplyOk, 1);
-        } else {
-            // 超时或错误 — 老工具 RecvHeartBeatBack_TCP 返回 0 时直接继续下一轮
-            // (不断连，不重连，对齐老工具行为)
+
+            HBDoSendRecv(slot);
         }
     }
 
-    // 退出：关闭连接
-    if (slot.sock != INVALID_SOCKET) {
-        closesocket(slot.sock);
-        slot.sock = INVALID_SOCKET;
+    // 退出：关闭本组所有连接
+    for (int i = startIdx; i < startIdx + count; i++) {
+        if (g_clients[i].sock != INVALID_SOCKET) {
+            closesocket(g_clients[i].sock);
+            g_clients[i].sock = INVALID_SOCKET;
+        }
+        InterlockedExchange(&g_clients[i].connected, 0);
     }
-    InterlockedExchange(&slot.connected, 0);
     return 0;
 }
 
@@ -335,26 +333,39 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
+    // 对齐老工具：AfxBeginThread(..., THREAD_PRIORITY_TIME_CRITICAL, ...)
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
+    // 对齐老工具：Log 线程启动时等待自己的 socket 就绪
+    // 老工具是先把 HB 全部建好（用户先跑 HB 任务），再手动点击启动日志任务
+    // 我们同时启动，所以需要等 socket 就绪（最多等 HB 门控时间）
+    while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
+        if (slot.sock != INVALID_SOCKET && InterlockedCompareExchange(&slot.connected, 1, 1))
+            break;
+        Sleep(500);
+    }
+    if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
+
+    // 相位错开：老工具因为线程创建时间差+HB 自然时序差实现；
+    // 我们所有 HB 同时启动，需要显式错开，防止 400 线程同时爆发（雷群效应）
+    if (g_logCfg.intervalMs > 0 && g_logCfg.logClientCount > 1) {
+        int staggerMs = (g_logCfg.intervalMs * idx) / g_logCfg.logClientCount;
+        if (staggerMs > 0) Sleep(staggerMs);
+    }
+    if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
+
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
 
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // 每轮间隔（对齐老工具 Sleep(SleepInterval)）
-        if (msgCount > 0 && g_logCfg.intervalMs > 0) {
-            Sleep(g_logCfg.intervalMs);
-        }
-        if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
-
         // 老工具不检查 connected 标志，直接发——发失败就进下一轮
-        // socket 为 INVALID_SOCKET 时 send() 返回错误，anyFail=true，继续即可
         // 发送每种类型（对齐老工具 SendThreatLog_ToserverTCP 的 3 种类型）
         // 每客户端使用自己的 payload（含独立 IP/ClientId）
-        bool anyFail = false;
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
-            if (slot.sock == INVALID_SOCKET) { anyFail = true; break; }
+            if (slot.sock == INVALID_SOCKET) break;
 
             const auto& payload = g_logCfg.payloads[idx * g_logCfg.typeCount + t];
             bool ok = SendAll(slot.sock, payload.data(), (int)payload.size());
@@ -362,9 +373,7 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 s_logSendOk++;
             } else {
                 s_logSendFail++;
-                anyFail = true;
-                // 对齐 C++: 一种失败就 goto END (break)
-                break;
+                break;  // 一种失败就 goto END（对齐老工具）
             }
 
             // 类型间 Sleep（对齐老工具 Sleep(50)）
@@ -373,14 +382,12 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
             }
         }
 
-        if (anyFail) {
-            // 老工具行为：发送失败直接进入下一轮 Sleep，
-            // 完全不关闭 socket、不修改 connected 标志。
-            // socket 生命周期 100% 由 HB 线程管理。
-            s_logSendFail++;  // 已在循环内计数，这里只补充统计断次
-        }
-
         msgCount++;
+
+        if (totalMsg > 0 && msgCount >= totalMsg) break;
+
+        // Sleep 在循环末尾（对齐老工具：先发完再等间隔）
+        if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
     }
     return 0;
 }
@@ -438,12 +445,19 @@ NE_API int32_t NE_Init(
 NE_API int32_t NE_StartHeartbeat() {
     InterlockedExchange(&g_stopHB, 0);
 
-    for (int i = 0; i < g_clientCount; i++) {
-        g_clients[i].hbThread = CreateThread(
-            NULL, 0, HBThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
+    // 对齐老工具：每次为 HB_CLIENTS_PER_THREAD=10 个客户端创建一个线程
+    // 50线程 × 500ms = 25秒全部上线（vs 原来500线程 × 500ms = 250秒）
+    for (int i = 0; i < g_clientCount; i += HB_CLIENTS_PER_THREAD) {
+        int count = HB_CLIENTS_PER_THREAD;
+        if (i + count > g_clientCount) count = g_clientCount - i;
 
-        // 对齐老工具：线程间隔 500ms 创建
-        if (g_config.connectGateMs > 0 && i < g_clientCount - 1) {
+        HBGroupArg* args = new HBGroupArg{i, count};
+        HANDLE h = CreateThread(NULL, 0, HBThreadProc, (LPVOID)args, 0, NULL);
+
+        // 线程句柄只存在本组第一个 slot；其余 slot 的 hbThread 保持 NULL
+        g_clients[i].hbThread = h;
+
+        if (g_config.connectGateMs > 0 && (i + HB_CLIENTS_PER_THREAD) < g_clientCount) {
             Sleep(g_config.connectGateMs);
         }
     }
