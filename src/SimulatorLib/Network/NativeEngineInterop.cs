@@ -56,6 +56,7 @@ namespace SimulatorLib.Network
             public int hbSendFail;
             public int hbRecvOk;
             public int hbRecvNoReg;
+            public int hbReplied;
             public int disconnects;
             public int reconnects;
             public long logSendOk;
@@ -103,6 +104,9 @@ namespace SimulatorLib.Network
         private static extern void NE_GetStats(out NE_Stats stats);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int NE_IsLogSendRunning();
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern void NE_Shutdown();
 
         // ==================== Managed Wrapper ====================
@@ -145,27 +149,35 @@ namespace SimulatorLib.Network
         public void StartHeartbeat() => NE_StartHeartbeat();
 
         /// <summary>
-        /// 启动日志发送。payloads 是每种日志类型的预打包 payload。
+        /// 启动日志发送。payloads 是每个客户端每种日志类型的预打包 payload。
+        /// payloads[clientIdx][typeIdx]
         /// </summary>
         public void StartLogSend(
-            IReadOnlyList<byte[]> payloadTemplates,
+            IReadOnlyList<byte[][]> perClientPayloads,
             int logClientCount,
             int intervalMs,
             int totalMessages,
             int sleepBetweenTypesMs = 50)
         {
-            int typeCount = payloadTemplates.Count;
-            var pinned = new GCHandle[typeCount];
-            var ptrs = new IntPtr[typeCount];
-            var sizes = new int[typeCount];
+            if (perClientPayloads.Count == 0) return;
+            int typeCount = perClientPayloads[0].Length;
+            int totalPayloads = logClientCount * typeCount;
+            var pinned = new GCHandle[totalPayloads];
+            var ptrs = new IntPtr[totalPayloads];
+            var sizes = new int[totalPayloads];
 
             try
             {
-                for (int i = 0; i < typeCount; i++)
+                for (int c = 0; c < logClientCount; c++)
                 {
-                    pinned[i] = GCHandle.Alloc(payloadTemplates[i], GCHandleType.Pinned);
-                    ptrs[i] = pinned[i].AddrOfPinnedObject();
-                    sizes[i] = payloadTemplates[i].Length;
+                    var clientPayloads = perClientPayloads[c];
+                    for (int t = 0; t < typeCount; t++)
+                    {
+                        int idx = c * typeCount + t;
+                        pinned[idx] = GCHandle.Alloc(clientPayloads[t], GCHandleType.Pinned);
+                        ptrs[idx] = pinned[idx].AddrOfPinnedObject();
+                        sizes[idx] = clientPayloads[t].Length;
+                    }
                 }
 
                 NE_StartLogSend(ptrs, sizes, typeCount, logClientCount,
@@ -173,7 +185,7 @@ namespace SimulatorLib.Network
             }
             finally
             {
-                for (int i = 0; i < typeCount; i++)
+                for (int i = 0; i < totalPayloads; i++)
                 {
                     if (pinned[i].IsAllocated) pinned[i].Free();
                 }
@@ -188,6 +200,8 @@ namespace SimulatorLib.Network
             NE_GetStats(out var stats);
             return stats;
         }
+
+        public bool IsLogSendRunning() => NE_IsLogSendRunning() != 0;
 
         public void Shutdown() => NE_Shutdown();
 

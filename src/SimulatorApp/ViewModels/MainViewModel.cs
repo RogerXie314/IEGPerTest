@@ -737,7 +737,7 @@ namespace SimulatorApp.ViewModels
                                     HbConnected     = stats.hbConnected;
                                     HbTcpOk         = stats.hbSendOk;
                                     HbTcpFail       = stats.hbSendFail;
-                                    HbServerReplied = stats.hbRecvOk;
+                                    HbServerReplied = stats.hbReplied;
                                     LogSuccess      = stats.logSendOk;
                                     LogFailed       = stats.logSendFail;
 
@@ -745,7 +745,7 @@ namespace SimulatorApp.ViewModels
                                     if (offline > 0 && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
                                     {
                                         _lastHbLogTime = DateTime.Now;
-                                        AppendStatus($"[NativeEngine] ⚠ 连接:{stats.hbConnected}/{stats.hbTotal}  HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}  断线:{stats.disconnects}  重连:{stats.reconnects}");
+                                        AppendStatus($"[NativeEngine] ⚠ 连接:{stats.hbConnected}/{stats.hbTotal}  HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包(在线):{stats.hbReplied}  回包累计:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}  断线:{stats.disconnects}  重连:{stats.reconnects}");
                                     }
 
                                     if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
@@ -1123,21 +1123,39 @@ namespace SimulatorApp.ViewModels
                     {
                         if (_nativeEngine != null)
                         {
-                            // ── NativeEngine 路径：C++ 发送日志 ──
+                            // ── NativeEngine 路径：C++ 发送日志（每客户端独立 payload 含各自 IP/ClientId）──
                             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                            var templateClient = clients.Count > 0 ? clients[0] : null;
-                            if (templateClient != null)
+                            int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
+                            if (actualLogClients > 0)
                             {
-                                var payloads = new List<byte[]>();
-                                foreach (var cat in threatCats)
+                                // 为每个客户端构建独立的 payload 数组
+                                var perClientPayloads = new List<byte[][]>();
+                                for (int ci = 0; ci < actualLogClients; ci++)
                                 {
-                                    payloads.Add(LogWorker.BuildTemplatePayload(cat, templateClient, isHit: false));
+                                    var clientPayloads = new byte[threatCats.Length][];
+                                    for (int ti = 0; ti < threatCats.Length; ti++)
+                                    {
+                                        clientPayloads[ti] = LogWorker.BuildTemplatePayload(
+                                            threatCats[ti], clients[ci], isHit: false);
+                                    }
+                                    perClientPayloads.Add(clientPayloads);
                                 }
 
                                 int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
-                                _nativeEngine.StartLogSend(payloads, LogThreatClientCount,
+                                _nativeEngine.StartLogSend(perClientPayloads, actualLogClients,
                                     intervalMs, LogMessagesPerClient, sleepBetweenTypesMs: 50);
-                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动：{threatCats.Length}种类型，{LogThreatClientCount}客户端"));
+                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动: {threatCats.Length}种类型, {actualLogClients}客户端(各自IP)"));
+
+                                // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
+                                var ne = _nativeEngine;
+                                workerTasks.Add(Task.Run(async () =>
+                                {
+                                    while (ne != null && ne.IsLogSendRunning())
+                                    {
+                                        try { await Task.Delay(2000, _logCts!.Token).ConfigureAwait(false); }
+                                        catch { break; }
+                                    }
+                                }));
                             }
                         }
                         else

@@ -31,6 +31,7 @@ struct ClientSlot {
     HANDLE   hbThread;          // 心跳线程句柄
     HANDLE   logThread;         // 日志线程句柄
     volatile long connected;    // 1=已连接
+    volatile long lastReplyOk;  // 最近一次HB是否收到回包（1=是）
 };
 
 // 全局状态
@@ -58,7 +59,8 @@ static std::atomic<int64_t> s_logSendFail{0};
 
 // 日志发送配置
 struct LogSendConfig {
-    std::vector<std::vector<uint8_t>> payloads;  // 每种类型的预打包 payload
+    // per-client payloads: payloads[clientIdx * typeCount + typeIdx]
+    std::vector<std::vector<uint8_t>> payloads;
     int32_t typeCount;
     int32_t logClientCount;
     int32_t intervalMs;
@@ -256,6 +258,9 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
         }
         if (hbLen <= 0) continue;
 
+        // 发送前重置回包标志
+        InterlockedExchange(&slot.lastReplyOk, 0);
+
         // 发送 HB（对齐老工具 SendHeartbeatToserver_TCP）
         bool sendOk = SendAll(slot.sock, hbBuf, hbLen);
         if (!sendOk) {
@@ -283,6 +288,7 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
         if (cmdId == 1) {
             // 正常回包
             s_hbRecvOk++;
+            InterlockedExchange(&slot.lastReplyOk, 1);
         } else if (cmdId == 18) {
             // NOREGISTER — 关闭连接，通知 C# 重注册
             s_hbRecvNoReg++;
@@ -305,6 +311,7 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
         } else if (cmdId == 17) {
             // 策略变更 — 忽略（模拟器不需要处理策略）
             s_hbRecvOk++;
+            InterlockedExchange(&slot.lastReplyOk, 1);
         } else {
             // 超时或错误 — 老工具 RecvHeartBeatBack_TCP 返回 0 时直接继续下一轮
             // (不断连，不重连，对齐老工具行为)
@@ -347,12 +354,13 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         }
 
         // 发送每种类型（对齐老工具 SendThreatLog_ToserverTCP 的 3 种类型）
+        // 每客户端使用自己的 payload（含独立 IP/ClientId）
         bool anyFail = false;
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
             if (slot.sock == INVALID_SOCKET) { anyFail = true; break; }
 
-            const auto& payload = g_logCfg.payloads[t];
+            const auto& payload = g_logCfg.payloads[idx * g_logCfg.typeCount + t];
             bool ok = SendAll(slot.sock, payload.data(), (int)payload.size());
             if (ok) {
                 s_logSendOk++;
@@ -423,6 +431,7 @@ NE_API int32_t NE_Init(
         s.hbThread = NULL;
         s.logThread = NULL;
         s.connected = 0;
+        s.lastReplyOk = 0;
     }
 
     // 重置统计
@@ -470,10 +479,13 @@ NE_API int32_t NE_StartLogSend(
     g_logCfg.totalMessages = totalMessages;
     g_logCfg.sleepBetweenTypesMs = sleepBetweenTypesMs;
 
-    for (int t = 0; t < typeCount; t++) {
+    // payloadTemplates 是 [logClientCount * typeCount] 的扁平数组
+    // payloadTemplates[clientIdx * typeCount + typeIdx]
+    int totalPayloads = logClientCount * typeCount;
+    for (int p = 0; p < totalPayloads; p++) {
         g_logCfg.payloads.emplace_back(
-            payloadTemplates[t],
-            payloadTemplates[t] + payloadSizes[t]);
+            payloadTemplates[p],
+            payloadTemplates[p] + payloadSizes[p]);
     }
 
     int count = (logClientCount > g_clientCount) ? g_clientCount : logClientCount;
@@ -517,8 +529,10 @@ NE_API void NE_StopLogSend() {
 NE_API void NE_GetStats(NE_Stats* out) {
     if (!out) return;
     int connCount = 0;
+    int repliedCount = 0;
     for (int i = 0; i < g_clientCount; i++) {
         if (g_clients[i].connected) connCount++;
+        if (g_clients[i].lastReplyOk) repliedCount++;
     }
     out->hbConnected  = connCount;
     out->hbTotal      = g_clientCount;
@@ -526,10 +540,23 @@ NE_API void NE_GetStats(NE_Stats* out) {
     out->hbSendFail   = s_hbSendFail;
     out->hbRecvOk     = s_hbRecvOk;
     out->hbRecvNoReg  = s_hbRecvNoReg;
+    out->hbReplied    = repliedCount;
     out->disconnects  = s_disconnects;
     out->reconnects   = s_reconnects;
     out->logSendOk    = s_logSendOk;
     out->logSendFail  = s_logSendFail;
+}
+
+NE_API int32_t NE_IsLogSendRunning() {
+    int count = (g_logCfg.logClientCount > g_clientCount) ? g_clientCount : g_logCfg.logClientCount;
+    for (int i = 0; i < count; i++) {
+        if (g_clients[i].logThread != NULL) {
+            DWORD exitCode;
+            if (GetExitCodeThread(g_clients[i].logThread, &exitCode) && exitCode == STILL_ACTIVE)
+                return 1;
+        }
+    }
+    return 0;
 }
 
 NE_API void NE_Shutdown() {

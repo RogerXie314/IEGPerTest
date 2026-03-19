@@ -36,6 +36,7 @@ typedef struct {
     int32_t  hbSendFail;          // HB 发送失败累计
     int32_t  hbRecvOk;            // 收到平台正常回包(cmdId=1)
     int32_t  hbRecvNoReg;         // 收到未注册回包(cmdId=18)
+    int32_t  hbReplied;           // 当前有回包的客户端数（最近一次HB收到回包）
     int32_t  disconnects;         // 断线次数
     int32_t  reconnects;          // 重连次数
     int64_t  logSendOk;           // Log 发送成功累计
@@ -89,6 +90,9 @@ NE_API void NE_StopLogSend();
 
 // 获取实时统计。
 NE_API void NE_GetStats(NE_Stats* out);
+
+// 检查日志发送线程是否还在运行。返回1=运行中，0=已结束。
+NE_API int32_t NE_IsLogSendRunning();
 
 // 释放资源。
 NE_API void NE_Shutdown();
