@@ -335,26 +335,31 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
 
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
+    // 对齐老工具：pHeapArgs->sock 是建线程时的 socket 值快照，之后不随 HB 重连变化
+    // 老工具 log 线程整个生命周期只用这一个 socket 句柄，失败就失败，不追踪新 socket
+    SOCKET sock = slot.sock;
+
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
 
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // 老工具不检查 connected 标志，直接发——发失败就进下一轮
-        // 发送每种类型（对齐老工具 SendThreatLog_ToserverTCP 的 3 种类型）
-        // 每客户端使用自己的 payload（含独立 IP/ClientId）
+        if (sock == INVALID_SOCKET) {
+            Sleep(g_logCfg.intervalMs > 0 ? g_logCfg.intervalMs : 1000);
+            continue;
+        }
+
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
-            if (slot.sock == INVALID_SOCKET) break;
 
             const auto& payload = g_logCfg.payloads[idx * g_logCfg.typeCount + t];
-            bool ok = SendAll(slot.sock, payload.data(), (int)payload.size());
+            bool ok = SendAll(sock, payload.data(), (int)payload.size());
             if (ok) {
                 s_logSendOk++;
             } else {
                 s_logSendFail++;
-                break;  // 一种失败就 goto END（对齐老工具）
+                break;
             }
 
             // 对齐 SendThreatLog_ToserverTCP 内部：子类型之间 Sleep(50)
