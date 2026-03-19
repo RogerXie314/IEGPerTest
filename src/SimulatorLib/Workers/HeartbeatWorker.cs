@@ -115,6 +115,14 @@ namespace SimulatorLib.Workers
             // 重连时相位天然不重叠，不需要额外 jitter。
             int spreadMs = intervalMs;
 
+            // v3.7.31: 连接门控 — 同一时刻只允许 1 个 ConnectAsync 执行。
+            // 对齐老工具 C++ 行为：50 线程×Sleep(500)+每线程 10 客户端串行连接
+            // = 平台看到连接"一个一个上"（~20/s）。
+            // 新工具 500 Task.Run 同时发射，startDelay(Task.Delay) 不阻塞 ThreadPool，
+            // 导致大量 ConnectAsync 并发 → 平台瞬时连接洪峰 → wl_limit 限流 → 断线振荡。
+            // SemaphoreSlim(1) 确保连接严格串行，ConnectAsync 耗时(~50-200ms)自然节拍。
+            var connectGate = new SemaphoreSlim(1, 1);
+
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
             {
@@ -201,12 +209,23 @@ namespace SimulatorLib.Workers
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                var newTcp  = new TcpClient { NoDelay = true };
-                                newTcp.Client.SetSocketOption(
-                                    SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                                using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
-                                await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
+                                // v3.7.31: 连接门控 — 串行化所有 ConnectAsync 调用，
+                                // 避免 500 Task 并发连接冲击平台 wl_limit。
+                                await connectGate.WaitAsync(ct).ConfigureAwait(false);
+                                TcpClient newTcp;
+                                try
+                                {
+                                    newTcp = new TcpClient { NoDelay = true };
+                                    newTcp.Client.SetSocketOption(
+                                        SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                                    using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                    connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
+                                    await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    connectGate.Release();
+                                }
 
                                 tcp    = newTcp;
                                 stream = tcp.GetStream();
