@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <atomic>
 #include <vector>
-#include <mutex>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -41,6 +40,7 @@ struct ClientSlot {
 struct HBGroupArg {
     int startIdx;
     int count;
+    int startDelayMs; // 错峰延迟：每个线程自行 Sleep，NE_StartHeartbeat 无需阻塞
 };
 
 // 全局状态
@@ -261,7 +261,6 @@ static void HBDoSendRecv(ClientSlot& slot) {
         InterlockedExchange(&slot.connected, 0);
         s_disconnects++;
         if (g_onNeedReregister) g_onNeedReregister(slot.clientId);
-        Sleep(1000);
         slot.sock = CreateConnection(g_config.platformHost,
                                      slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
         if (slot.sock != INVALID_SOCKET) {
@@ -283,9 +282,14 @@ static void HBDoSendRecv(ClientSlot& slot) {
 // ============================================================
 static DWORD WINAPI HBThreadProc(LPVOID param) {
     HBGroupArg* args = (HBGroupArg*)param;
-    int startIdx = args->startIdx;
-    int count    = args->count;
+    int startIdx    = args->startIdx;
+    int count       = args->count;
+    int startDelay  = args->startDelayMs;
     delete args;
+
+    // 错峰延迟：各线程自行等待，不占用 NE_StartHeartbeat 调用线程
+    // 对齐老工具：AfxBeginThread + Sleep(500) 的错峰效果，但不阻塞主线程
+    if (startDelay > 0) Sleep(startDelay);
 
     // 1. 初始建连 + 首个 HB（顺序处理本组所有客户端）
     for (int i = startIdx; i < startIdx + count; i++) {
@@ -348,20 +352,19 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-
-    // 对齐老工具：pHeapArgs->sock 是建线程时的 socket 值快照，之后不随 HB 重连变化
-    // 老工具 log 线程整个生命周期只用这一个 socket 句柄，失败就失败，不追踪新 socket
-    SOCKET sock = slot.sock;
-
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
 
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
+        // 对齐老工具 g_sock[i]：每轮从 slot 读取当前 socket，HB 线程重连后自动使用新连接
+        SOCKET sock = slot.sock;
         if (sock == INVALID_SOCKET) {
-            Sleep(g_logCfg.intervalMs > 0 ? g_logCfg.intervalMs : 1000);
+            // 短轮询：HB 线程建立连接后，日志线程最多 100ms 内感知并开始发送。
+            // 老工具场景：用户先开 HB 等全部就绪再开日志，此处几乎不触发。
+            // 新工具场景：允许日志和 HB 同时启动，100ms 轮询确保 socket 就绪后立即跟上。
+            Sleep(100);
             continue;
         }
 
@@ -445,14 +448,14 @@ NE_API int32_t NE_Init(
 NE_API int32_t NE_StartHeartbeat() {
     InterlockedExchange(&g_stopHB, 0);
 
-    // 对齐老工具：1客户端/线程，500线程 × 500ms = 250秒全部上线
+    // 对齐老工具错峰：每线程获得 startDelayMs = i * connectGateMs，自行 Sleep 后再连接。
+    // 效果与老工具 AfxBeginThread+Sleep(500) 完全一致（各客户端相差 500ms 上线），
+    // 区别是本函数立即返回（不阻塞调用线程250秒），C# 侧可以随时调用 StartLogSend。
     for (int i = 0; i < g_clientCount; i++) {
-        HBGroupArg* args = new HBGroupArg{i, 1};
+        int delayMs = g_config.connectGateMs > 0 ? i * g_config.connectGateMs : 0;
+        HBGroupArg* args = new HBGroupArg{i, 1, delayMs};
         HANDLE h = CreateThread(NULL, 0, HBThreadProc, (LPVOID)args, 0, NULL);
         g_clients[i].hbThread = h;
-
-        // 对齐老工具：AfxBeginThread; Sleep(500); 无条件
-        if (g_config.connectGateMs > 0) Sleep(g_config.connectGateMs);
     }
     return 0;
 }

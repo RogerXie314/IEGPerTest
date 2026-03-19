@@ -708,7 +708,27 @@ namespace SimulatorApp.ViewModels
                         };
                         _nativeEngine.OnNeedReregister = (clientId) =>
                         {
-                            RunOnUi(() => AppendStatus($"[NativeEngine] 客户端 {clientId} 收到 NOREGISTER (cmdId=18)"));
+                            // 对齐老工具：CloseConnection → RegisterClientToServer(HTTPS) → CreateConnection
+                            // 回调由 C++ OS 线程同步调用；.GetAwaiter().GetResult() 阻塞该线程直到重注册完成，
+                            // 使 C++ 在拿到新 DeviceId 后再重连（与老工具同线程串行行为一致）
+                            if (!clientLookup.TryGetValue(clientId, out var cRereg)) return;
+                            RunOnUi(() => AppendStatus($"[NativeEngine] 客户端 {clientId} 收到 NOREGISTER，执行 HTTPS 重注册..."));
+                            try
+                            {
+                                var newc = HeartbeatWorker.ReregisterClientAsync(
+                                    cRereg, PlatformHost, PlatformPort, null, CancellationToken.None)
+                                    .GetAwaiter().GetResult();
+                                if (newc != null)
+                                {
+                                    clientLookup[clientId] = newc;
+                                    RunOnUi(() => AppendStatus($"[NativeEngine] 重注册成功 {clientId} deviceId={newc.DeviceId}"));
+                                }
+                                else
+                                {
+                                    RunOnUi(() => AppendStatus($"[NativeEngine] ⚠ 重注册失败 {clientId}，使用旧凭据重连"));
+                                }
+                            }
+                            catch { }
                         };
 
                         if (!_nativeEngine.Init(PlatformHost, PlatformPort, HbInterval, 500, clients))

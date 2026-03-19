@@ -423,8 +423,9 @@ namespace SimulatorLib.Workers
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
                             Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                             hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=写入失败");
-                            nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs; // 相位门控：重连等待一个完整周期
-                            continue; // 重连等待由循环顶部的 nextCycleTargetMs 门控处理
+                            // 对齐老工具：send 失败后立即重连（不等 intervalMs）
+                            // nextCycleTargetMs 保留上次成功值，loop 顶 waitMs ≤ 0，无等待
+                            continue;
                         }
 
                         // HB 间隙：直写架构下 LogWorker 自行写 TCP，drain 仅处理 Channel fallback 积压。
@@ -776,7 +777,7 @@ namespace SimulatorLib.Workers
         ///   CloseConnection → RegisterClientToServer(HTTPS) → 返回更新后的 ClientRecord。
         /// 若注册失败返回 null，调用方保留旧记录继续重连（避免永久离线）。
         /// </summary>
-        private static async Task<ClientRecord?> ReregisterClientAsync(
+        public static async Task<ClientRecord?> ReregisterClientAsync(
             ClientRecord client, string host, int port, string? clientVersion, CancellationToken ct)
         {
             var handler = new HttpClientHandler
