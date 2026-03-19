@@ -357,10 +357,7 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 break;  // 一种失败就 goto END（对齐老工具）
             }
 
-            // 类型间 Sleep（对齐老工具 Sleep(50)）
-            if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0) {
-                Sleep(g_logCfg.sleepBetweenTypesMs);
-            }
+            // 老工具各类型之间无 Sleep，背靠背发送
         }
 
         msgCount++;
@@ -438,9 +435,8 @@ NE_API int32_t NE_StartHeartbeat() {
         // 线程句柄只存在本组第一个 slot；其余 slot 的 hbThread 保持 NULL
         g_clients[i].hbThread = h;
 
-        if (g_config.connectGateMs > 0 && (i + HB_CLIENTS_PER_THREAD) < g_clientCount) {
-            Sleep(g_config.connectGateMs);
-        }
+        // 对齐老工具：创建每个 HB 线程后无条件 Sleep(500)（包括最后一个）
+        if (g_config.connectGateMs > 0) Sleep(g_config.connectGateMs);
     }
     return 0;
 }
