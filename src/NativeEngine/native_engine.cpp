@@ -333,26 +333,7 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
-    // 对齐老工具：AfxBeginThread(..., THREAD_PRIORITY_TIME_CRITICAL, ...)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-
-    // 对齐老工具：Log 线程启动时等待自己的 socket 就绪
-    // 老工具是先把 HB 全部建好（用户先跑 HB 任务），再手动点击启动日志任务
-    // 我们同时启动，所以需要等 socket 就绪（最多等 HB 门控时间）
-    while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
-        if (slot.sock != INVALID_SOCKET && InterlockedCompareExchange(&slot.connected, 1, 1))
-            break;
-        Sleep(500);
-    }
-    if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
-
-    // 相位错开：老工具因为线程创建时间差+HB 自然时序差实现；
-    // 我们所有 HB 同时启动，需要显式错开，防止 400 线程同时爆发（雷群效应）
-    if (g_logCfg.intervalMs > 0 && g_logCfg.logClientCount > 1) {
-        int staggerMs = (g_logCfg.intervalMs * idx) / g_logCfg.logClientCount;
-        if (staggerMs > 0) Sleep(staggerMs);
-    }
-    if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
 
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
