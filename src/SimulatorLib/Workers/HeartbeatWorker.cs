@@ -115,12 +115,12 @@ namespace SimulatorLib.Workers
             // 重连时相位天然不重叠，不需要额外 jitter。
             int spreadMs = intervalMs;
 
-            // v3.7.31: 连接门控 — 同一时刻只允许 1 个 ConnectAsync 执行。
-            // 对齐老工具 C++ 行为：50 线程×Sleep(500)+每线程 10 客户端串行连接
-            // = 平台看到连接"一个一个上"（~20/s）。
-            // 新工具 500 Task.Run 同时发射，startDelay(Task.Delay) 不阻塞 ThreadPool，
-            // 导致大量 ConnectAsync 并发 → 平台瞬时连接洪峰 → wl_limit 限流 → 断线振荡。
-            // SemaphoreSlim(1) 确保连接严格串行，ConnectAsync 耗时(~50-200ms)自然节拍。
+            // v3.7.31→v3.7.33: 上线门控 — 同一时刻只允许 1 个客户端执行"连接+首HB+注册"。
+            // v3.7.32 仅串行化 ConnectAsync（~5-20/s），实测 EPS 约 950 仍低于预期 1200。
+            // 老工具实际节拍：每线程串行 CreateConnection → SendHB → RecvHB（轮询100次×20ms=2s），
+            // 加上线程间 Sleep(500)，最终平台看到 ~1 客户端/秒 逐个上线。
+            // 必须将整个"上线"过程（Connect + 首HB send + 等回包确认）都纳入门控，
+            // 并在释放后加 500ms 间隔（对齐老工具 Sleep(500)），确保 ~1-2 客户端/秒。
             var connectGate = new SemaphoreSlim(1, 1);
 
             var clientTasks = new List<Task>(clients.Count);
@@ -209,10 +209,12 @@ namespace SimulatorLib.Workers
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                // v3.7.31: 连接门控 — 串行化所有 ConnectAsync 调用，
-                                // 避免 500 Task 并发连接冲击平台 wl_limit。
+                                // v3.7.33: 上线门控 — 整个"连接+首HB+注册"在门控内串行执行。
+                                // v3.7.32 仅包裹 ConnectAsync，~5-20/s 速率仍触发平台 wl_limit。
+                                // 现扩展到含首HB发送+stream注册+500ms冷却，对齐老工具 ~1/s 节奏。
                                 await connectGate.WaitAsync(ct).ConfigureAwait(false);
                                 TcpClient newTcp;
+                                NetworkStream newStream;
                                 try
                                 {
                                     newTcp = new TcpClient { NoDelay = true };
@@ -221,6 +223,29 @@ namespace SimulatorLib.Workers
                                     using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                                     connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
                                     await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
+
+                                    newStream = newTcp.GetStream();
+                                    try
+                                    {
+                                        var ka = new byte[12];
+                                        BitConverter.GetBytes(1u).CopyTo(ka, 0);
+                                        BitConverter.GetBytes(5000u).CopyTo(ka, 4);
+                                        BitConverter.GetBytes(2000u).CopyTo(ka, 8);
+                                        newTcp.Client.IOControl(IOControlCode.KeepAliveValues, ka, null);
+                                    }
+                                    catch { }
+
+                                    // 门控内发送首个 HB 包 — 平台收到 HB 才算"上线"
+                                    var domainName0 = GetDomainNameSafe();
+                                    var mac0        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                                    var json0       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName0, c.IP, mac0, osVersion);
+                                    var jsonBytes0  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json0));
+                                    var payload0    = PtProtocol.Pack(jsonBytes0, cmdId: 1, deviceId: c.DeviceId);
+                                    await newStream.WriteAsync(payload0, 0, payload0.Length).ConfigureAwait(false);
+                                    await newStream.FlushAsync().ConfigureAwait(false);
+
+                                    // 500ms 冷却间隔，对齐老工具 Sleep(500)
+                                    await Task.Delay(500, ct).ConfigureAwait(false);
                                 }
                                 finally
                                 {
@@ -228,25 +253,15 @@ namespace SimulatorLib.Workers
                                 }
 
                                 tcp    = newTcp;
-                                stream = tcp.GetStream();
-                                // Fix 4: 精细化 TCP KeepAlive 探测参数（SIO_KEEPALIVE_VALS）。
-                                // 老工具用 CURLOPT_LOW_SPEED_LIMIT/TIME 感知死连接；.NET WriteAsync(无CT) 需要
-                                // OS 层面检测才能在合理时间内抛 IOException，而非永久阻塞。
-                                // 5s 空闲后开始探测，每 2s 一次，OS 默认 3~5 次 = 死连接约 11~15s 内触发。
-                                try
-                                {
-                                    var ka = new byte[12];
-                                    BitConverter.GetBytes(1u).CopyTo(ka, 0);     // enable=1
-                                    BitConverter.GetBytes(5000u).CopyTo(ka, 4);  // idle_ms=5000
-                                    BitConverter.GetBytes(2000u).CopyTo(ka, 8);  // interval_ms=2000
-                                    newTcp.Client.IOControl(IOControlCode.KeepAliveValues, ka, null);
-                                }
-                                catch { /* 不支持时忽略，基础 KeepAlive 已由 SetSocketOption 开启 */ }
+                                stream = newStream;
                                 alive  = true;
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
-                                // 注册到共享表，供威胁检测 LogWorker 复用此 stream（对齐原项目 SetWLTcpConnectInstance）
                                 _streamRegistry?.Register(c.ClientId, stream);
+                                // 首HB 已在门控内发送，更新相位目标
+                                nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
+                                lastResult[idx] = 1;
+                                lastReason[idx] = Reason.Ok;
                                 // 事件日志：首次 CONNECT 或断线后 RECONNECT
                                 {
                                     long latMs = hasConnectedBefore && evtDisconnAtMs[idx] > 0
