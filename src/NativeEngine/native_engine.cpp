@@ -347,12 +347,8 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         }
         if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
-        // 检查 socket 是否可用
-        if (slot.sock == INVALID_SOCKET || !InterlockedCompareExchange(&slot.connected, 1, 1)) {
-            Sleep(1000);  // 没连接，等1s重试
-            continue;
-        }
-
+        // 老工具不检查 connected 标志，直接发——发失败就进下一轮
+        // socket 为 INVALID_SOCKET 时 send() 返回错误，anyFail=true，继续即可
         // 发送每种类型（对齐老工具 SendThreatLog_ToserverTCP 的 3 种类型）
         // 每客户端使用自己的 payload（含独立 IP/ClientId）
         bool anyFail = false;
@@ -378,17 +374,10 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         }
 
         if (anyFail) {
-            // 发送失败 — 标记 socket 无效，等 HB 线程重连
-            // 对齐老工具：SendThreatLog 失败后回主循环 Sleep
-            // 注意：这里不关闭 socket，因为 HB 线程管理连接生命周期
-            // 但需要通知 HB 线程该连接有问题
-            InterlockedExchange(&slot.connected, 0);
-            s_disconnects++;
-            if (slot.sock != INVALID_SOCKET) {
-                closesocket(slot.sock);
-                slot.sock = INVALID_SOCKET;
-            }
-            Sleep(g_logCfg.intervalMs > 0 ? g_logCfg.intervalMs : 1000);
+            // 老工具行为：发送失败直接进入下一轮 Sleep，
+            // 完全不关闭 socket、不修改 connected 标志。
+            // socket 生命周期 100% 由 HB 线程管理。
+            s_logSendFail++;  // 已在循环内计数，这里只补充统计断次
         }
 
         msgCount++;
