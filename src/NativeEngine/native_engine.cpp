@@ -35,7 +35,7 @@ struct ClientSlot {
 };
 
 // 对齐老工具 HB_CLIENTCOUNT_PER_THREAD = 10
-#define HB_CLIENTS_PER_THREAD  10
+#define HB_CLIENTS_PER_THREAD  1   // 对齐老工具 HB_CLIENTCOUNT_PER_THREAD = 1（1客户端/线程）
 
 // HB 线程组参数（堆分配，线程启动后 delete）
 struct HBGroupArg {
@@ -263,8 +263,8 @@ static void HBDoSendRecv(ClientSlot& slot) {
 }
 
 // ============================================================
-//  HB 线程（每线程管理 HB_CLIENTS_PER_THREAD=10 个客户端，对齐老工具）
-//  老工具 ThreadFunc_HeartbeatSend_New：每线程10个客户端，顺序建连+发HB
+//  HB 线程（每线程管理 1 个客户端，对齐老工具 HB_CLIENTCOUNT_PER_THREAD=1）
+//  老工具 ThreadFunc_HeartbeatSend_New：每线程1个客户端
 // ============================================================
 static DWORD WINAPI HBThreadProc(LPVOID param) {
     HBGroupArg* args = (HBGroupArg*)param;
@@ -423,19 +423,13 @@ NE_API int32_t NE_Init(
 NE_API int32_t NE_StartHeartbeat() {
     InterlockedExchange(&g_stopHB, 0);
 
-    // 对齐老工具：每次为 HB_CLIENTS_PER_THREAD=10 个客户端创建一个线程
-    // 50线程 × 500ms = 25秒全部上线（vs 原来500线程 × 500ms = 250秒）
-    for (int i = 0; i < g_clientCount; i += HB_CLIENTS_PER_THREAD) {
-        int count = HB_CLIENTS_PER_THREAD;
-        if (i + count > g_clientCount) count = g_clientCount - i;
-
-        HBGroupArg* args = new HBGroupArg{i, count};
+    // 对齐老工具：1客户端/线程，500线程 × 500ms = 250秒全部上线
+    for (int i = 0; i < g_clientCount; i++) {
+        HBGroupArg* args = new HBGroupArg{i, 1};
         HANDLE h = CreateThread(NULL, 0, HBThreadProc, (LPVOID)args, 0, NULL);
-
-        // 线程句柄只存在本组第一个 slot；其余 slot 的 hbThread 保持 NULL
         g_clients[i].hbThread = h;
 
-        // 对齐老工具：创建每个 HB 线程后无条件 Sleep(500)（包括最后一个）
+        // 对齐老工具：AfxBeginThread; Sleep(500); 无条件
         if (g_config.connectGateMs > 0) Sleep(g_config.connectGateMs);
     }
     return 0;
