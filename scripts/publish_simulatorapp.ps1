@@ -81,6 +81,16 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# -- 2b. Copy NativeEngine.dll (C++ non-blocking socket engine) ----------------
+$neDll = "$PSScriptRoot\..\src\NativeEngine\build\Release\NativeEngine.dll"
+if (Test-Path $neDll) {
+    Copy-Item $neDll -Destination $outputPath -Force
+    $neSize = (Get-Item "$outputPath\NativeEngine.dll").Length / 1KB
+    Write-Host "NativeEngine.dll copied: $([math]::Round($neSize, 1)) KB" -ForegroundColor Cyan
+} else {
+    Write-Warning "NativeEngine.dll not found at $neDll — C++ engine will be unavailable, falling back to C# path"
+}
+
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 

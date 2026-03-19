@@ -2,17 +2,16 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
-using SimulatorLib.Network;
 
 namespace SimulatorLib.Workers
 {
     /// <summary>
-    /// 心跳 TCP 连接的 stream 注册表 + 直写锁 + 每客户端日志包队列（fallback）。
+    /// 心跳 TCP 连接的 stream/socket 注册表 + 每客户端日志包队列（fallback）。
     /// <para>
-    /// <b>架构原则（v3.7.27 直写架构，对齐老工具 C++ 行为）：</b>
-    /// LogWorker 和 HeartbeatWorker 各自通过轻量 SemaphoreSlim(1,1) 写锁直接写 TCP stream，
-    /// 还原 C++ 两线程各自 send(g_sock[i]) + OS 内核串行化的原始模型。
-    /// 锁持有时间仅为单包 WriteAsync（NoDelay=true，微秒级），竞争概率 &lt; 0.5%。
+    /// <b>架构原则（v3.7.35 无锁直写，完全对齐老工具 C++ 行为）：</b>
+    /// LogWorker 和 HeartbeatWorker 各自直接调用 Socket.Send()（阻塞式 Winsock send），
+    /// OS 内核保证同一 socket 上并发 send() 的字节不交错（与 C++ send(g_sock[i]) 完全等价）。
+    /// 无应用层锁，无超时，无 NetworkStream.WriteAsync（后者非线程安全）。
     /// </para>
     /// <para>
     /// Channel 保留作为 fallback（非 allThreatTcp 路径仍可用），但主路径不再经过 Channel。
@@ -22,22 +21,19 @@ namespace SimulatorLib.Workers
     {
         private readonly ConcurrentDictionary<string, NetworkStream> _streams = new();
 
-        /// <summary>Native SOCKET 句柄注册表（v3.7.30 NativeSender DLL 路径）。</summary>
-        private readonly ConcurrentDictionary<string, ulong> _nativeSockets = new();
-
-        /// <summary>每客户端 TCP 写锁：HeartbeatWorker + LogWorker 共用，SemaphoreSlim(1,1) 异步互斥。</summary>
-        private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks = new();
+        /// <summary>每客户端底层 Socket：用于 Send() 直写，绕过 NetworkStream 的非线程安全限制。</summary>
+        private readonly ConcurrentDictionary<string, Socket> _sockets = new();
 
         /// <summary>每个 clientId 的日志包队列（fallback 用）：LogWorker 生产，HeartbeatWorker 消费。</summary>
         private readonly ConcurrentDictionary<string, Channel<byte[]>> _logQueues = new();
 
         // ── 注册 / 注销 ────────────────────────────────────────────────────────
 
-        /// <summary>注册心跳连接的 stream（每次重连时覆盖旧值），同时确保写锁和日志队列已存在。</summary>
-        public void Register(string clientId, NetworkStream stream)
+        /// <summary>注册心跳连接的 stream + socket（每次重连时覆盖旧值），同时确保日志队列已存在。</summary>
+        public void Register(string clientId, NetworkStream stream, Socket socket)
         {
             _streams[clientId] = stream;
-            _writeLocks.GetOrAdd(clientId, _ => new SemaphoreSlim(1, 1));
+            _sockets[clientId] = socket;
             _logQueues.GetOrAdd(clientId, _ => Channel.CreateBounded<byte[]>(
                 new BoundedChannelOptions(2000)
                 {
@@ -48,34 +44,12 @@ namespace SimulatorLib.Workers
                 }));
         }
 
-        /// <summary>注销心跳连接（连接关闭时调用）。写锁和日志队列保留，避免重连期间 NPE。</summary>
+        /// <summary>注销心跳连接（连接关闭时调用）。日志队列保留，避免重连期间 NPE。</summary>
         public void Unregister(string clientId)
-            => _streams.TryRemove(clientId, out _);
-
-        // ── Native Socket 注册/注销（v3.7.30 NativeSender DLL）────────────────
-
-        /// <summary>注册 native SOCKET 句柄（每次重连时覆盖旧值），同时确保写锁已存在。</summary>
-        public void RegisterNative(string clientId, ulong sock)
         {
-            _nativeSockets[clientId] = sock;
-            _writeLocks.GetOrAdd(clientId, _ => new SemaphoreSlim(1, 1));
-            _logQueues.GetOrAdd(clientId, _ => Channel.CreateBounded<byte[]>(
-                new BoundedChannelOptions(2000)
-                {
-                    FullMode                      = BoundedChannelFullMode.DropOldest,
-                    SingleReader                  = true,
-                    SingleWriter                  = false,
-                    AllowSynchronousContinuations = false,
-                }));
+            _streams.TryRemove(clientId, out _);
+            _sockets.TryRemove(clientId, out _);
         }
-
-        /// <summary>注销 native SOCKET（连接关闭时调用）。</summary>
-        public void UnregisterNative(string clientId)
-            => _nativeSockets.TryRemove(clientId, out _);
-
-        /// <summary>获取 native SOCKET 句柄，不存在返回 INVALID_SOCKET。</summary>
-        public ulong GetNativeSocket(string clientId)
-            => _nativeSockets.TryGetValue(clientId, out var s) ? s : NativeSenderInterop.INVALID_SOCKET;
 
         // ── Stream 读取 ────────────────────────────────────────────────────────
 
@@ -85,73 +59,29 @@ namespace SimulatorLib.Workers
             return s;
         }
 
-        // ── 写锁 API（直写架构核心）────────────────────────────────────────────
+        // ── 直写 API（无锁，Socket.Send 内核串行化）─────────────────────────
 
         /// <summary>
-        /// 获取指定客户端的写锁。调用方必须在 finally 中调用 <see cref="ReleaseWriteLock"/>。
-        /// 超时返回 false（调用方应跳过本次写入，不断连接）。
-        /// </summary>
-        public async Task<bool> AcquireWriteLockAsync(string clientId, int timeoutMs, CancellationToken ct)
-        {
-            if (!_writeLocks.TryGetValue(clientId, out var sem)) return false;
-            return await sem.WaitAsync(timeoutMs, ct).ConfigureAwait(false);
-        }
-
-        /// <summary>释放写锁。</summary>
-        public void ReleaseWriteLock(string clientId)
-        {
-            if (_writeLocks.TryGetValue(clientId, out var sem))
-            {
-                try { sem.Release(); } catch (SemaphoreFullException) { /* 防御性 */ }
-            }
-        }
-
-        // ── 直写 API ──────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 直接将 payload 写入 TCP stream（获取写锁 → WriteAsync → 释放写锁）。
+        /// 直接将 payload 写入底层 Socket（阻塞式 Winsock send）。
         /// 返回 null 表示成功，非 null 字符串为失败原因。
-        /// 对齐 C++ Log 线程直接 send(sock) 的数据路径，消除 Channel 间接层延迟。
+        /// <para>
+        /// v3.7.35: 彻底去掉应用层写锁，改用 Socket.Send()。
+        /// Winsock send() 在 TCP 流式 socket 上是线程安全的 — OS 内核保证并发 send()
+        /// 的字节不交错，与老工具 C++ send(g_sock[i]) 行为完全一致。
+        /// 对于小包（PT 包 &lt; 2KB），send() 立即拷入内核缓冲区（微秒级），无背压阻塞。
+        /// </para>
         /// </summary>
-        public async Task<string?> DirectSendAsync(string clientId, byte[] payload, CancellationToken ct)
+        public string? DirectSend(string clientId, byte[] payload)
         {
-            // ── Native DLL 路径优先（v3.7.30）──
-            if (_nativeSockets.TryGetValue(clientId, out var nativeSock))
-            {
-                if (!_writeLocks.TryGetValue(clientId, out var nsem)) return "no_lock";
-                if (!await nsem.WaitAsync(2000, ct).ConfigureAwait(false)) return "lock_timeout";
-                try
-                {
-                    return NativeSenderInterop.NS_SendData(nativeSock, payload, payload.Length) == 0
-                        ? null : "send_failed";
-                }
-                finally
-                {
-                    try { nsem.Release(); } catch (SemaphoreFullException) { }
-                }
-            }
-
-            // ── 托管 NetworkStream 路径（fallback）──
-            if (!_streams.TryGetValue(clientId, out var stream)) return "disconnected";
-            if (!_writeLocks.TryGetValue(clientId, out var sem)) return "no_lock";
-
-            // 写锁超时 2s：正常情况 < 1ms（单小包 NoDelay），超时说明连接异常或 HB 正在写
-            if (!await sem.WaitAsync(2000, ct).ConfigureAwait(false)) return "lock_timeout";
+            if (!_sockets.TryGetValue(clientId, out var socket)) return "disconnected";
             try
             {
-                // !! 不传 CancellationToken 给 WriteAsync：CT 取消会导致 .NET RST socket，
-                // 对齐 v3.7.3 Fix 1（去除 WriteAsync/FlushAsync 的 CT，背压时不再 RST socket）。
-                // 若连接已死，TCP KeepAlive（idle=5s, interval=2s）会在 ~15s 内触发 IOException。
-                await stream.WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+                socket.Send(payload, SocketFlags.None);
                 return null;
             }
             catch (Exception ex)
             {
                 return ex.GetType().Name;
-            }
-            finally
-            {
-                try { sem.Release(); } catch (SemaphoreFullException) { }
             }
         }
 
@@ -167,7 +97,7 @@ namespace SimulatorLib.Workers
         /// </summary>
         public string? TryEnqueueLog(string clientId, byte[] payload)
         {
-            if (!_streams.ContainsKey(clientId)) return "disconnected";
+            if (!_sockets.ContainsKey(clientId)) return "disconnected";
             if (!_logQueues.TryGetValue(clientId, out var ch)) return "no_queue";
             ch.Writer.TryWrite(payload);
             return null;
@@ -182,6 +112,6 @@ namespace SimulatorLib.Workers
             return ch?.Reader;
         }
 
-        public int Count => _streams.Count + _nativeSockets.Count;
+        public int Count => _streams.Count;
     }
 }

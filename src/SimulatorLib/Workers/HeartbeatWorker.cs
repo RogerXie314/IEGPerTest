@@ -115,6 +115,14 @@ namespace SimulatorLib.Workers
             // 重连时相位天然不重叠，不需要额外 jitter。
             int spreadMs = intervalMs;
 
+            // v3.7.31→v3.7.33: 上线门控 — 同一时刻只允许 1 个客户端执行"连接+首HB+注册"。
+            // v3.7.32 仅串行化 ConnectAsync（~5-20/s），实测 EPS 约 950 仍低于预期 1200。
+            // 老工具实际节拍：每线程串行 CreateConnection → SendHB → RecvHB（轮询100次×20ms=2s），
+            // 加上线程间 Sleep(500)，最终平台看到 ~1 客户端/秒 逐个上线。
+            // 必须将整个"上线"过程（Connect + 首HB send + 等回包确认）都纳入门控，
+            // 并在释放后加 500ms 间隔（对齐老工具 Sleep(500)），确保 ~1-2 客户端/秒。
+            var connectGate = new SemaphoreSlim(1, 1);
+
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
             {
@@ -131,14 +139,15 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) { return; }
                     }
 
-                    TcpClient?     tcp    = null;          // 保留兼容（session timeout cleanup 引用）
-                    NetworkStream? stream = null;         // 保留兼容
-                    ulong          nativeSock = NativeSenderInterop.INVALID_SOCKET;
-                    bool           alive  = false; // NS_SendHeartbeatAndRecv 返回 0 时置 false，主循环据此重连
+                    TcpClient?     tcp    = null;
+                    NetworkStream? stream = null;
+                    bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
                     long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
                     bool           hasConnectedBefore = false; // 区分首次 CONNECT 与 RECONNECT
-                    // cmdId==18 标志：recv 收到平台返回"未注册"时置 true，主循环在重连前先执行 HTTPS 重注册
+                    // cmdId==18 标志：drain 收到平台返回“未注册”时置 true，主循环在重连前先执行 HTTPS 重注册
                     bool           needReregister = false;
+                    // 立即唤醒信号：drain 检测到断连或 NOREGISTER 时 Release，使主循环提前退出 intervalMs 等待
+                    var wakeupSem = new SemaphoreSlim(0, 1);
                     // 相位对齐重连门控：记录本客户端"自然下一次 HB 时刻"（Unix ms），
                     // 每次 HB 写入成功后更新为 now+intervalMs。断线后重连时等到此刻，
                     // 保持各客户端重连时刻的相位差，天然散布在整个 intervalMs 窗口内。
@@ -146,18 +155,12 @@ namespace SimulatorLib.Workers
 
                     while (!ct.IsCancellationRequested)
                     {
-                        //  1. 建立连接（连接不存在，或发送失败时）
-                        if (nativeSock == NativeSenderInterop.INVALID_SOCKET || !alive)
+                        //  1. 建立连接（连接不存在，或 drain 检测到服务端关闭时）
+                        if (tcp == null || !alive)
                         {
-                            if (nativeSock != NativeSenderInterop.INVALID_SOCKET)
-                            {
-                                NativeSenderInterop.NS_CloseConnection(nativeSock);
-                                _streamRegistry?.UnregisterNative(c.ClientId);
-                            }
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
-                            nativeSock = NativeSenderInterop.INVALID_SOCKET;
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             Interlocked.Exchange(ref lastReplyTimeMs[idx], 0L); // 重建连接时清零回包时间戳
@@ -206,17 +209,66 @@ namespace SimulatorLib.Workers
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                // v3.7.30: Winsock 同步连接（DLL 内部 non-blocking connect + select(2s)，100%对齐C++老工具）
-                                // 不设 TCP_NODELAY、不设 SO_KEEPALIVE（对齐老工具 CreateConnection）
-                                nativeSock = NativeSenderInterop.NS_CreateConnection(platformHost, tcpPort);
-                                if (nativeSock == NativeSenderInterop.INVALID_SOCKET)
-                                    throw new SocketException((int)SocketError.TimedOut);
+                                // v3.7.33: 上线门控 — 整个"连接+首HB+注册"在门控内串行执行。
+                                // v3.7.32 仅包裹 ConnectAsync，~5-20/s 速率仍触发平台 wl_limit。
+                                // 现扩展到含首HB发送+stream注册+500ms冷却，对齐老工具 ~1/s 节奏。
+                                await connectGate.WaitAsync(ct).ConfigureAwait(false);
+                                TcpClient newTcp;
+                                NetworkStream newStream;
+                                try
+                                {
+                                    newTcp = new TcpClient { NoDelay = true };
+                                    // v3.7.38: SendTimeout=2s — 对齐 C++ 非阻塞 socket 行为。
+                                    // C++ CreateConnection 中 ioctlsocket(FIONBIO, ul=1) 使 socket 终身非阻塞，
+                                    // send() 遇到 TCP 窗口缩小时立即返回 WSAEWOULDBLOCK 而非无限阻塞。
+                                    // C# Socket.Send() 默认阻塞模式 + SendTimeout=0（无限阻塞），
+                                    // 当 400 个 Log 线程同时发送导致平台处理延迟→TCP 窗口收缩时，
+                                    // HB 的 Send 也被卡住→平台收不到 HB→session 超时→在线数骤降。
+                                    newTcp.Client.SendTimeout = 2000;
+                                    newTcp.Client.SetSocketOption(
+                                        SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                                    using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                    connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
+                                    await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
 
+                                    newStream = newTcp.GetStream();
+                                    try
+                                    {
+                                        var ka = new byte[12];
+                                        BitConverter.GetBytes(1u).CopyTo(ka, 0);
+                                        BitConverter.GetBytes(5000u).CopyTo(ka, 4);
+                                        BitConverter.GetBytes(2000u).CopyTo(ka, 8);
+                                        newTcp.Client.IOControl(IOControlCode.KeepAliveValues, ka, null);
+                                    }
+                                    catch { }
+
+                                    // 门控内发送首个 HB 包 — 平台收到 HB 才算"上线"
+                                    var domainName0 = GetDomainNameSafe();
+                                    var mac0        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                                    var json0       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName0, c.IP, mac0, osVersion);
+                                    var jsonBytes0  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json0));
+                                    var payload0    = PtProtocol.Pack(jsonBytes0, cmdId: 1, deviceId: c.DeviceId);
+                                    // v3.7.35: Socket.Send — 对齐 C++ send(g_sock[i])，OS 内核保证原子性
+                                    newTcp.Client.Send(payload0, SocketFlags.None);
+
+                                    // 500ms 冷却间隔，对齐老工具 Sleep(500)
+                                    await Task.Delay(500, ct).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    connectGate.Release();
+                                }
+
+                                tcp    = newTcp;
+                                stream = newStream;
                                 alive  = true;
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
-                                // 注册到共享表，供威胁检测 LogWorker 复用此 native socket（对齐原项目 SetWLTcpConnectInstance）
-                                _streamRegistry?.RegisterNative(c.ClientId, nativeSock);
+                                _streamRegistry?.Register(c.ClientId, stream, tcp.Client);
+                                // 首HB 已在门控内发送，更新相位目标
+                                nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
+                                lastResult[idx] = 1;
+                                lastReason[idx] = Reason.Ok;
                                 // 事件日志：首次 CONNECT 或断线后 RECONNECT
                                 {
                                     long latMs = hasConnectedBefore && evtDisconnAtMs[idx] > 0
@@ -224,14 +276,100 @@ namespace SimulatorLib.Workers
                                     hbEventLog.Enqueue($"{DateTime.UtcNow:o} {(hasConnectedBefore ? "RECONNECT" : "CONNECT  ")} client={c.ClientId}{(latMs >= 0 ? $" latencyMs={latMs}" : "")}");
                                     hasConnectedBefore = true;
                                 }
-                                // v3.7.30: 无独立 drain task — NS_SendHeartbeatAndRecv 在 HB 发送时同步读回包，
-                                // 对齐 C++ 老工具（RecvHeartBeatBack_TCP 在 HB 线程内同步 recv）。
+
+                                // 后台 drain：读取服务端推送（对应原始 C++ HeartBeatRecvThread）。
+                                // 若配置了 PolicyReceiveWorker，则解析下行命令并回包；
+                                // 否则仅丢弃数据并记录回包时间戳。
+                                var drainStream      = stream;
+                                var capturedIdx      = idx;
+                                var capturedC        = c;
+                                var capturedPolicyWorker = _policyWorker;
+                                var capturedRegistry = _streamRegistry;
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        if (capturedPolicyWorker != null)
+                                        {
+                                            // 带策略解析的接收模式：每次 ReadAsync 收到数据时，通过回调实时更新回包时间戳
+                                            bool serverAlive = await capturedPolicyWorker.ProcessStreamAsync(
+                                                drainStream, capturedC.ClientId, capturedC.DeviceId, ct,
+                                                onDataReceived: () => Interlocked.Exchange(
+                                                    ref lastReplyTimeMs[capturedIdx],
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                                                onNeedReregister: () =>
+                                                {
+                                                    // cmdId==18：平台通知未注册，标记重注册并立即唤醒主循环
+                                                    needReregister = true;
+                                                    alive = false;
+                                                    capturedRegistry?.Unregister(capturedC.ClientId);
+                                                    Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} NOREGISTER     client={capturedC.ClientId} 触发重注册");
+                                                    if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
+                                                })
+                                                .ConfigureAwait(false);
+                                            if (!serverAlive)
+                                            {
+                                                alive = false;
+                                                lastReason[capturedIdx] = Reason.ServerClosed;
+                                                capturedRegistry?.Unregister(capturedC.ClientId);
+                                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(PolicyDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
+                                                Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
+                                                if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // 原始 drain 模式：仅读取并丢弃，记录时间戳
+                                            var buf = new byte[4096];
+                                            while (!ct.IsCancellationRequested)
+                                            {
+                                                int n = await drainStream.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
+                                                if (n == 0)
+                                                {
+                                                    alive = false;
+                                                    lastReason[capturedIdx] = Reason.ServerClosed;
+                                                    capturedRegistry?.Unregister(capturedC.ClientId);
+                                                    eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(RawDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
+                                                    Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
+                                                    if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
+                                                    break;
+                                                }
+                                                Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                            }
+                                        }
+                                    }
+                                    catch (Exception exDrain)
+                                    {
+                                        alive = false;
+                                        capturedRegistry?.Unregister(capturedC.ClientId);
+                                        Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        // 记录具体异常类型，区分网络错误/ObjectDisposed/OperationCanceled
+                                        string drainReason = exDrain is ObjectDisposedException ? "连接已释放" : exDrain.GetType().Name;
+                                        hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=drain异常:{drainReason}");
+                                        if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
+                                    }
+                                }, ct);
                             }
                             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                            catch (OperationCanceledException)
+                            {
+                                // ConnectAsync 2s 超时（CancelAfter 触发）
+                                // 对应原始：connect timeout → 下一个心跳周期重试，节奏由 intervalMs 控制
+                                lastResult[idx]  = 0;
+                                lastReason[idx]  = Reason.ConnectTimeout;
+                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=连接超时");
+                                try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { return; }
+                                continue;
+                            }
                             catch
                             {
-                                // 连接失败/超时：等一个心跳周期后重试（对齐原始行为）
-                                nativeSock = NativeSenderInterop.INVALID_SOCKET;
+                                // 连接被拒绝 / 网络不通：等一个心跳周期后重试（与原始行为一致）
                                 lastResult[idx] = 0;
                                 lastReason[idx] = Reason.ConnectFailed;
                                 Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
@@ -251,81 +389,11 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            // v3.7.30: 写锁保护 send，unlock 后再 recv（TCP 全双工：send/recv 可并发）
-                            // 这样 recv 等待期间（最多2s）LogWorker 仍可发送日志，不阻塞 EPS。
-                            if (_streamRegistry != null)
-                            {
-                                if (!await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 5000, ct).ConfigureAwait(false))
-                                    throw new TimeoutException("HB write lock timeout — force reconnect");
-                            }
-                            int sendResult;
-                            try
-                            {
-                                sendResult = NativeSenderInterop.NS_SendData(nativeSock, payload, payload.Length);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId);
-                            }
-
-                            if (sendResult != 0)
-                            {
-                                alive = false;
-                                throw new IOException("NS_SendData (HB) failed — connection dead");
-                            }
-
-                            // recv 回包（不需要写锁，TCP 全双工）
-                            // 读 PT header (48B) → 解析 cmdId + bodyLen → 读 body（丢弃）
-                            var hdrBuf = new byte[48];
-                            int hdrN = NativeSenderInterop.NS_RecvData(nativeSock, hdrBuf, 48, 2000);
-                            uint hbCmdId = 0;
-                            if (hdrN == 48 && hdrBuf[0] == (byte)'P' && hdrBuf[1] == (byte)'T')
-                            {
-                                hbCmdId = ((uint)hdrBuf[32] << 24) | ((uint)hdrBuf[33] << 16)
-                                        | ((uint)hdrBuf[34] << 8)  | hdrBuf[35];
-                                ushort bodyLen = (ushort)((hdrBuf[4] << 8) | hdrBuf[5]);
-                                // 丢弃 body
-                                if (bodyLen > 0 && bodyLen < 65535)
-                                {
-                                    var discardBuf = new byte[Math.Min((int)bodyLen, 4096)];
-                                    int remaining = bodyLen;
-                                    while (remaining > 0)
-                                    {
-                                        int chunk = Math.Min(remaining, discardBuf.Length);
-                                        int r = NativeSenderInterop.NS_RecvData(nativeSock, discardBuf, chunk, 2000);
-                                        if (r < chunk) break;
-                                        remaining -= chunk;
-                                    }
-                                }
-                            }
-                            // recv timeout 不等于连接死亡（服务端可能忙），对齐 C++ 老工具行为：继续下一周期
-
-                            if (hbCmdId > 0)
-                            {
-                                // 收到有效回包 → 更新时间戳
-                                Interlocked.Exchange(ref lastReplyTimeMs[idx],
-                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                            }
-
-                            // cmdId==18：平台通知未注册，触发 HTTPS 重注册
-                            if (hbCmdId == 18)
-                            {
-                                needReregister = true;
-                                alive = false;
-                                _streamRegistry?.UnregisterNative(c.ClientId);
-                                NativeSenderInterop.NS_CloseConnection(nativeSock);
-                                nativeSock = NativeSenderInterop.INVALID_SOCKET;
-                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} NOREGISTER     client={c.ClientId} 触发重注册");
-                                continue;
-                            }
-
-                            // cmdId==17：平台策略变更通知 → 通过 HTTPS 拉取策略 JSON 并回报结果
-                            // 对齐老工具 RecvHeartBeatBack_TCP → SendHeartbeat → ParseRevData → SendExecResult
-                            if (hbCmdId == 17 && _policyWorker != null)
-                            {
-                                _ = _policyWorker.HandleTcpPolicyCmdAsync(hbCmdId, c.ClientId, ct);
-                            }
-
+                            // v3.7.35: 无锁直写 — Socket.Send() 对齐 C++ send(g_sock[i])。
+                            // Winsock send() 在 TCP socket 上线程安全，OS 内核保证并发 send()
+                            // 的字节不交错。无应用层锁、无超时、无不必要的重连。
+                            tcp!.Client.Send(payload, SocketFlags.None);
+                            _streamRegistry?.Register(c.ClientId, stream!, tcp!.Client);
                             // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
                             nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
 
@@ -343,18 +411,13 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                         catch
                         {
-                            // 写失败 = 连接已死，立即重连
-                            if (nativeSock != NativeSenderInterop.INVALID_SOCKET)
-                            {
-                                NativeSenderInterop.NS_CloseConnection(nativeSock);
-                                _streamRegistry?.UnregisterNative(c.ClientId);
-                            }
-                            nativeSock = NativeSenderInterop.INVALID_SOCKET;
+                            // 写失败 = 连接已死，立即重连（对齐老工具在同一周期内 CreateConnection 重试）
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
                             alive  = false;
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
+                            _streamRegistry?.Unregister(c.ClientId);
                             lastResult[idx] = 0;
                             lastReason[idx] = Reason.WriteFailed;
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
@@ -364,62 +427,57 @@ namespace SimulatorLib.Workers
                             continue; // 重连等待由循环顶部的 nextCycleTargetMs 门控处理
                         }
 
-                        // v3.7.30: HB 间隙等待（无 drain task，无 Channel 积压）
-                        // LogWorker 通过 DirectSendAsync → NS_SendData 直接写 native socket。
-                        if (alive)
+                        // HB 间隙：直写架构下 LogWorker 自行写 TCP，drain 仅处理 Channel fallback 积压。
+                        // 简化为：快速清空 Channel 残留（若有），然后 wakeupSem 等待到下次 HB。
+                        if (alive && stream != null)
                         {
-                            try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
-                            catch (OperationCanceledException) { break; }
-                        }
-
-                        //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
-                        //  触发条件：曾经收到过平台回包（lastReply>0），但最近 staleMs 内没有再收到。
-                        //  对齐老工具 C++ 行为：RecvHeartBeatBack_TCP 2s 超时后直接继续下一周期，
-                        //  从不因"未收到回包"主动断线。只有曾有回包、后来停止时才处理。
-                        //  !! lastReply==0（本次连接从未收到回包）= 平台忙/容量限制，不等于 session 失效。
-                        //  旧逻辑（refTime=connectedAtMs 当 lastReply==0 时）会在 90s 后触发断线，
-                        //  造成 ~2min 振荡周期（90s等待 + 30s重连），这是之前版本 EPS 振荡的根因。
-                        if (alive)
-                        {
-                            long staleMs   = Math.Max((long)intervalMs * 3, 30_000L);
-                            long nowCheck  = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                            long lastReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                            // 只有收到过回包、且最近又停止回包，才判定 session 失效（对齐老工具）
-                            if (lastReply > 0 && (nowCheck - lastReply) > staleMs)
+                            var logReader = _streamRegistry?.GetLogReader(c.ClientId);
+                            if (logReader != null)
                             {
-                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接。
-                                if (nativeSock != NativeSenderInterop.INVALID_SOCKET)
+                                // 快速清空 fallback Channel 积压（非 allThreatTcp 路径可能残留少量包）
+                                while (alive && !ct.IsCancellationRequested && logReader.TryRead(out var logPayload))
                                 {
-                                    NativeSenderInterop.NS_CloseConnection(nativeSock);
-                                    _streamRegistry?.UnregisterNative(c.ClientId);
+                                    try
+                                    {
+                                        // v3.7.35: 无锁 Socket.Send，对齐 C++ send(g_sock[i])
+                                        tcp!.Client.Send(logPayload, SocketFlags.None);
+                                    }
+                                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                                    catch
+                                    {
+                                        tcp?.Dispose();
+                                        tcp    = null;
+                                        stream = null;
+                                        alive  = false;
+                                        Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                        _streamRegistry?.Unregister(c.ClientId);
+                                        lastResult[idx] = 0;
+                                        lastReason[idx] = Reason.WriteFailed;
+                                        eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(LogDrain) 客户端#{idx} {c.ClientId}");
+                                        Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=日志写入失败");
+                                        break;
+                                    }
                                 }
-                                nativeSock = NativeSenderInterop.INVALID_SOCKET;
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                alive  = false;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.SessionStale;
-                                // snapshot 一次
-                                long snapReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                                string snapReplyStr = snapReply > 0
-                                    ? DateTimeOffset.FromUnixTimeMilliseconds(snapReply).LocalDateTime.ToString("HH:mm:ss")
-                                    : "从未";
-                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
-                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
-                                // 相位对齐：重连由循环顶部的 nextCycleTargetMs 门控，无需额外随机 jitter
+                            }
+
+                            // 等待下次 HB 周期（wakeupSem 可被 drain task 断连事件提前唤醒）
+                            if (alive)
+                            {
+                                try { await wakeupSem.WaitAsync(intervalMs, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { break; }
                             }
                         }
+
+                        //  4. SessionStale 检测已移除（v3.7.38）
+                        //  老 C++ 工具没有此机制却完全稳定。平台踢 session 的三种场景全部已覆盖：
+                        //  - 平台发 cmdId==18 (NOREGISTER) → drain/PolicyReceiveWorker 处理重注册
+                        //  - 平台发 FIN → drain ReadAsync n==0 → 重连
+                        //  - Send 失败 → SocketException → WriteFailed → 重连
+                        //  v3.7.37 在线骤降的根因是 SendTimeout=0（无限阻塞）而非缺少 SessionStale。
+                        //  v3.7.38 加 SendTimeout=2s 后 HB 不再被阻塞，无需 SessionStale 兜底。
                     }
 
-                    // 退出清理：关闭 native socket
-                    if (nativeSock != NativeSenderInterop.INVALID_SOCKET)
-                    {
-                        NativeSenderInterop.NS_CloseConnection(nativeSock);
-                        _streamRegistry?.UnregisterNative(c.ClientId);
-                    }
                     tcp?.Dispose();
                 }, ct));
             }
