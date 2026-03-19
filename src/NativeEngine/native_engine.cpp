@@ -357,7 +357,9 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 break;  // 一种失败就 goto END（对齐老工具）
             }
 
-            // 老工具各类型之间无 Sleep，背靠背发送
+            // 对齐 SendThreatLog_ToserverTCP 内部：子类型之间 Sleep(50)
+            if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
+                Sleep(g_logCfg.sleepBetweenTypesMs);
         }
 
         msgCount++;
