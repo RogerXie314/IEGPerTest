@@ -718,9 +718,8 @@ namespace SimulatorApp.ViewModels
                         }
 
                         RunOnUi(() => AppendStatus($"开始心跳任务（NativeEngine C++ 模式，{clients.Count} 客户端，间隔 {HbInterval}ms）"));
-                        _nativeEngine.StartHeartbeat();
 
-                        // 统计轮询
+                        // 统计轮询先启动，StartHeartbeat 内部 Sleep(500ms)×N 会阻塞约250秒
                         _neStatsCts?.Cancel();
                         _neStatsCts = new CancellationTokenSource();
                         var neCt = _neStatsCts.Token;
@@ -753,6 +752,8 @@ namespace SimulatorApp.ViewModels
                                 });
                             }
                         });
+
+                        _nativeEngine.StartHeartbeat();
                     }
                     else
                     {
