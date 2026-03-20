@@ -502,9 +502,9 @@ namespace SimulatorLib.Workers
         /// <summary>
         /// 为 NativeEngine 构建预打包的日志 payload 模板。
         /// </summary>
-        public static byte[] BuildTemplatePayload(string category, ClientRecord client, bool isHit = false)
+        public static byte[] BuildTemplatePayload(string category, ClientRecord client, bool isHit = false, int messageIndex = 0)
         {
-            var (socketCmd, json) = BuildLogByCategory(category, client, messageIndex: 0, isHit: isHit);
+            var (socketCmd, json) = BuildLogByCategory(category, client, messageIndex: messageIndex, isHit: isHit);
             var src = GetThreatDataJsonBytes(json);
             return PtProtocol.Pack(src, cmdId: socketCmd,
                 compressType: PtCompressType.Zlib,
