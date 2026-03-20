@@ -299,7 +299,7 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
                                      slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
         if (slot.sock != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
-            s_reconnects++;
+            // 首次建连不算"重连"，s_reconnects 只在断线后重建时累加
             HBDoSendRecv(slot);
         } else {
             InterlockedExchange(&slot.connected, 0);
