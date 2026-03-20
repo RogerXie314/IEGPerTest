@@ -393,8 +393,8 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 break;
             }
 
-            // 对齐老工具 ThreadFunc_MsgLogSend：类型之间无 Sleep，直接发下一类型
-            // sleepBetweenTypesMs 保留参数但调用方传 0（老工具行为）
+            // 对齐老工具 SendThreatLog_ToserverTCP：File→Sleep(50)→ProcStart→Sleep(50)→Reg
+            // 每个子 payload 发送后 Sleep(50ms)（最后一个除外）
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
         }

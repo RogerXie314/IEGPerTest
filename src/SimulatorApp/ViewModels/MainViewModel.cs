@@ -1165,7 +1165,7 @@ namespace SimulatorApp.ViewModels
 
                                 int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
                                 _nativeEngine.StartLogSend(perClientPayloads, actualLogClients,
-                                    intervalMs, LogMessagesPerClient, sleepBetweenTypesMs: 0);
+                                    intervalMs, LogMessagesPerClient, sleepBetweenTypesMs: 50);
                                 RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动: {threatCats.Length}种类型, {actualLogClients}客户端(各自IP)"));
 
                                 // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
