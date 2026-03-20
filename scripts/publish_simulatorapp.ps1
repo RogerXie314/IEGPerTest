@@ -81,14 +81,54 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-# -- 2b. Copy NativeEngine.dll (C++ non-blocking socket engine) ----------------
-$neDll = "$PSScriptRoot\..\src\NativeEngine\build\Release\NativeEngine.dll"
+# -- 2b. Build & copy NativeEngine.dll (C++ non-blocking socket engine) -------
+$cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+$neDir = "$PSScriptRoot\..\src\NativeEngine"
+if (Test-Path $cmake) {
+    Write-Host "Building NativeEngine.dll..." -ForegroundColor Cyan
+    Push-Location "$neDir\build"
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+} else {
+    Write-Warning "CMake not found; skipping NativeEngine rebuild (using existing dll if present)"
+}
+$neDll = "$neDir\build\Release\NativeEngine.dll"
 if (Test-Path $neDll) {
     Copy-Item $neDll -Destination $outputPath -Force
     $neSize = (Get-Item "$outputPath\NativeEngine.dll").Length / 1KB
     Write-Host "NativeEngine.dll copied: $([math]::Round($neSize, 1)) KB" -ForegroundColor Cyan
 } else {
-    Write-Warning "NativeEngine.dll not found at $neDll — C++ engine will be unavailable, falling back to C# path"
+    Write-Warning "NativeEngine.dll not found — C++ engine will be unavailable"
+}
+
+# -- 2c. Build NativeSender.dll (Winsock 同步发送层，启动时必须存在) ----------
+$nsDir = "$PSScriptRoot\..\src\NativeSender"
+if (Test-Path $cmake) {
+    Write-Host "Building NativeSender.dll..." -ForegroundColor Cyan
+    # 确保 build 目录已配置
+    if (-not (Test-Path "$nsDir\build\CMakeCache.txt")) {
+        Push-Location "$nsDir"
+        if (-not (Test-Path build)) { New-Item -ItemType Directory build | Out-Null }
+        Push-Location build
+        & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
+        Pop-Location ; Pop-Location
+    }
+    Push-Location "$nsDir\build"
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+    # DLL 由 CMake 的 RUNTIME_OUTPUT_DIRECTORY 直接输出到 outputPath
+    if (Test-Path "$outputPath\NativeSender.dll") {
+        $nsSize = (Get-Item "$outputPath\NativeSender.dll").Length / 1KB
+        Write-Host "NativeSender.dll built: $([math]::Round($nsSize, 1)) KB" -ForegroundColor Cyan
+    } else {
+        Write-Warning "NativeSender.dll not found after build — app will crash on startup"
+    }
+} else {
+    Write-Warning "CMake not found; skipping NativeSender rebuild (using existing dll if present)"
+    if (-not (Test-Path "$outputPath\NativeSender.dll")) {
+        Write-Error "NativeSender.dll missing and CMake unavailable — publish aborted"
+        exit 1
+    }
 }
 
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
