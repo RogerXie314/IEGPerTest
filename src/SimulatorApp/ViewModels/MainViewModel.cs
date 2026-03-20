@@ -685,7 +685,10 @@ namespace SimulatorApp.ViewModels
                 else
                 {
                     // ── Windows 路径：TCP 长连接心跳 ───────────────
-                    bool useNativeEngine = File.Exists(Path.Combine(AppContext.BaseDirectory, "NativeEngine.dll"));
+                    // 单文件 EXE 模式下 DLL 被解压到 %TEMP%\.net\[hash]\，
+                    // AppContext.BaseDirectory 里不再有文件，须用 NativeLibrary.TryLoad 探测。
+                    bool useNativeEngine = System.Runtime.InteropServices.NativeLibrary.TryLoad(
+                        "NativeEngine.dll", typeof(MainViewModel).Assembly, null, out _);
 
                     if (useNativeEngine)
                     {
