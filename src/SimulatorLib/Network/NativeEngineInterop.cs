@@ -19,10 +19,12 @@ namespace SimulatorLib.Network
         // ── 保持委托引用，防止 GC 回收 ──
         private NeedReregisterDelegate? _pinnedReregister;
         private BuildHBPayloadDelegate? _pinnedBuildHB;
+        private PolicyNotifyDelegate? _pinnedPolicyNotify;
 
         // ── 外部可注册的回调 ──
         public Action<string>? OnNeedReregister { get; set; }
         public Func<string, uint, byte[]?>? OnBuildHBPayload { get; set; }
+        public Action<string>? OnPolicyNotify { get; set; }
 
         // ==================== Native Structs ====================
 
@@ -73,6 +75,9 @@ namespace SimulatorLib.Network
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int BuildHBPayloadDelegate(IntPtr clientIdPtr, int deviceId, IntPtr outBuf, int outBufSize);
 
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate void PolicyNotifyDelegate(IntPtr clientIdPtr);
+
         // ==================== P/Invoke ====================
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
@@ -106,6 +111,9 @@ namespace SimulatorLib.Network
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int NE_IsLogSendRunning();
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void NE_SetPolicyCallback(PolicyNotifyDelegate? cb);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern void NE_Shutdown();
@@ -176,6 +184,15 @@ namespace SimulatorLib.Network
 
         public bool IsLogSendRunning() => NE_IsLogSendRunning() != 0;
 
+        /// <summary>
+        /// 注册 cmdId=17 策略通知回调（调用前请先设置 <see cref="OnPolicyNotify"/>）。
+        /// </summary>
+        public void SetPolicyCallback()
+        {
+            _pinnedPolicyNotify = new PolicyNotifyDelegate(OnPolicyNotifyNative);
+            NE_SetPolicyCallback(_pinnedPolicyNotify);
+        }
+
         public void Shutdown() => NE_Shutdown();
 
         // ==================== Native Callback Implementations ====================
@@ -187,6 +204,13 @@ namespace SimulatorLib.Network
             {
                 OnNeedReregister?.Invoke(clientId);
             }
+        }
+
+        private void OnPolicyNotifyNative(IntPtr clientIdPtr)
+        {
+            string? clientId = Marshal.PtrToStringAnsi(clientIdPtr);
+            if (clientId != null)
+                OnPolicyNotify?.Invoke(clientId);
         }
 
         private int OnBuildHBPayloadNative(IntPtr clientIdPtr, int deviceId, IntPtr outBuf, int outBufSize)
@@ -218,6 +242,7 @@ namespace SimulatorLib.Network
             try { NE_Shutdown(); } catch { }
             _pinnedReregister = null;
             _pinnedBuildHB = null;
+            _pinnedPolicyNotify = null;
         }
     }
 }

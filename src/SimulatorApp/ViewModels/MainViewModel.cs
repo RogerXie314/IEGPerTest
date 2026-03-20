@@ -770,9 +770,24 @@ namespace SimulatorApp.ViewModels
 
                                     if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
                                         hbTaskRec.Detail = $"连接:{stats.hbConnected}/{stats.hbTotal} 断线:{stats.disconnects} 重连:{stats.reconnects}";
+
+                                    if (_policyWorker != null)
+                                    {
+                                        PolicyReceived = _policyWorker.ReceivedCount;
+                                        PolicyReplied  = _policyWorker.RepliedCount;
+                                    }
                                 });
                             }
                         });
+
+                        // 策略接收支持（NativeEngine 模式，cmdId=17 通过回调转发至 C#）
+                        _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
+                        if (_policyWorker != null)
+                        {
+                            _nativeEngine.OnPolicyNotify = (clientId) =>
+                                _ = _policyWorker.HandleTcpPolicyCmdAsync(17, clientId, _hbCts?.Token ?? CancellationToken.None);
+                            _nativeEngine.SetPolicyCallback();
+                        }
 
                         _nativeEngine.StartHeartbeat();
                     }

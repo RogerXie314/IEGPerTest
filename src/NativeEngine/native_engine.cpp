@@ -57,6 +57,7 @@ static int32_t               g_clientCount = 0;
 // 回调
 static NE_NeedReregisterCallback g_onNeedReregister = nullptr;
 static NE_BuildHBPayloadCallback g_onBuildHBPayload = nullptr;
+static NE_PolicyNotifyCallback   g_onPolicyNotify   = nullptr;  // cmdId=17 策略通知
 
 // 停止标志
 static volatile long g_stopHB  = 0;
@@ -258,6 +259,9 @@ static void HBDoSendRecv(ClientSlot& slot) {
     if (cmdId == 1 || cmdId == 17) {
         s_hbRecvOk++;
         InterlockedExchange(&slot.lastReplyOk, 1);
+        // cmdId=17: 平台通知有策略下发 → 回调 C# 发 HTTPS 心跳并拉取策略（非热路径，极低频）
+        if (cmdId == 17 && g_onPolicyNotify)
+            g_onPolicyNotify(slot.clientId);
     } else if (cmdId == 18) {
         // 对齐老工具：NOREGISTER → 关连 → 回调重注册 → 重连 → 重发 HB
         s_hbRecvNoReg++;
@@ -763,6 +767,10 @@ NE_API int32_t NE_IsLogSendRunning() {
         }
     }
     return 0;
+}
+
+NE_API void NE_SetPolicyCallback(NE_PolicyNotifyCallback cb) {
+    g_onPolicyNotify = cb;
 }
 
 NE_API void NE_Shutdown() {

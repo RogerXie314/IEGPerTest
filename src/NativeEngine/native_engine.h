@@ -53,12 +53,9 @@ typedef int32_t (__stdcall *NE_BuildHBPayloadCallback)(
     const char* clientId, int32_t deviceId,
     uint8_t* outBuf, int32_t outBufSize);
 
-// ---------- 回调：每次发送前动态构建日志 payload（对齐老工具每次循环实时构建 JSON）----------
-// clientIdx: 客户端索引, typeIdx: 日志类型索引, msgCount: 当前线程已发条数
-// C# 填充 outBuf，返回写入字节数；返回 <=0 表示失败/跳过
-typedef int32_t (__stdcall *NE_BuildLogPayloadCallback)(
-    int32_t clientIdx, int32_t typeIdx, int32_t msgCount,
-    uint8_t* outBuf, int32_t outBufSize);
+// ---------- 回调：收到平台策略推送（cmdId=17）时通知 C#（非热路径，极低频）----------
+// C# 侧收到后发 HTTPS 心跳拉取策略 JSON 并回报结果
+typedef void (__stdcall *NE_PolicyNotifyCallback)(const char* clientId);
 
 // 初始化引擎。成功返回0。
 NE_API int32_t NE_Init(
@@ -97,6 +94,10 @@ NE_API void NE_GetStats(NE_Stats* out);
 
 // 检查日志发送线程是否还在运行。返回1=运行中，0=已结束。
 NE_API int32_t NE_IsLogSendRunning();
+
+// 注册策略通知回调（可选，NE_Init 后、NE_StartHeartbeat 前调用）。
+// 当收到平台 cmdId=17 时调用，C# 侧发 HTTPS 心跳拉取策略并回报。
+NE_API void NE_SetPolicyCallback(NE_PolicyNotifyCallback cb);
 
 // 释放资源。
 NE_API void NE_Shutdown();
