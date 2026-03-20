@@ -32,10 +32,11 @@ namespace SimulatorApp.ViewModels
         private string _projectType = "IEG";
 
         private int _logMessagesPerClient = 50;
-        private int _logHttpsClientCount = 5;
-        private int _logHttpsEps = 10;
+        private int _logHttpsClientCount = 0;
+        private int _logHttpsEps = 0;
         private int _logThreatClientCount = 5;
         private int _logThreatEps = 1;
+        private int _logThreatHitEvery = 71;
         private long _logTotalMessages;
         private long _logSuccess;
         private long _logFailed;
@@ -46,9 +47,9 @@ namespace SimulatorApp.ViewModels
         private bool _catOs;
         private bool _catOutbound;
         // 威胁检测5种事件（均通过 TCP 长连接）
-        private bool _catThreatProcStart;   // 进程启动（EDR）
-        private bool _catThreatRegAccess;    // 注册表访问（EDR）
-        private bool _catThreatFileAccess;   // 文件访问（EDR）
+        private bool _catThreatProcStart = true;   // 进程启动（EDR）
+        private bool _catThreatRegAccess  = true;   // 注册表访问（EDR）
+        private bool _catThreatFileAccess = true;   // 文件访问（EDR）
         private bool _catThreatOsEvent;      // 操作系统日志（IEG）
         private bool _catThreatDllLoad;      // DLL加载（EDR）
         private bool _catNonWhitelist;
@@ -86,9 +87,8 @@ namespace SimulatorApp.ViewModels
         private string _regFailureDetail = string.Empty;
 
         private string _whitelistFilePath = string.Empty;
-        private int _whitelistClientCount = 5;
+        private bool _enableWhitelistOnReg = false;
         private int _whitelistConcurrency = 4;
-        private int _whitelistCycleIntervalSec = 900; // 15分钟
         private long _uploadTotal;
         private long _uploadSuccess;
         private long _uploadFailed;
@@ -101,7 +101,8 @@ namespace SimulatorApp.ViewModels
         {
             "V300R011C01B090",   // Windows 当前版本
             "V300R011C01B030",   // Windows 旧版
-            "V300R006C02B090",   // 老版（支持白名单上传）
+            "V300R006C05B270",   // 老版 V6（支持白名单上传）
+            "V300R006C02B090",   // 老版 V6（支持白名单上传）
         };
 
         // 策略下发接收统计
@@ -131,6 +132,8 @@ namespace SimulatorApp.ViewModels
         private CancellationTokenSource? _logCts;
         private CancellationTokenSource? _uploadCts;
         private DateTime _lastHbLogTime = DateTime.MinValue; // 心跳状态日志节流
+        private NativeEngineInterop? _nativeEngine;          // C++ 非阻塞引擎（可选）
+        private CancellationTokenSource? _neStatsCts;        // NativeEngine 统计轮询
 
         private readonly SynchronizationContext? _uiContext;
 
@@ -165,6 +168,8 @@ namespace SimulatorApp.ViewModels
         public int LogThreatClientCount { get => _logThreatClientCount; set { _logThreatClientCount = value; OnProp(); } }
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get => _logThreatEps; set { _logThreatEps = value; OnProp(); } }
+        /// <summary>威胁命中轮比：每 N 轮仅第 1 轮发 hit 包，其余发 miss 包（对齐老工具 bHit=1/71）；0 或 1 = 每轮均 hit</summary>
+        public int LogThreatHitEvery { get => _logThreatHitEvery; set { _logThreatHitEvery = value; OnProp(); } }
         public long LogTotalMessages { get => _logTotalMessages; set { _logTotalMessages = value; OnProp(); } }
         public long LogSuccess { get => _logSuccess; set { _logSuccess = value; OnProp(); } }
         public long LogFailed { get => _logFailed; set { _logFailed = value; OnProp(); } }
@@ -215,9 +220,9 @@ namespace SimulatorApp.ViewModels
         public string RegFailureDetail { get => _regFailureDetail; set { _regFailureDetail = value; OnProp(); } }
 
         public string WhitelistFilePath { get => _whitelistFilePath; set { _whitelistFilePath = value; OnProp(); } }
-        public int WhitelistClientCount { get => _whitelistClientCount; set { _whitelistClientCount = value; OnProp(); } }
+        /// <summary>对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单</summary>
+        public bool EnableWhitelistOnReg { get => _enableWhitelistOnReg; set { _enableWhitelistOnReg = value; OnProp(); } }
         public int WhitelistConcurrency { get => _whitelistConcurrency; set { _whitelistConcurrency = value; OnProp(); } }
-        public int WhitelistCycleIntervalSec { get => _whitelistCycleIntervalSec; set { _whitelistCycleIntervalSec = value; OnProp(); } }
         public long UploadTotal { get => _uploadTotal; set { _uploadTotal = value; OnProp(); } }
         public long UploadSuccess { get => _uploadSuccess; set { _uploadSuccess = value; OnProp(); } }
         public long UploadFailed { get => _uploadFailed; set { _uploadFailed = value; OnProp(); } }
@@ -268,6 +273,7 @@ namespace SimulatorApp.ViewModels
                 {
                     "V300R011C01B090",
                     "V300R011C01B030",
+                    "V300R006C05B270",   // 老版 V6（支持白名单上传）
                     "V300R006C02B090",
                 };
                 _regClientVersion  = "V300R011C01B090";
@@ -365,9 +371,10 @@ namespace SimulatorApp.ViewModels
                 LogHttpsEps = cfg.LogHttpsEps;
                 LogThreatClientCount = cfg.LogThreatClientCount;
                 LogThreatEps = cfg.LogThreatEps;
+                LogThreatHitEvery = cfg.LogThreatHitEvery;
 
                 WhitelistFilePath = cfg.WhitelistFilePath;
-                WhitelistClientCount = cfg.WhitelistClientCount;
+                EnableWhitelistOnReg = cfg.EnableWhitelistOnReg;
                 WhitelistConcurrency = cfg.WhitelistConcurrency;
 
                 // 操作系统类型（加载后触发版本列表更新）
@@ -404,8 +411,9 @@ namespace SimulatorApp.ViewModels
                 LogHttpsEps = LogHttpsEps,
                 LogThreatClientCount = LogThreatClientCount,
                 LogThreatEps = LogThreatEps,
+                LogThreatHitEvery = LogThreatHitEvery,
                 WhitelistFilePath = WhitelistFilePath,
-                WhitelistClientCount = WhitelistClientCount,
+                EnableWhitelistOnReg = EnableWhitelistOnReg,
                 WhitelistConcurrency = WhitelistConcurrency,
                 ClientOsType = _osType,
             };
@@ -438,11 +446,11 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // IEG如属：威胁检测中只有操作系统日志
-                CatThreatOsEvent = true;
-                CatThreatProcStart = false;
-                CatThreatRegAccess = false;
-                CatThreatFileAccess = false;
+                // IEG如属：威胁检测进程启动/注册表/文件访问（默认不勾选操作系统日志）
+                CatThreatOsEvent = false;
+                CatThreatProcStart = true;
+                CatThreatRegAccess = true;
+                CatThreatFileAccess = true;
                 CatThreatDllLoad = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
@@ -463,12 +471,12 @@ namespace SimulatorApp.ViewModels
                 // CatProcessControl 已移除
                 CatOs = true;
                 CatOutbound = true;
-                // EDR如属：威胁检测全部5种事件（EDR 4种 + IEG操作系统日志）
+                // EDR如属：威胁检测全部4种EDR事件（默认不勾选操作系统日志）
                 CatThreatProcStart = true;
                 CatThreatRegAccess = true;
                 CatThreatFileAccess = true;
                 CatThreatDllLoad = true;
-                CatThreatOsEvent = true;
+                CatThreatOsEvent = false;
                 CatFileProtect = true;
                 CatMandatoryAccess = true;
                 CatVirusAlert = true;
@@ -564,17 +572,50 @@ namespace SimulatorApp.ViewModels
                     RegFailureDetail = detailSb.ToString().Trim();
                     AppendStatus($"注册任务完成（共{summary.Rounds}轮）：成功={summary.Success}  失败={summary.Failed}");
                     if (summary.FailureReasons.Count > 0)
-                        AppendStatus("失败原因：\r\n" + detailSb.ToString().TrimEnd());
+                        System.Diagnostics.Debug.WriteLine("[注册失败原因] " + detailSb.ToString().TrimEnd());
                 });
 
                 // 将统计追加写入 RegistrationStats.log 文件
                 try
                 {
-                    var statsPath = Path.Combine(AppContext.BaseDirectory, "RegistrationStats.log");
+                    var statsLogDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                    Directory.CreateDirectory(statsLogDir);
+                    var statsPath = Path.Combine(statsLogDir, "RegistrationStats.log");
                     var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {summary.ToLogString()}";
                     await File.AppendAllTextAsync(statsPath, line + Environment.NewLine, Encoding.UTF8).ConfigureAwait(false);
                 }
                 catch { /* 日志写入失败不影响主流程 */ }
+
+                // 对齐老工具：注册完成后自动上传白名单（勾选了“注册后自动上传”时）
+                if (EnableWhitelistOnReg &&
+                    !string.IsNullOrWhiteSpace(WhitelistFilePath) &&
+                    System.IO.File.Exists(WhitelistFilePath) &&
+                    summary.Success > 0)
+                {
+                    var allClients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                    var autoRec = AddTaskRecord("白名单上传(自动)", allClients.Count, 0);
+                    RunOnUi(() => AppendStatus(
+                        $"注册完成，自动开始白名单上传（全量 {allClients.Count} 台，并发={WhitelistConcurrency}）…"));
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var uploadWorker = new WhitelistUploadWorker(new TcpSender());
+                            await uploadWorker.RunAllOnceAsync(
+                                WhitelistFilePath, allClients,
+                                PlatformHost, PlatformPort,
+                                WhitelistConcurrency,
+                                autoRec,
+                                CancellationToken.None).ConfigureAwait(false);
+                            RunOnUi(() => AppendStatus(
+                                $"[白名单自动上传] 完成：成功={autoRec.SuccessCount} 失败={autoRec.FailCount}"));
+                        }
+                        catch (Exception uploadEx)
+                        {
+                            RunOnUi(() => AppendStatus("白名单自动上传异常: " + uploadEx.Message));
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -643,7 +684,116 @@ namespace SimulatorApp.ViewModels
                 }
                 else
                 {
-                    // ── Windows 路径：TCP 长连接心跳 + 可选 UDP 到日志服务器 ───────────────
+                    // ── Windows 路径：TCP 长连接心跳 ───────────────
+                    bool useNativeEngine = File.Exists(Path.Combine(AppContext.BaseDirectory, "NativeEngine.dll"));
+
+                    if (useNativeEngine)
+                    {
+                        // ── NativeEngine C++ DLL 路径（非阻塞 socket + OS 线程，对齐老工具）──
+                        var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                        if (clients.Count == 0) { RunOnUi(() => AppendStatus("⚠ 未找到已注册客户端")); return; }
+
+                        var clientLookup = clients.ToDictionary(c => c.ClientId);
+
+                        _nativeEngine?.Dispose();
+                        _nativeEngine = new NativeEngineInterop();
+                        _nativeEngine.OnBuildHBPayload = (clientId, deviceId) =>
+                        {
+                            if (!clientLookup.TryGetValue(clientId, out var c)) return null;
+                            var mac = SimulatorLib.Protocol.HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                            var json = SimulatorLib.Protocol.HeartbeatJsonBuilder.BuildV3R7C02(
+                                clientId, GetDomainNameSafe(), c.IP, mac);
+                            var jsonBytes = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
+                            return SimulatorLib.Protocol.PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
+                        };
+                        _nativeEngine.OnNeedReregister = (clientId) =>
+                        {
+                            // 对齐老工具：CloseConnection → RegisterClientToServer(HTTPS) → CreateConnection
+                            // 回调由 C++ OS 线程同步调用；.GetAwaiter().GetResult() 阻塞该线程直到重注册完成，
+                            // 使 C++ 在拿到新 DeviceId 后再重连（与老工具同线程串行行为一致）
+                            if (!clientLookup.TryGetValue(clientId, out var cRereg)) return;
+                            System.Diagnostics.Debug.WriteLine($"[NativeEngine] NOREGISTER {clientId}, re-registering...");
+                            try
+                            {
+                                var newc = HeartbeatWorker.ReregisterClientAsync(
+                                    cRereg, PlatformHost, PlatformPort, null, CancellationToken.None)
+                                    .GetAwaiter().GetResult();
+                                if (newc != null)
+                                {
+                                    clientLookup[clientId] = newc;
+                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg OK {clientId} deviceId={newc.DeviceId}");
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg FAIL {clientId}");
+                                }
+                            }
+                            catch { }
+                        };
+
+                        if (!_nativeEngine.Init(PlatformHost, PlatformPort, HbInterval, 500, clients))
+                        {
+                            RunOnUi(() => AppendStatus("⚠ NativeEngine 初始化失败"));
+                            return;
+                        }
+
+                        RunOnUi(() => AppendStatus($"开始心跳任务（NativeEngine C++ 模式，{clients.Count} 客户端，间隔 {HbInterval}ms）"));
+
+                        // 统计轮询先启动，StartHeartbeat 内部 Sleep(gateMs)×N 期间持续轮询
+                        _neStatsCts?.Cancel();
+                        _neStatsCts = new CancellationTokenSource();
+                        var neCt = _neStatsCts.Token;
+                        _ = Task.Run(async () =>
+                        {
+                            while (!neCt.IsCancellationRequested)
+                            {
+                                try { await Task.Delay(2000, neCt).ConfigureAwait(false); } catch { break; }
+                                if (_nativeEngine == null) break;
+                                var stats = _nativeEngine.GetStats();
+                                RunOnUi(() =>
+                                {
+                                    HbTotal         = stats.hbTotal;
+                                    HbConnected     = stats.hbConnected;
+                                    HbTcpOk         = stats.hbSendOk;
+                                    HbTcpFail       = stats.hbSendFail;
+                                    HbServerReplied = stats.hbReplied;
+                                    LogSuccess      = stats.logSendOk;
+                                    LogFailed       = stats.logSendFail;
+
+                                    int offline = stats.hbTotal - stats.hbConnected;
+                                    if (offline > 0 && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
+                                    {
+                                        _lastHbLogTime = DateTime.Now;
+                                        AppendStatus($"[心跳] ⚠ 在线:{stats.hbConnected}/{stats.hbTotal}  断线:{stats.disconnects} 重连:{stats.reconnects}");
+                                        System.Diagnostics.Debug.WriteLine($"[NativeEngine] HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包:{stats.hbReplied}  回包累计:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}");
+                                    }
+
+                                    if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
+                                        hbTaskRec.Detail = $"连接:{stats.hbConnected}/{stats.hbTotal} 断线:{stats.disconnects} 重连:{stats.reconnects}";
+
+                                    if (_policyWorker != null)
+                                    {
+                                        PolicyReceived = _policyWorker.ReceivedCount;
+                                        PolicyReplied  = _policyWorker.RepliedCount;
+                                    }
+                                });
+                            }
+                        });
+
+                        // 策略接收支持（NativeEngine 模式，cmdId=17 通过回调转发至 C#）
+                        _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
+                        if (_policyWorker != null)
+                        {
+                            _nativeEngine.OnPolicyNotify = (clientId) =>
+                                _ = _policyWorker.HandleTcpPolicyCmdAsync(17, clientId, _hbCts?.Token ?? CancellationToken.None);
+                            _nativeEngine.SetPolicyCallback();
+                        }
+
+                        _nativeEngine.StartHeartbeat();
+                    }
+                    else
+                    {
+                    // ── 原有 C# 实现路径 ───────────────
                     var tcp = new TcpSender();
                     var udp = new UdpSender();
                     _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
@@ -686,15 +836,16 @@ namespace SimulatorApp.ViewModels
                                         if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
                                         if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
                                         string reasonStr = reasons.Count > 0
-                                            ? "  离线原因: " + string.Join(", ", reasons)
+                                            ? "  原因: " + string.Join(", ", reasons)
                                             : string.Empty;
                                         AppendStatus(
-                                            $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
+                                            $"[心跳] ⚠ 在线:{s.Connected}/{s.Total}  离线:{offline}↓" +
                                             reasonStr);
                                     }
                                 }
                             });
                         });
+                        // drain 速率限制已移除：相位对齐重连后各客户端重连时刻天然散布，积压不会同时涌出，无需限速。
                         await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
                             osVersion: null).ConfigureAwait(false);
                         hbTaskRec.MarkStopped();
@@ -718,6 +869,7 @@ namespace SimulatorApp.ViewModels
                             catch { break; }
                         }
                     });
+                    } // end else (C# path)
                 }
             }
             catch (Exception ex)
@@ -736,6 +888,19 @@ namespace SimulatorApp.ViewModels
             // 兼容旧路径（直接调用 HTTPS 命令时产生的 CTS）
             if (_httpsCts != null && !_httpsCts.IsCancellationRequested)
                 _httpsCts.Cancel();
+
+            // 停止 NativeEngine
+            _neStatsCts?.Cancel();
+            if (_nativeEngine != null)
+            {
+                Task.Run(() =>
+                {
+                    try { _nativeEngine.StopAll(); } catch { }
+                    try { _nativeEngine.Dispose(); } catch { }
+                    _nativeEngine = null;
+                });
+                RunOnUi(() => AppendStatus("NativeEngine 已停止"));
+            }
         }
 
         private async Task StartHttpsHeartbeatAsync()
@@ -812,7 +977,6 @@ namespace SimulatorApp.ViewModels
             if (RegRetryIntervalSec < 0) return (false, "轮间隔不能为负数");
             if (RegTimeoutMs < 500) return (false, "单次超时不能低于 500ms");
             if (LogMessagesPerClient <= 0) return (false, "LogMessagesPerClient 必须大于 0");
-            if (WhitelistClientCount <= 0) return (false, "WhitelistClientCount 必须大于 0");
             if (WhitelistConcurrency <= 0) return (false, "WhitelistConcurrency 必须大于 0");
             
             // 验证起始IP格式（如果已填写）
@@ -870,6 +1034,21 @@ namespace SimulatorApp.ViewModels
             // 插拔 & 网口事件子类
             if (CatNetAdapterEvent) list.Add("网口Up/Down");
             return list.Count == 0 ? new[] { "Default" } : list.ToArray();
+        }
+
+        private static string GetDomainNameSafe()
+        {
+            try { return Environment.UserDomainName ?? string.Empty; }
+            catch { return string.Empty; }
+        }
+
+        private static byte[] TrimTrailingNewline(byte[] bytes)
+        {
+            if (bytes.Length >= 2 && bytes[^2] == (byte)'\r' && bytes[^1] == (byte)'\n')
+                return bytes.AsSpan(0, bytes.Length - 2).ToArray();
+            if (bytes.Length >= 1 && bytes[^1] == (byte)'\n')
+                return bytes.AsSpan(0, bytes.Length - 1).ToArray();
+            return bytes;
         }
 
         private static bool IsThreatCategoryByName(string category) =>
@@ -979,6 +1158,48 @@ namespace SimulatorApp.ViewModels
                     // 客户端数=0 表示禁用此通道
                     if (threatCats.Length > 0 && LogThreatClientCount > 0)
                     {
+                        if (_nativeEngine != null)
+                        {
+                            // 对齐老工具：客户端未就绪时硬拦截（等效 WLServerTestDlg 行 1934 的 AfxMessageBox + return）
+                            var neStats = _nativeEngine.GetStats();
+                            if (neStats.hbTotal > 0 && LogThreatClientCount > neStats.hbConnected)
+                            {
+                                RunOnUi(() => AppendStatus(
+                                    $"[错误] 没有足够的客户端可以运行：仅 {neStats.hbConnected}/{neStats.hbTotal} 已上线，" +
+                                    $"请等待足够客户端上线后再添加日志任务。"));
+                                return;
+                            }
+                            // ── NativeEngine 路径：C++ 发送日志（对齐老工具：每次循环回调动态构建 JSON）──
+                            var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                            int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
+                            if (actualLogClients > 0)
+                            {
+                                // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 JSON（新时间戳、rand 字段）
+                                // 注册回调，DLL 线程每次发送前调用此回调获取新 payload
+                                var clientsArr = clients;
+                                var catsArr = threatCats;
+                                int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
+
+                                int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
+                                _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
+                                    intervalMs, LogMessagesPerClient,
+                                    hitEvery: hitEvery, sleepBetweenTypesMs: 50);
+                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动（纯C++热路径）: {threatCats.Length}种类型, {actualLogClients}客户端"));
+
+                                // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
+                                var ne = _nativeEngine;
+                                workerTasks.Add(Task.Run(async () =>
+                                {
+                                    while (ne != null && ne.IsLogSendRunning())
+                                    {
+                                        try { await Task.Delay(2000, _logCts!.Token).ConfigureAwait(false); }
+                                        catch { break; }
+                                    }
+                                }));
+                            }
+                        }
+                        else
+                        {
                         var threatWorker = new LogWorker(new TcpSender(), new UdpSender(), _hbStreamRegistry);
                         var threatProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
                         {
@@ -1000,7 +1221,9 @@ namespace SimulatorApp.ViewModels
                             stressMode:                 false,
                             localIps:                   null,
                             ct:                         _logCts.Token,
-                            progress:                   threatProgress));
+                            progress:                   threatProgress,
+                            threatHitEvery:             LogThreatHitEvery));
+                        }
                     }
 
                     try
@@ -1029,6 +1252,11 @@ namespace SimulatorApp.ViewModels
             {
                 _logCts.Cancel();
                 RunOnUi(() => AppendStatus("已请求停止日志发送任务"));
+            }
+            // 停止 NativeEngine 日志发送（保留心跳）
+            if (_nativeEngine != null)
+            {
+                Task.Run(() => { try { _nativeEngine.StopLogSendOnly(); } catch { } });
             }
         }
 
@@ -1088,22 +1316,24 @@ namespace SimulatorApp.ViewModels
                 var worker = new WhitelistUploadWorker(tcp);
 
                 // 创建任务面板记录
-                var taskRec = AddTaskRecord("白名单上传", WhitelistClientCount, WhitelistCycleIntervalSec);
+                var taskRec = AddTaskRecord("白名单上传", 0, 0);
 
                 RunOnUi(() =>
                 {
                     UploadTotal = 0;
                     UploadSuccess = 0;
                     UploadFailed = 0;
-                    AppendStatus($"开始白名单上传（随机轮转）：文件={System.IO.Path.GetFileName(WhitelistFilePath)}" +
-                                 $" 每轮客户端数={WhitelistClientCount} 并发={WhitelistConcurrency}" +
-                                 $" 轮间隔={WhitelistCycleIntervalSec}s");
+                    AppendStatus($"开始白名单上传（全量一次，对齐老工具）：文件={System.IO.Path.GetFileName(WhitelistFilePath)}" +
+                                 $" 并发={WhitelistConcurrency}");
                 });
 
                 _ = Task.Run(async () =>
                 {
                     try
                     {
+                        // 读取所有已注册客户端（全量上传，对齐老工具逻辑）
+                        var allClients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+
                         // 订阅 TaskRecord 属性变化，同步更新 UI 统计数值
                         taskRec.PropertyChanged += (_, e) =>
                         {
@@ -1121,15 +1351,14 @@ namespace SimulatorApp.ViewModels
                                 RunOnUi(() => AppendStatus("[白名单] " + taskRec.Detail));
                         };
 
-                        await worker.RunRotatingAsync(
-                            filePath:        WhitelistFilePath,
-                            clientCount:     WhitelistClientCount,
-                            platformHost:    PlatformHost,
-                            platformPort:    PlatformPort,
-                            concurrency:     WhitelistConcurrency,
-                            cycleIntervalMs: WhitelistCycleIntervalSec * 1000,
-                            record:          taskRec,
-                            ct:              _uploadCts.Token).ConfigureAwait(false);
+                        await worker.RunAllOnceAsync(
+                            filePath:     WhitelistFilePath,
+                            clients:      allClients,
+                            platformHost: PlatformHost,
+                            platformPort: PlatformPort,
+                            concurrency:  WhitelistConcurrency,
+                            record:       taskRec,
+                            ct:           _uploadCts.Token).ConfigureAwait(false);
 
                         RunOnUi(() => AppendStatus(
                             $"白名单上传结束: 成功={taskRec.SuccessCount} 失败={taskRec.FailCount} 状态={taskRec.StatusText}"));

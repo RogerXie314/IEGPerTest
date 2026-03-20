@@ -22,7 +22,7 @@ namespace SimulatorLib.Workers
     ///   - 开启 TCP KeepAlive，由 OS 自动探测网络层死连接
     ///   - 连接超时 2s（对应原始 stcTime.tv_sec = 2）
     ///   - 连接失败/超时：等待一个心跳周期 intervalMs 后重试（原始靠定时器间隔天然节流）
-    ///   - 无额外 jitter / reconnectNotBefore 机制——心跳间隔本身就是重连节奏
+    ///   - 相位对齐重连：错峰启动让各客户端占据不同时间槽，断线后等到自己的下一个自然时刻再重连
     /// </summary>
     public class HeartbeatWorker
     {
@@ -51,7 +51,7 @@ namespace SimulatorLib.Workers
             int SuccessUdp, int FailUdp, int ServerReplied = 0,
             int RsnServerClosed = 0, int RsnWriteFailed = 0,
             int RsnConnFailed = 0, int RsnConnTimeout = 0,
-            int RsnSessionStale = 0, int RsnLockBusy = 0);
+            int RsnSessionStale = 0, int RsnLockBusy = 0, int RsnNoRegister = 0);
 
         // 断线原因代码（存入 lastReason[] 数组，供监控日志读取）
         static class Reason
@@ -63,6 +63,7 @@ namespace SimulatorLib.Workers
             public const int ConnectTimeout = 4; // ConnectAsync 3s 超时
             public const int SessionStale   = 5; // 平台静默踢除 session（TCP 不断但不再回包）
             public const int LockBusy       = 6; // 写锁被 LogWorker 占用超时，跳过本次心跳（连接仍然有效）
+            public const int NoRegister     = 7; // 平台返回 cmdId==18（未注册），需要 HTTPS 重注册后重连
         }
 
         public async Task StartAsync(
@@ -75,10 +76,16 @@ namespace SimulatorLib.Workers
             int concurrency,
             CancellationToken ct,
             IProgress<HeartbeatStats>? progress = null,
-            string? osVersion = null)
+            string? osVersion = null,
+            string? clientVersion = null)
         {
-            var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-            if (clients.Count == 0) return;
+            var clientList = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+            if (clientList.Count == 0) return;
+            var clients = clientList; // 仅用于长度/索引（read-only 语义）
+            // 可变当前记录：重注册后更新 DeviceId/TcpPort 并持久化到 Clients.log
+            var currentClients = clientList.ToList();
+            // 异步安全的写锁（保护 currentClients 并发修改 + WriteAllAsync）
+            var clientsLock = new SemaphoreSlim(1, 1);
 
             // lastResult[i]: 1=上轮成功, 0=上轮失败, -1=尚未发送
             var lastResult    = new int[clients.Count];
@@ -103,8 +110,18 @@ namespace SimulatorLib.Workers
             // 每客户端最近断线时间戳（ms），用于计算 RECONNECT 延迟
             var evtDisconnAtMs = new long[clients.Count];
 
-            // 错峰启动：在 spreadMs 内均匀错开首次连接
-            int spreadMs = Math.Min(intervalMs, 3000);
+            // 错峰启动：在整个 intervalMs 窗口内均匀错开首次连接（对齐老工具 500ms×50批≈25s 的启动散布）。
+            // 上限等于 intervalMs 而非固定 3s，确保 500 个客户端的相位散布覆盖完整心跳周期，
+            // 重连时相位天然不重叠，不需要额外 jitter。
+            int spreadMs = intervalMs;
+
+            // v3.7.31→v3.7.33: 上线门控 — 同一时刻只允许 1 个客户端执行"连接+首HB+注册"。
+            // v3.7.32 仅串行化 ConnectAsync（~5-20/s），实测 EPS 约 950 仍低于预期 1200。
+            // 老工具实际节拍：每线程串行 CreateConnection → SendHB → RecvHB（轮询100次×20ms=2s），
+            // 加上线程间 Sleep(500)，最终平台看到 ~1 客户端/秒 逐个上线。
+            // 必须将整个"上线"过程（Connect + 首HB send + 等回包确认）都纳入门控，
+            // 并在释放后加 500ms 间隔（对齐老工具 Sleep(500)），确保 ~1-2 客户端/秒。
+            var connectGate = new SemaphoreSlim(1, 1);
 
             var clientTasks = new List<Task>(clients.Count);
             for (int i = 0; i < clients.Count; i++)
@@ -127,6 +144,14 @@ namespace SimulatorLib.Workers
                     bool           alive  = false; // drain Task 检测到 n=0 时置 false，主循环据此重连
                     long           connectedAtMs = 0L; // 本次连接建立时的时间戳，用于 session 超时检测
                     bool           hasConnectedBefore = false; // 区分首次 CONNECT 与 RECONNECT
+                    // cmdId==18 标志：drain 收到平台返回“未注册”时置 true，主循环在重连前先执行 HTTPS 重注册
+                    bool           needReregister = false;
+                    // 立即唤醒信号：drain 检测到断连或 NOREGISTER 时 Release，使主循环提前退出 intervalMs 等待
+                    var wakeupSem = new SemaphoreSlim(0, 1);
+                    // 相位对齐重连门控：记录本客户端"自然下一次 HB 时刻"（Unix ms），
+                    // 每次 HB 写入成功后更新为 now+intervalMs。断线后重连时等到此刻，
+                    // 保持各客户端重连时刻的相位差，天然散布在整个 intervalMs 窗口内。
+                    long nextCycleTargetMs = 0L;
 
                     while (!ct.IsCancellationRequested)
                     {
@@ -140,23 +165,110 @@ namespace SimulatorLib.Workers
                             Interlocked.Exchange(ref connectedFlags[idx], 0);
                             Interlocked.Exchange(ref lastReplyTimeMs[idx], 0L); // 重建连接时清零回包时间戳
 
+                            // re-register：对应老工具 HEARTBEAT_CMD_NOREGISTER 分支
+                            // ― CloseConnection → RegisterClientToServer (HTTPS) → CreateConnection
+                            if (needReregister)
+                            {
+                                needReregister = false;
+                                lastReason[idx] = Reason.NoRegister;
+                                var reregResult = await ReregisterClientAsync(
+                                    c, platformHost, platformPort, clientVersion, ct).ConfigureAwait(false);
+                                if (reregResult != null)
+                                {
+                                    c = reregResult; // 更新局部 c（DeviceId/TcpPort 可能变化）
+                                    await clientsLock.WaitAsync(ct).ConfigureAwait(false);
+                                    try
+                                    {
+                                        currentClients[idx] = reregResult;
+                                        await ClientsPersistence.WriteAllAsync(currentClients).ConfigureAwait(false);
+                                    }
+                                    finally { clientsLock.Release(); }
+                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} REREGISTER OK   client={c.ClientId} deviceId={c.DeviceId}");
+                                }
+                                else
+                                {
+                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} REREGISTER FAIL client={c.ClientId} 将使用旧凭据重连");
+                                }
+                            }
+
+                            // 相位对齐重连：等到本客户端"自然下一次 HB 时刻"再发起 ConnectAsync。
+                            // 原理：500 个客户端的 startDelay 均匀散布在 [0, intervalMs) 内，
+                            // 每次 HB 写入后 nextCycleTargetMs = hbTime+intervalMs，各客户端值不同。
+                            // 平台批量发 FIN 时，各客户端等待剩余时间各异，重连自然散布在整个周期窗口，
+                            // 等价于老工具 C++ Sleep(30000) 保留的相位差，无需随机 jitter。
+                            if (hasConnectedBefore && nextCycleTargetMs > 0)
+                            {
+                                long waitMs = nextCycleTargetMs - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                if (waitMs > 0)
+                                {
+                                    try { await Task.Delay((int)Math.Min(waitMs, intervalMs), ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                            }
+
                             try
                             {
                                 int tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                var newTcp  = new TcpClient { NoDelay = true };
-                                newTcp.Client.SetSocketOption(
-                                    SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                                using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                                connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
-                                await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
+                                // v3.7.33: 上线门控 — 整个"连接+首HB+注册"在门控内串行执行。
+                                // v3.7.32 仅包裹 ConnectAsync，~5-20/s 速率仍触发平台 wl_limit。
+                                // 现扩展到含首HB发送+stream注册+500ms冷却，对齐老工具 ~1/s 节奏。
+                                await connectGate.WaitAsync(ct).ConfigureAwait(false);
+                                TcpClient newTcp;
+                                NetworkStream newStream;
+                                try
+                                {
+                                    newTcp = new TcpClient { NoDelay = true };
+                                    // v3.7.38: SendTimeout=2s — 对齐 C++ 非阻塞 socket 行为。
+                                    // C++ CreateConnection 中 ioctlsocket(FIONBIO, ul=1) 使 socket 终身非阻塞，
+                                    // send() 遇到 TCP 窗口缩小时立即返回 WSAEWOULDBLOCK 而非无限阻塞。
+                                    // C# Socket.Send() 默认阻塞模式 + SendTimeout=0（无限阻塞），
+                                    // 当 400 个 Log 线程同时发送导致平台处理延迟→TCP 窗口收缩时，
+                                    // HB 的 Send 也被卡住→平台收不到 HB→session 超时→在线数骤降。
+                                    newTcp.Client.SendTimeout = 2000;
+                                    newTcp.Client.SetSocketOption(
+                                        SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                                    using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                    connCts.CancelAfter(2000); // 2s，对应原始 stcTime.tv_sec = 2
+                                    await newTcp.ConnectAsync(platformHost, tcpPort, connCts.Token).ConfigureAwait(false);
+
+                                    newStream = newTcp.GetStream();
+                                    try
+                                    {
+                                        var ka = new byte[12];
+                                        BitConverter.GetBytes(1u).CopyTo(ka, 0);
+                                        BitConverter.GetBytes(5000u).CopyTo(ka, 4);
+                                        BitConverter.GetBytes(2000u).CopyTo(ka, 8);
+                                        newTcp.Client.IOControl(IOControlCode.KeepAliveValues, ka, null);
+                                    }
+                                    catch { }
+
+                                    // 门控内发送首个 HB 包 — 平台收到 HB 才算"上线"
+                                    var domainName0 = GetDomainNameSafe();
+                                    var mac0        = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
+                                    var json0       = HeartbeatJsonBuilder.BuildV3R7C02(c.ClientId, domainName0, c.IP, mac0, osVersion);
+                                    var jsonBytes0  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json0));
+                                    var payload0    = PtProtocol.Pack(jsonBytes0, cmdId: 1, deviceId: c.DeviceId);
+                                    // v3.7.35: Socket.Send — 对齐 C++ send(g_sock[i])，OS 内核保证原子性
+                                    newTcp.Client.Send(payload0, SocketFlags.None);
+
+                                    // 500ms 冷却间隔，对齐老工具 Sleep(500)
+                                    await Task.Delay(500, ct).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    connectGate.Release();
+                                }
 
                                 tcp    = newTcp;
-                                stream = tcp.GetStream();
+                                stream = newStream;
                                 alive  = true;
                                 connectedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 Interlocked.Exchange(ref connectedFlags[idx], 1);
-                                // 注册到共享表，供威胁检测 LogWorker 复用此 stream（对齐原项目 SetWLTcpConnectInstance）
-                                _streamRegistry?.Register(c.ClientId, stream);
+                                _streamRegistry?.Register(c.ClientId, stream, tcp.Client);
+                                // 首HB 已在门控内发送，更新相位目标
+                                nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
+                                lastResult[idx] = 1;
+                                lastReason[idx] = Reason.Ok;
                                 // 事件日志：首次 CONNECT 或断线后 RECONNECT
                                 {
                                     long latMs = hasConnectedBefore && evtDisconnAtMs[idx] > 0
@@ -184,7 +296,17 @@ namespace SimulatorLib.Workers
                                                 drainStream, capturedC.ClientId, capturedC.DeviceId, ct,
                                                 onDataReceived: () => Interlocked.Exchange(
                                                     ref lastReplyTimeMs[capturedIdx],
-                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()))
+                                                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                                                onNeedReregister: () =>
+                                                {
+                                                    // cmdId==18：平台通知未注册，标记重注册并立即唤醒主循环
+                                                    needReregister = true;
+                                                    alive = false;
+                                                    capturedRegistry?.Unregister(capturedC.ClientId);
+                                                    Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                                    hbEventLog.Enqueue($"{DateTime.UtcNow:o} NOREGISTER     client={capturedC.ClientId} 触发重注册");
+                                                    if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
+                                                })
                                                 .ConfigureAwait(false);
                                             if (!serverAlive)
                                             {
@@ -194,6 +316,7 @@ namespace SimulatorLib.Workers
                                                 eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(PolicyDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
                                                 Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                                 hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
+                                                if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
                                             }
                                         }
                                         else
@@ -211,6 +334,7 @@ namespace SimulatorLib.Workers
                                                     eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 服务端关闭(RawDrain) 客户端#{capturedIdx} {capturedC.ClientId}");
                                                     Interlocked.Exchange(ref evtDisconnAtMs[capturedIdx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                                                     hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=服务端关闭");
+                                                    if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
                                                     break;
                                                 }
                                                 Interlocked.Exchange(ref lastReplyTimeMs[capturedIdx],
@@ -226,6 +350,7 @@ namespace SimulatorLib.Workers
                                         // 记录具体异常类型，区分网络错误/ObjectDisposed/OperationCanceled
                                         string drainReason = exDrain is ObjectDisposedException ? "连接已释放" : exDrain.GetType().Name;
                                         hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={capturedC.ClientId} reason=drain异常:{drainReason}");
+                                        if (wakeupSem.CurrentCount == 0) wakeupSem.Release();
                                     }
                                 }, ct);
                             }
@@ -264,50 +389,13 @@ namespace SimulatorLib.Workers
                             var jsonBytes  = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
                             var payload    = PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
 
-                            using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                            sendCts.CancelAfter(5000);
-
-                            // 加写锁：防止与 LogWorker 并发写同一 NetworkStream 导致包体互相穿插损坏
-                            bool lockAcq = _streamRegistry != null
-                                ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 4000, sendCts.Token).ConfigureAwait(false)
-                                : true; // 无 registry 时不需要额外锁
-                            if (!lockAcq)
-                            {
-                                // ★ 写锁被 LogWorker 占用超时：TCP 连接本身依然有效，不能 Dispose。
-                                // 不跳过整个心跳周期（老工具 send() 由 OS 排队，心跳包一定发出）：
-                                // 短暂等待 200ms 让 LogWorker 完成写操作后，立即补发心跳。
-                                // 补发失败才按 WriteFailed 处理（而非静默跳过）。
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.LockBusy;
-                                try { await Task.Delay(200, ct).ConfigureAwait(false); }
-                                catch (OperationCanceledException) { break; }
-                                // 等待后重试获取锁（500ms），写完即释放
-                                bool retryLock = _streamRegistry != null
-                                    ? await _streamRegistry.AcquireWriteLockAsync(c.ClientId, 500, ct).ConfigureAwait(false)
-                                    : true;
-                                if (!retryLock)
-                                {
-                                    // 仍抢不到：本次心跳确实跳过，等下一周期，但不等完整 intervalMs
-                                    continue;
-                                }
-                                // 重新赋值 lockAcq 供 finally 块正确释放
-                                lockAcq = retryLock;
-                                // 继续走下方 try { WriteAsync } finally { ReleaseWriteLock }
-                            }
-                            try
-                            {
-                                await stream!.WriteAsync(payload, 0, payload.Length, sendCts.Token).ConfigureAwait(false);
-                                await stream.FlushAsync(sendCts.Token).ConfigureAwait(false);
-                                // 防止 LogWorker 因 write_ex 调用 Unregister 后 TCP 仍存活、
-                                // 导致注册表永久空缺（stream_null 持续至连接自然死亡）。
-                                // 必须在 ReleaseWriteLock 之前注册：确保锁释放时注册表已有值，
-                                // 等锁的 LogWorker 拿到锁后能立即 TryGet 成功，消除竞态窗口。
-                                _streamRegistry?.Register(c.ClientId, stream!);
-                            }
-                            finally
-                            {
-                                _streamRegistry?.ReleaseWriteLock(c.ClientId, lockAcq);
-                            }
+                            // v3.7.35: 无锁直写 — Socket.Send() 对齐 C++ send(g_sock[i])。
+                            // Winsock send() 在 TCP socket 上线程安全，OS 内核保证并发 send()
+                            // 的字节不交错。无应用层锁、无超时、无不必要的重连。
+                            tcp!.Client.Send(payload, SocketFlags.None);
+                            _streamRegistry?.Register(c.ClientId, stream!, tcp!.Client);
+                            // 更新相位目标：下次 HB（或重连）时刻 = 本次写入时刻 + intervalMs
+                            nextCycleTargetMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + intervalMs;
 
                             lastResult[idx] = 1;
                             lastReason[idx] = Reason.Ok;
@@ -323,7 +411,7 @@ namespace SimulatorLib.Workers
                         catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
                         catch
                         {
-                            // 写失败 = 连接已死，下一轮重连（不立即 continue，先等 intervalMs）
+                            // 写失败 = 连接已死，立即重连（对齐老工具在同一周期内 CreateConnection 重试）
                             tcp?.Dispose();
                             tcp    = null;
                             stream = null;
@@ -335,54 +423,60 @@ namespace SimulatorLib.Workers
                             eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(WriteFailed) 客户端#{idx} {c.ClientId}");
                             Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                             hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=写入失败");
+                            // 对齐老工具：send 失败后立即重连（不等 intervalMs）
+                            // nextCycleTargetMs 保留上次成功值，loop 顶 waitMs ≤ 0，无等待
+                            continue;
                         }
 
-                        // 等待下一个心跳周期
-                        try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
-                        catch (OperationCanceledException) { break; }
-
-                        //  4. Session 超时检测：平台静默踢人而 TCP 不断的场景
-                        //  如果 TCP 仍连接，但自本次连接建立后一直收不到平台回包，
-                        //  说明平台 session 已失效（被踢或连接没经过认证）。
-                        //  主动断开重连，否则即使其他主机释放了槽位，我们也永远占着僵尸连接出不来。
-                        if (alive)
+                        // HB 间隙：直写架构下 LogWorker 自行写 TCP，drain 仅处理 Channel fallback 积压。
+                        // 简化为：快速清空 Channel 残留（若有），然后 wakeupSem 等待到下次 HB。
+                        if (alive && stream != null)
                         {
-                            long staleMs   = Math.Max((long)intervalMs * 3, 30_000L);
-                            long nowCheck  = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                            long lastReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                            // refTime: 收到过回包就用最后回包时间，否则用连接建立时间
-                            long refTime   = lastReply > 0 ? lastReply : connectedAtMs;
-                            if (refTime > 0 && (nowCheck - refTime) > staleMs)
+                            var logReader = _streamRegistry?.GetLogReader(c.ClientId);
+                            if (logReader != null)
                             {
-                                // Session 被平台静默踢出：主动关闭 TCP，下轮会重新连接。
-                                // 加随机 jitter（0~5s）打散重连潮：同批注册的客户端可能同时触发
-                                // SessionStale，若同时重连则 270 个 ConnectAsync 并发冲击平台，
-                                // 导致更多拒绝 → 雪崩。
-                                tcp?.Dispose();
-                                tcp    = null;
-                                stream = null;
-                                alive  = false;
-                                Interlocked.Exchange(ref connectedFlags[idx], 0);
-                                lastResult[idx] = 0;
-                                lastReason[idx] = Reason.SessionStale;
-                                _streamRegistry?.Unregister(c.ClientId);
-                                // snapshot 一次，避免 drain task 并发修改导致双重读取结果不一致
-                                long snapReply = Interlocked.Read(ref lastReplyTimeMs[idx]);
-                                string snapReplyStr = snapReply > 0
-                                    ? DateTimeOffset.FromUnixTimeMilliseconds(snapReply).LocalDateTime.ToString("HH:mm:ss")
-                                    : "从未";
-                                eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 平台静默踢session 客户端#{idx} {c.ClientId} 上次回包:{snapReplyStr} 连接建立:{DateTimeOffset.FromUnixTimeMilliseconds(connectedAtMs).LocalDateTime:HH:mm:ss}");
-                                Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                                hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=平台踢session 上次回包:{snapReplyStr}");
-                                // 随机 jitter 0~5000ms，打散多客户端同时重连对平台的冲击
-                                int reconnJitter = Random.Shared.Next(0, 5000);
-                                if (reconnJitter > 0)
+                                // 快速清空 fallback Channel 积压（非 allThreatTcp 路径可能残留少量包）
+                                while (alive && !ct.IsCancellationRequested && logReader.TryRead(out var logPayload))
                                 {
-                                    try { await Task.Delay(reconnJitter, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { break; }
+                                    try
+                                    {
+                                        // v3.7.35: 无锁 Socket.Send，对齐 C++ send(g_sock[i])
+                                        tcp!.Client.Send(logPayload, SocketFlags.None);
+                                    }
+                                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                                    catch
+                                    {
+                                        tcp?.Dispose();
+                                        tcp    = null;
+                                        stream = null;
+                                        alive  = false;
+                                        Interlocked.Exchange(ref connectedFlags[idx], 0);
+                                        _streamRegistry?.Unregister(c.ClientId);
+                                        lastResult[idx] = 0;
+                                        lastReason[idx] = Reason.WriteFailed;
+                                        eventQueue.Enqueue($"[{DateTime.Now:HH:mm:ss.fff}] 写入失败(LogDrain) 客户端#{idx} {c.ClientId}");
+                                        Interlocked.Exchange(ref evtDisconnAtMs[idx], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                                        hbEventLog.Enqueue($"{DateTime.UtcNow:o} DISCONNECT client={c.ClientId} reason=日志写入失败");
+                                        break;
+                                    }
                                 }
                             }
+
+                            // 等待下次 HB 周期（wakeupSem 可被 drain task 断连事件提前唤醒）
+                            if (alive)
+                            {
+                                try { await wakeupSem.WaitAsync(intervalMs, ct).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { break; }
+                            }
                         }
+
+                        //  4. SessionStale 检测已移除（v3.7.38）
+                        //  老 C++ 工具没有此机制却完全稳定。平台踢 session 的三种场景全部已覆盖：
+                        //  - 平台发 cmdId==18 (NOREGISTER) → drain/PolicyReceiveWorker 处理重注册
+                        //  - 平台发 FIN → drain ReadAsync n==0 → 重连
+                        //  - Send 失败 → SocketException → WriteFailed → 重连
+                        //  v3.7.37 在线骤降的根因是 SendTimeout=0（无限阻塞）而非缺少 SessionStale。
+                        //  v3.7.38 加 SendTimeout=2s 后 HB 不再被阻塞，无需 SessionStale 兜底。
                     }
 
                     tcp?.Dispose();
@@ -392,7 +486,9 @@ namespace SimulatorLib.Workers
             // 监控日志：定时写文件，记录离线数量与断线原因分布（供开发分析）
             // 间隔：max(30s, intervalMs)，确保即使心跳间隔30s、测试刚开始3分钟内也能捕获异常
             int monitorIntervalMs = Math.Max(30_000, intervalMs);
-            var monitorFile = Path.Combine(AppContext.BaseDirectory,
+            var hbLogDir = Path.Combine(AppContext.BaseDirectory, "logs");
+            Directory.CreateDirectory(hbLogDir);
+            var monitorFile = Path.Combine(hbLogDir,
                 $"heartbeat_monitor_{DateTime.Now:yyyyMMdd_HHmmss}.log");
             var monitorTask = Task.Run(async () =>
             {
@@ -405,7 +501,7 @@ namespace SimulatorLib.Workers
 
                     int total = clients.Count;
                     int conn = 0, ok = 0, fail = 0, replied = 0;
-                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0, rSessionStale = 0, rLockBusy = 0;
+                    int rServerClosed = 0, rWriteFailed = 0, rConnFailed = 0, rConnTimeout = 0, rSessionStale = 0, rLockBusy = 0, rNoRegister = 0;
                     long replyWindowMs2 = (long)intervalMs * 3;
                     long nowMs2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < total; j++)
@@ -423,6 +519,7 @@ namespace SimulatorLib.Workers
                             case Reason.ConnectFailed:  if (connectedFlags[j] == 0) rConnFailed++;     break;
                             case Reason.ConnectTimeout: if (connectedFlags[j] == 0) rConnTimeout++;    break;
                             case Reason.SessionStale:   if (connectedFlags[j] == 0) rSessionStale++;   break;
+                            case Reason.NoRegister:     rNoRegister++; break; // 包含已重连的，更能反映历史重注册次数
                             case Reason.LockBusy:       rLockBusy++; break; // 连接有效但本次心跳被跳过，单独统计（不要求一定离线）
                         }
                     }
@@ -457,6 +554,8 @@ namespace SimulatorLib.Workers
                     {
                         sb.AppendLine($"  断线原因 | 服务端关闭:{rServerClosed}  写入失败:{rWriteFailed}  连接失败:{rConnFailed}  连接超时:{rConnTimeout}  平台踢session:{rSessionStale}");
                     }
+                    if (rNoRegister > 0)
+                        sb.AppendLine($"  平台返回未注册(NoRegister/历史次数):{rNoRegister} ⇒ 已触发 HTTPS 重注册+重连");
                     sb.AppendLine();
 
                     prevReplied = replied;
@@ -468,7 +567,7 @@ namespace SimulatorLib.Workers
             }, ct);
 
             // 事件日志任务：实时将 hbEventLog 写入 heartbeat-events-YYYYMMDD.log（500ms 刷新）
-            var hbEventLogFile = Path.Combine(AppContext.BaseDirectory, $"heartbeat-events-{DateTime.UtcNow:yyyyMMdd}.log");
+            var hbEventLogFile = Path.Combine(hbLogDir, $"heartbeat-events-{DateTime.UtcNow:yyyyMMdd}.log");
             _ = Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
@@ -501,7 +600,7 @@ namespace SimulatorLib.Workers
                     catch { break; }
 
                     int conn = 0, ok = 0, fail = 0, udpOk = 0, udpFail = 0, replied = 0;
-                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0, rSS = 0, rLB = 0;
+                    int rSC = 0, rWF = 0, rCF = 0, rCT = 0, rSS = 0, rLB = 0, rNR = 0;
                     long replyWindowMs = (long)intervalMs * 3; // 3个周期内有回包才算在线
                     long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     for (int j = 0; j < clients.Count; j++)
@@ -521,10 +620,11 @@ namespace SimulatorLib.Workers
                             case Reason.ConnectFailed:  if (connectedFlags[j] == 0) rCF++; break;
                             case Reason.ConnectTimeout: if (connectedFlags[j] == 0) rCT++; break;
                             case Reason.SessionStale:   if (connectedFlags[j] == 0) rSS++; break;
+                            case Reason.NoRegister:     rNR++; break;
                             case Reason.LockBusy:       rLB++; break; // 连接有效但心跳被跳过
                         }
                     }
-                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT, rSS, rLB)); } catch { }
+                    try { progress?.Report(new HeartbeatStats(clients.Count, conn, ok, fail, udpOk, udpFail, replied, rSC, rWF, rCF, rCT, rSS, rLB, rNR)); } catch { }
                 }
             }, ct);
 
@@ -670,6 +770,73 @@ namespace SimulatorLib.Workers
             }, ct);
 
             await Task.WhenAll(clientTasks).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 对单个客户端执行 HTTPS 重注册。对应老工具 HEARTBEAT_CMD_NOREGISTER 分支：
+        ///   CloseConnection → RegisterClientToServer(HTTPS) → 返回更新后的 ClientRecord。
+        /// 若注册失败返回 null，调用方保留旧记录继续重连（避免永久离线）。
+        /// </summary>
+        public static async Task<ClientRecord?> ReregisterClientAsync(
+            ClientRecord client, string host, int port, string? clientVersion, CancellationToken ct)
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+            using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+            var loginUrl  = new Uri($"https://{host}:{port}/USM/clientLogin.do");
+            var resultUrl = new Uri($"https://{host}:{port}/USM/clientResult.do");
+
+            var mac = HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(client.IP);
+            var reqJson = UsmRegistrationJsonBuilder.BuildClientLoginJson(
+                computerId: client.ClientId,
+                username: "SysAdmin",
+                computerName: client.ClientId,
+                computerIp: client.IP,
+                computerMac: mac,
+                windowsVersion: OsInfo.GetWindowsVersionName(),
+                windowsX64: Environment.Is64BitOperatingSystem,
+                proxying: 0,
+                licenseRecycle: false,
+                clientType: 0,
+                clientVersion: clientVersion ?? "V300R011C01B090");
+            try
+            {
+                using var content = new StringContent(reqJson, Encoding.UTF8, "application/json");
+                using var resp    = await http.PostAsync(loginUrl, content, ct).ConfigureAwait(false);
+                var respText      = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode) return null;
+                if (!UsmResponseParsers.TryCheckSetupResult(respText, out _, out _)) return null;
+
+                uint deviceId = 0;
+                int  tcpPort  = 0;
+                if (UsmResponseParsers.TryParseConfigInfo(respText, out var cfg))
+                {
+                    deviceId = cfg.DeviceId;
+                    tcpPort  = cfg.TcpPort;
+                }
+
+                var resultJson = UsmRegistrationJsonBuilder.BuildClientResultJson(
+                    computerId: client.ClientId,
+                    username: "SysAdmin",
+                    cmdType: UsmRegistrationJsonBuilder.SetupCmdType,
+                    cmdId: UsmRegistrationJsonBuilder.CmdClientRegistry,
+                    dealResult: 0);
+                using var rc = new StringContent(resultJson, Encoding.UTF8, "application/json");
+                using var rr = await http.PostAsync(resultUrl, rc, ct).ConfigureAwait(false);
+                if (!rr.IsSuccessStatusCode) return null;
+
+                return client with { Status = "Registered", RegisteredAt = DateTime.UtcNow, DeviceId = deviceId, TcpPort = tcpPort };
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw; // 用户主动取消，向上传播
+            }
+            catch
+            {
+                return null; // 超时/网络问题，返回 null 由调用方决定是否用旧凭据重连
+            }
         }
     }
 }

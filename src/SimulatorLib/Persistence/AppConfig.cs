@@ -30,14 +30,21 @@ namespace SimulatorLib.Persistence
         public int LogThreatClientCount { get; set; } = 5;
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
         public int LogThreatEps { get; set; } = 100;
+        /// <summary>
+        /// 威胁检测命中轮比：每 N 轮中仅第 1 轮发含命中特征的事件包，其余发无害（miss）包。
+        /// 对齐老工具默认值 71（约 1.4% 命中率），避免平台告警风暴触发熔断 FIN 踢人。
+        /// 0 或 1 = 每轮均命中（等效旧行为，会导致告警风暴）。
+        /// </summary>
+        public int LogThreatHitEvery { get; set; } = 71;
 
         public int RegConcurrency { get; set; } = 20;
         public int RegRetryIntervalSec { get; set; } = 30;
         public int RegTimeoutMs { get; set; } = 60000;
 
         public string WhitelistFilePath { get; set; } = string.Empty;
-        public int WhitelistClientCount { get; set; } = 5;
         public int WhitelistConcurrency { get; set; } = 4;
+        /// <summary>对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单</summary>
+        public bool EnableWhitelistOnReg { get; set; } = false;
 
         // ── SSH 日志收集 ────────────────────────────────────────────────────
         /// <summary>模拟客户端的操作系统类型："Windows" 或 "Linux"</summary>

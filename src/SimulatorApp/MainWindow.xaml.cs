@@ -27,6 +27,11 @@ namespace SimulatorApp
         {
             new LogCategoryHelpWindow { Owner = this }.ShowDialog();
         }
+
+        private void ShowRegAdvanced_Click(object sender, RoutedEventArgs e)
+        {
+            new RegAdvancedWindow { Owner = this, DataContext = DataContext }.ShowDialog();
+        }
     }
 }
 

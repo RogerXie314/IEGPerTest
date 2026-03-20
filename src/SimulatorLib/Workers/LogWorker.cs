@@ -61,6 +61,17 @@ namespace SimulatorLib.Workers
         // 共享心跳流注册表（对齐原项目 SetWLTcpConnectInstance 复用同一 TCP 连接）
         private readonly HeartbeatStreamRegistry? _streamRegistry;
 
+        // 可选吞吐量统计器（默认不启用，调用 Metrics.Enable() 激活）
+        private readonly ThroughputMetrics _metrics = new();
+
+        /// <summary>
+        /// 可选吞吐量统计器。调用 <see cref="ThroughputMetrics.Enable"/> 启用定时输出。
+        /// <code>
+        ///   logWorker.Metrics.Enable(reportIntervalSeconds: 30);
+        /// </code>
+        /// </summary>
+        public ThroughputMetrics Metrics => _metrics;
+
         public LogWorker(INetworkSender tcpSender, IUdpSender? udpSender = null, HeartbeatStreamRegistry? streamRegistry = null)
         {
             _tcpSender = tcpSender;
@@ -96,7 +107,7 @@ namespace SimulatorLib.Workers
         /// - messagesPerSecondPerClient：每客户端每秒条数（<=0 或 null 表示不做速率控制）
         /// - categories：日志分类（为空则用 Default）；会按消息序号轮转
         /// </summary>
-        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress = null)
+        public async Task StartAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress = null, int threatHitEvery = 0)
         {
             await StartCoreAsync(
                 messagesPerClient: messagesPerClient,
@@ -112,10 +123,11 @@ namespace SimulatorLib.Workers
                 stressMode: stressMode,
                 localIps: localIps,
                 ct: ct,
-                progress: progress).ConfigureAwait(false);
+                progress: progress,
+                threatHitEvery: threatHitEvery).ConfigureAwait(false);
         }
 
-        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress)
+        private async Task StartCoreAsync(int messagesPerClient, int? messagesPerSecondPerClient, int? maxClients, IReadOnlyList<string>? categories, bool useLogServer, string platformHost, int platformPort, string? logHost, int logPort, int concurrency, bool stressMode, IReadOnlyList<string>? localIps, CancellationToken ct, IProgress<LogSendStats>? progress, int threatHitEvery = 0)
         {
             var clientsAll = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
             var clients = (maxClients.HasValue && maxClients.Value > 0)
@@ -150,6 +162,10 @@ namespace SimulatorLib.Workers
             long totalMessages = (long)clients.Count * messagesPerClient * (allThreatTcp ? categories!.Count : 1);
             long success = 0L;
             long fail = 0L;
+
+            // 局部辅助方法：计数同时通知可选吞吐量统计器（高并发热路径，无额外分配）
+            void IncSuccess() { Interlocked.Increment(ref success); _metrics.RecordSuccess(); }
+            void IncFail()    { Interlocked.Increment(ref fail);    _metrics.RecordFail(); }
 
             // 任务启动即上报一次，避免 UI 长时间显示 0。
             try { progress?.Report(new LogSendStats(totalMessages, 0, 0)); } catch { }
@@ -203,73 +219,54 @@ namespace SimulatorLib.Workers
             // 最大不超过 30s，单客户端不超过 1 轮 interval。
             int spreadMs = clients.Count > 1 ? Math.Min(Math.Max(intervalMs > 0 ? intervalMs : 1000, clients.Count > 100 ? 10000 : 3000), 30000) : 0;
 
-            var clientTasks = new List<Task>(clients.Count);
-            for (int ci = 0; ci < clients.Count; ci++)
+            // v3.7.36: allThreatTcp 路径用专用 OS 线程（Thread + Thread.Sleep + Socket.Send），
+            // 完全对齐老工具 C++ 行为：每客户端一个 OS 线程，Sleep 由 OS 调度器独立唤醒，
+            // send() 由内核排队。不走 ThreadPool / Task.Delay / async。
+            // 非 allThreatTcp 路径仍保持 async Task（HTTPS 等需要 async I/O）。
+
+            // 启动可选吞吐量统计后台循环（未调用 Enable() 时立即返回）
+            using var metricsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var metricsTask = _metrics.RunReportLoopAsync(sw, metricsCts.Token);
+
+            if (allThreatTcp)
             {
-                var c = clients[ci];
-                var startDelay = clients.Count > 1 ? (int)((long)ci * spreadMs / clients.Count) : 0;
-
-                clientTasks.Add(Task.Run(async () =>
+                // ── allThreatTcp: 专用 OS 线程路径（对齐 C++ SendThreatLog_ToserverTCP）──
+                var threads = new Thread[clients.Count];
+                for (int ci = 0; ci < clients.Count; ci++)
                 {
-                    // 每客户端独立 serial（序列号语义是 per-connection，无需全局唯一）
-                    uint clientSerial = 0;
+                    var c = clients[ci];
+                    var startDelay = clients.Count > 1 ? (int)((long)ci * spreadMs / clients.Count) : 0;
 
-                    if (startDelay > 0)
+                    threads[ci] = new Thread(() =>
                     {
-                        try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
-                        catch (OperationCanceledException) { return; }
-                    }
+                        uint clientSerial = 0;
 
-                    // deadline 模式：目标时刻按固定步长递增，HTTP 耗时从等待中扣除，不叠加。
-                    // 超期分两种情况处理：
-                    //   慢响应（耗时 >= fastFailThresholdMs）：正常压力大，重置基准直接继续。
-                    //   快速失败（耗时 < fastFailThresholdMs，如 TLS 握手被拒 ~1ms）：
-                    //     额外等 intervalMs，防止多主机叠加产生握手风暴打垮服务端。
-                    var intervalTicks = intervalMs > 0 ? (long)(intervalMs * (double)Stopwatch.Frequency / 1000.0) : 0L;
-                    const int fastFailThresholdMs = 50; // 低于此值视为快速失败，需要 floor 限速
-                    var nextDeadlineTick = Stopwatch.GetTimestamp(); // 第1条立即发送
-                    long lastSendElapsedMs = intervalMs; // 首条假设"正常耗时"
-
-                    for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
-                    {
-                        if (msgIdx > 0 && intervalTicks > 0)
+                        // 错峰启动
+                        if (startDelay > 0)
                         {
-                            nextDeadlineTick += intervalTicks;
-                            var remainTicks = nextDeadlineTick - Stopwatch.GetTimestamp();
-                            if (remainTicks > 0)
-                            {
-                                var waitMs = (int)(remainTicks * 1000L / Stopwatch.Frequency);
-                                if (waitMs > 0)
-                                {
-                                    try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { return; }
-                                }
-                            }
-                            else
-                            {
-                                // 超期：重置基准，不累积欠债。
-                                nextDeadlineTick = Stopwatch.GetTimestamp();
-                                // 仅快速失败时加 floor 等待，正常慢响应直接继续。
-                                if (lastSendElapsedMs < fastFailThresholdMs)
-                                {
-                                    try { await Task.Delay(intervalMs, ct).ConfigureAwait(false); }
-                                    catch (OperationCanceledException) { return; }
-                                }
-                            }
+                            if (ct.IsCancellationRequested) return;
+                            Thread.Sleep(startDelay);
                         }
 
-                        // allThreatTcp: 每tick依次发送全部N种（对齐C++ SendThreatLog_ToserverTCP）
-                        // 否则：按 msgIdx 轮转单种分类（原有行为）
-                        var sendSw = Stopwatch.StartNew();
-                        if (allThreatTcp)
+                        for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
                         {
+                            // 轮间等待：对齐 C++ Sleep(intervalMs)。
+                            // 用 Thread.Sleep 而非 Task.Delay — OS 调度器独立唤醒每个线程，
+                            // 不存在 ThreadPool TimerQueue 批量回调导致的集中爆发。
+                            if (msgIdx > 0 && intervalMs > 0)
+                            {
+                                Thread.Sleep(intervalMs);
+                            }
+
                             try
                             {
-                                var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
                                 for (int typeIdx = 0; typeIdx < categoryList.Count; typeIdx++)
                                 {
+                                    if (ct.IsCancellationRequested) return;
+
                                     var cat = categoryList[typeIdx];
-                                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
+                                    bool isHit = threatHitEvery <= 1 || (msgIdx % threatHitEvery == 0);
+                                    var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx, isHit: isHit);
                                     var src = GetThreatDataJsonBytes(json);
                                     uint serial = unchecked(++clientSerial);
                                     var pt = PtProtocol.Pack(
@@ -281,35 +278,95 @@ namespace SimulatorLib.Workers
                                         serialNumber: serial);
                                     TryDebugWriteSentPacket(c.ClientId, pt, json);
 
-                                    var typeFailR = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
-                                    if (typeFailR == null) Interlocked.Increment(ref success);
+                                    var typeFailR = DirectSend(c.ClientId, pt);
+                                    if (typeFailR == null) IncSuccess();
                                     else
                                     {
-                                        Interlocked.Increment(ref fail);
+                                        IncFail();
                                         TrackFailure(cat, typeFailR);
-                                        // 对齐C++ goto END：任一类型发送失败立即停止本轮，
-                                        // 避免用已损坏的 stream 继续发后续类型（失败膨胀×N倍）。
+                                        // 对齐 C++ goto END：任一类型发送失败停止本轮
+                                        if (typeFailR == "disconnected")
+                                        {
+                                            Thread.Sleep(Math.Max(intervalMs, 1000));
+                                        }
                                         break;
                                     }
 
-                                    // ~50ms 间隔，对齐C++ Sleep(50)（类型之间，最后一种后不等）
+                                    // ~50ms 间隔，对齐 C++ Sleep(50)
                                     if (typeIdx < categoryList.Count - 1)
-                                        await Task.Delay(50, ct).ConfigureAwait(false);
+                                        Thread.Sleep(50);
                                 }
                             }
-                            catch (OperationCanceledException) { return; }
                             catch (Exception ex)
                             {
-                                Interlocked.Increment(ref fail);
+                                IncFail();
                                 TrackFailure(categoryList[0], ex.GetType().Name + ": " + ex.Message);
                             }
+
+                            MaybeReportProgress();
                         }
-                        else
+                    });
+                    threads[ci].IsBackground = true;
+                    threads[ci].Name = $"LogSend_{c.ClientId}";
+                    threads[ci].Start();
+                }
+
+                // 等待所有线程完成（或取消时放弃等待）
+                foreach (var t in threads)
+                {
+                    while (t.IsAlive && !ct.IsCancellationRequested)
+                    {
+                        Thread.Sleep(500);
+                    }
+                }
+            }
+            else
+            {
+            // ── 非 allThreatTcp: 保持 async Task 路径（HTTPS 等需要 async I/O）──
+            var clientTasks = new List<Task>(clients.Count);
+            for (int ci = 0; ci < clients.Count; ci++)
+            {
+                var c = clients[ci];
+                var startDelay = clients.Count > 1 ? (int)((long)ci * spreadMs / clients.Count) : 0;
+
+                clientTasks.Add(Task.Run(async () =>
+                {
+                    uint clientSerial = 0;
+
+                    if (startDelay > 0)
+                    {
+                        try { await Task.Delay(startDelay, ct).ConfigureAwait(false); }
+                        catch (OperationCanceledException) { return; }
+                    }
+
+                    var intervalTicksAbs = intervalMs > 0
+                        ? (long)(intervalMs * (double)Stopwatch.Frequency / 1000.0)
+                        : 0L;
+                    var clientStartTick = Stopwatch.GetTimestamp();
+
+                    for (int msgIdx = 0; msgIdx < messagesPerClient && !ct.IsCancellationRequested; msgIdx++)
+                    {
+                        if (intervalTicksAbs > 0 && msgIdx > 0)
                         {
-                            var cat = categoryList[msgIdx % categoryList.Count];
-                            var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx);
-                            bool ok;
-                            string? tcpSendFail = null; // TCP 通道失败时记录具体原因，传入 TrackFailure
+                            var targetTick = clientStartTick + (long)msgIdx * intervalTicksAbs;
+                            var waitTicks  = targetTick - Stopwatch.GetTimestamp();
+                            if (waitTicks > 0)
+                            {
+                                var waitMs = (int)(waitTicks * 1000L / Stopwatch.Frequency);
+                                if (waitMs > 1)
+                                {
+                                    try { await Task.Delay(waitMs, ct).ConfigureAwait(false); }
+                                    catch (OperationCanceledException) { return; }
+                                }
+                            }
+                        }
+
+                        var cat = categoryList[msgIdx % categoryList.Count];
+                        // 对齐老工具 bHit逻辑：threatHitEvery 轮中仅第 1 轮发 hit，其余发 miss
+                        bool isHit = threatHitEvery <= 1 || (msgIdx % threatHitEvery == 0);
+                        var (socketCmd, json) = BuildLogByCategory(cat, c, messageIndex: msgIdx, isHit: isHit);
+                        bool ok;
+                        string? tcpSendFail = null;
 
                             try
                             {
@@ -333,7 +390,8 @@ namespace SimulatorLib.Workers
                                     else
                                     {
                                         var tcpPort = c.TcpPort > 0 ? c.TcpPort : platformPort;
-                                        tcpSendFail = await SendLogTcpLikeExternalAsync(c.ClientId, platformHost, tcpPort, pt, ct).ConfigureAwait(false);
+                                        // 直写架构：单分类威胁TCP也走 DirectSend，统计真实发送结果
+                                        tcpSendFail = DirectSend(c.ClientId, pt);
                                         ok = tcpSendFail == null;
                                     }
                                 }
@@ -362,18 +420,25 @@ namespace SimulatorLib.Workers
                                     ok = await PostLogHttpsGatedAsync(http, httpsGate, platformHost, platformPort, path, json, cat, ct).ConfigureAwait(false);
                                 }
 
-                                if (ok) Interlocked.Increment(ref success);
-                                else { Interlocked.Increment(ref fail); TrackFailure(cat, tcpSendFail ?? "non_ok_response"); }
+                                if (ok) IncSuccess();
+                                else
+                                {
+                                    IncFail();
+                                    TrackFailure(cat, tcpSendFail ?? "non_ok_response");
+                                    // 同 allThreatTcp 路径：流断开时等待 interval 避免空转紧循环
+                                    if (tcpSendFail == "disconnected" || tcpSendFail == "no_lock")
+                                    {
+                                        try { await Task.Delay(Math.Max(intervalMs, 1000), ct).ConfigureAwait(false); }
+                                        catch (OperationCanceledException) { return; }
+                                    }
+                                }
                             }
-                            catch (OperationCanceledException) { return; }
-                            catch (Exception ex)
-                            {
-                                Interlocked.Increment(ref fail);
-                                TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
-                            }
+                        catch (OperationCanceledException) { return; }
+                        catch (Exception ex)
+                        {
+                            IncFail();
+                            TrackFailure(cat, ex.GetType().Name + ": " + ex.Message);
                         }
-                        lastSendElapsedMs = sendSw.ElapsedMilliseconds;
-
                         MaybeReportProgress();
                     }
                 }, ct));
@@ -383,9 +448,12 @@ namespace SimulatorLib.Workers
             {
                 await Task.WhenAll(clientTasks).ConfigureAwait(false);
             }
-            finally
-            {
-            }
+            catch { /* individual tasks handle their own exceptions */ }
+            } // end else (non-allThreatTcp)
+
+            // 停止吞吐量统计循环
+            metricsCts.Cancel();
+            try { await metricsTask.ConfigureAwait(false); } catch { }
 
             WriteFailureSummary();
 
@@ -429,6 +497,19 @@ namespace SimulatorLib.Workers
             if (string.IsNullOrEmpty(json)) return Array.Empty<byte>();
             if (json.EndsWith("\n", StringComparison.Ordinal)) json = json.Substring(0, json.Length - 1);
             return Encoding.UTF8.GetBytes(json);
+        }
+
+        /// <summary>
+        /// 为 NativeEngine 构建预打包的日志 payload 模板。
+        /// </summary>
+        public static byte[] BuildTemplatePayload(string category, ClientRecord client, bool isHit = false, int messageIndex = 0)
+        {
+            var (socketCmd, json) = BuildLogByCategory(category, client, messageIndex: messageIndex, isHit: isHit);
+            var src = GetThreatDataJsonBytes(json);
+            return PtProtocol.Pack(src, cmdId: socketCmd,
+                compressType: PtCompressType.Zlib,
+                encryptType: PtEncryptType.None,
+                deviceId: client.DeviceId);
         }
 
         private static bool IsThreatDataCategory(string category)
@@ -733,7 +814,7 @@ namespace SimulatorLib.Workers
             catch { }
         }
 
-        private static (uint SocketCmd, string Json) BuildLogByCategory(string category, ClientRecord client, int messageIndex)
+        private static (uint SocketCmd, string Json) BuildLogByCategory(string category, ClientRecord client, int messageIndex, bool isHit = true)
         {
             // UI 分类 -> external em_LogType + (SOCKET_CMD_LOG_*) + JSON结构
             // 未覆盖/未知的分类，优先回落到 ProcessAlert（平台通常能展示）。
@@ -952,28 +1033,32 @@ namespace SimulatorLib.Workers
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    commandLine: $"{exeName} /c whoami idx={messageIndex}")),
+                    commandLine: $"{exeName} /c whoami idx={messageIndex}",
+                    isHit: isHit)),
 
                 LogCategory.ThreatDllLoad => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventDllLoadLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    targetDll: $"C:\\Windows\\System32\\malware-{messageIndex % 50}.dll")),
+                    targetDll: $"C:\\Windows\\System32\\malware-{messageIndex % 50}.dll",
+                    isHit: isHit)),
 
                 LogCategory.ThreatFileAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventFileAccessLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    filePath: $"C:\\Sensitive\\{client.ClientId}\\doc-{messageIndex % 200}.docx")),
+                    filePath: $"C:\\Sensitive\\{client.ClientId}\\doc-{messageIndex % 200}.docx",
+                    isHit: isHit)),
 
                 LogCategory.ThreatRegAccess => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventRegAccessLog(
                     client.ClientId,
                     processId: 2000 + (Math.Abs(client.DeviceId.GetHashCode()) % 20000) + (messageIndex % 1000),
                     processGuid: Guid.NewGuid().ToString("B"),
                     processPath: fullPath,
-                    regKey: $"HKLM\\SOFTWARE\\{client.ClientId}\\Config\\Key{messageIndex % 100}")),
+                    regKey: $"HKLM\\SOFTWARE\\{client.ClientId}\\Config\\Key{messageIndex % 100}",
+                    isHit: isHit)),
 
                 LogCategory.ThreatOsEvent => (CmdWords.SocketCmd.LogThreat, LogJsonBuilder.BuildThreatEventOsEventLog(
                     client.ClientId,
@@ -992,44 +1077,24 @@ namespace SimulatorLib.Workers
             };
         }
 
-        private async Task<string?> SendLogTcpLikeExternalAsync(string clientId, string host, int port, byte[] payload, CancellationToken ct)
+        /// <summary>
+        /// 直接将日志包写入底层 Socket（阻塞式 Winsock send）。
+        /// 返回 null = 发送成功；返回非 null 字符串 = 失败原因。
+        /// v3.7.35: 同步调用，对齐 C++ Log 线程直接 send(sock) 的数据路径。
+        /// </summary>
+        private string? DirectSend(string clientId, byte[] payload)
         {
-            // 对齐老工具：始终复用心跳已建立的 TCP stream（g_sock[i]），HB 不可用时直接返回失败原因。
-            // 不自建独立连接，避免同一 clientId 两条 TCP 并存被平台踢掉心跳 session。
-            // 返回 null = 成功；返回非 null 字符串 = 失败原因（stream_null / lock_timeout / write_ex:类型名）。
             if (_streamRegistry == null) return "no_registry";
+            return _streamRegistry.DirectSend(clientId, payload);
+        }
 
-            // 写锁仅保护 WriteAsync+FlushAsync（微秒级操作）。
-            // 不在锁内等 ACK：HB 有后台 drain task 持续 ReadAsync 同一 stream，
-            // LogWorker 无法安全读 ACK（drain 会抢先消费字节）。
-            // 背压由 TCP 发送缓冲区满时 WriteAsync 自然阻塞提供；
-            // 200ms 超时保证高 EPS 时快速失败而非无限堆积。
-            bool lockAcq = await _streamRegistry.AcquireWriteLockAsync(clientId, 200, ct).ConfigureAwait(false);
-            try
-            {
-                if (!lockAcq) return "lock_timeout";
-                // 重新取一次 stream（锁等待期间可能重连，stream 已更换）
-                var hbStream = _streamRegistry.TryGet(clientId);
-                if (hbStream == null) return "stream_null";
-
-                using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts2.CancelAfter(3000);
-                await hbStream.WriteAsync(payload, 0, payload.Length, cts2.Token).ConfigureAwait(false);
-                await hbStream.FlushAsync(cts2.Token).ConfigureAwait(false);
-                return null; // success
-            }
-            catch (Exception ex)
-            {
-                // write_ex：半截报文已写入 stream，继续使用会导致协议帧错位。
-                // 主动 Unregister 通知 HeartbeatWorker 此 stream 已损坏，
-                // 触发快速重连（避免等待 SessionStale 超时 90s 才发现问题）。
-                _streamRegistry.Unregister(clientId);
-                return "write_ex:" + ex.GetType().Name;
-            }
-            finally
-            {
-                _streamRegistry.ReleaseWriteLock(clientId, lockAcq);
-            }
+        /// <summary>
+        /// 将日志包投入每客户端的 Channel 队列（非阻塞，fallback 路径）。
+        /// </summary>
+        private string? TryEnqueueLog(string clientId, byte[] payload)
+        {
+            if (_streamRegistry == null) return "no_registry";
+            return _streamRegistry.TryEnqueueLog(clientId, payload);
         }
 
         private static string ComputeFakeSha1(string input)

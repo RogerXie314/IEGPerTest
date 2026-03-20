@@ -297,33 +297,54 @@ public static class LogJsonBuilder
         return Envelope(computerId, CmdWords.CmdTypeDataToServer, CmdWords.DataToServerCmdId.IllegalLog, new[] { item });
     }
 
-    public static string BuildThreatEventProcStartLog(string computerId, int processId, string processGuid, string processPath, string commandLine)
+    public static string BuildThreatEventProcStartLog(string computerId, int processId, string processGuid, string processPath, string commandLine, bool isHit = true)
     {
         // external: ThreatLog_ProcStart_GetJson
         // external constants: THREAT_EVENT_TYPE_PROCSTART=60, THREAT_EVENT_UPLOAD_CMDID=21
+        // isHit=true  → 对齐老工具 bHit=TRUE：powershell -exec bypass 父进程 + cmd.exe reg add 命令行，可触发平台行为规则
+        // isHit=false → 对齐老工具 bHit=FALSE（miss包）：a.exe/b.exe，平台规则不匹配，不产生告警
+        string resolvedPath, resolvedFileName, resolvedCmdLine, resolvedParentPath, resolvedParentCmdLine, resolvedParentFileName;
+        if (isHit)
+        {
+            resolvedPath        = string.IsNullOrWhiteSpace(processPath) ? "C:\\Windows\\System32\\cmd.exe" : processPath;
+            resolvedFileName    = System.IO.Path.GetFileName(resolvedPath);
+            resolvedCmdLine     = string.IsNullOrWhiteSpace(commandLine) ? "\"cmd.exe\" /c \"reg add HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer /v NoSetTaskbar /t REG_DWORD /d 1 /f\"" : commandLine;
+            resolvedParentPath  = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+            resolvedParentCmdLine = "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -exec bypass";
+            resolvedParentFileName = "powershell.exe";
+        }
+        else
+        {
+            resolvedPath        = "C:\\a.exe";
+            resolvedFileName    = "a.exe";
+            resolvedCmdLine     = "\"a.exe\"";
+            resolvedParentPath  = "C:\\b.exe";
+            resolvedParentCmdLine = "C:\\b.exe";
+            resolvedParentFileName = "b.exe";
+        }
         var cmdContent = new Dictionary<string, object?>
         {
             ["EventType"] = 60,
             ["Process.TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             ["Process.ProcessId"] = processId,
             ["Process.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
-            ["Process.ProcessFileName"] = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath),
-            ["Process.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
-            ["Process.CommandLine"] = string.IsNullOrWhiteSpace(commandLine) ? "-" : commandLine,
-            ["Process.User"] = "user",
-            ["Process.UserSid"] = "S-1-5-18",
+            ["Process.ProcessFileName"] = resolvedFileName,
+            ["Process.ProcessName"] = resolvedPath,
+            ["Process.CommandLine"] = resolvedCmdLine,
+            ["Process.User"] = "WIN-913056QNOGK\\DELL",
+            ["Process.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",
             ["Process.TerminalSessionId"] = 0,
-            ["Process.FileVersion"] = "-",
-            ["Process.Description"] = "-",
-            ["Process.Product"] = "-",
-            ["Process.Company"] = "-",
-            ["Process.OriginalFileName"] = "-",
+            ["Process.FileVersion"] = "6.1.7601.17514 (win7sp1_rtm.101119-1850)",
+            ["Process.Description"] = "Host Process for Windows Services",
+            ["Process.Product"] = "Microsoft Windows Operating System",
+            ["Process.Company"] = "Microsoft Corporation",
+            ["Process.OriginalFileName"] = resolvedFileName,
             ["Process.ParentProcessId"] = 0,
             ["Process.ParentProcessGuid"] = Guid.NewGuid().ToString("B"),
-            ["Process.ParentProcessFileName"] = "explorer.exe",
-            ["Process.ParentProcessName"] = "C:\\Windows\\explorer.exe",
-            ["Process.ParentCommandLine"] = "explorer.exe",
-            ["Process.ParentUser"] = "user",
+            ["Process.ParentProcessFileName"] = resolvedParentFileName,
+            ["Process.ParentProcessName"] = resolvedParentPath,
+            ["Process.ParentCommandLine"] = resolvedParentCmdLine,
+            ["Process.ParentUser"] = "WIN-9PARENTCGK\\DELL",
         };
 
         var person = new Dictionary<string, object?>
@@ -338,12 +359,23 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(root, JsonOptions);
     }
 
-    public static string BuildThreatEventDllLoadLog(string computerId, int processId, string processGuid, string processPath, string targetDll)
+    public static string BuildThreatEventDllLoadLog(string computerId, int processId, string processGuid, string processPath, string targetDll, bool isHit = true)
     {
         // external: THREAT_EVENT_TYPE_DLLLOAD=80
-        // No canonical WLJsonParse builder in old tool; use DllLoad.* prefix for consistency
-        var resolvedDll = string.IsNullOrWhiteSpace(targetDll) ? "C:\\Windows\\System32\\malware.dll" : targetDll;
-        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "unknown.exe" : processPath);
+        // isHit=true  → 使用可疑 DLL（malware-*.dll）和调用进程，可触发平台规则
+        // isHit=false → 使用系统安全 DLL（ntdll.dll）和良性进程，不产生告警
+        string resolvedDll, resolvedProc;
+        if (isHit)
+        {
+            resolvedDll  = string.IsNullOrWhiteSpace(targetDll) ? "C:\\Windows\\System32\\malware.dll" : targetDll;
+            resolvedProc = string.IsNullOrWhiteSpace(processPath) ? "C:\\malware_loader.exe" : processPath;
+        }
+        else
+        {
+            resolvedDll  = "C:\\Windows\\System32\\ntdll.dll";
+            resolvedProc = "C:\\safe.exe";
+        }
+        var procFileName = System.IO.Path.GetFileName(resolvedProc);
         var cmdContent = new Dictionary<string, object?>
         {
             ["EventType"] = 80,  // THREAT_EVENT_TYPE_DLLLOAD
@@ -351,7 +383,7 @@ public static class LogJsonBuilder
             ["DllLoad.ProcessId"] = processId,
             ["DllLoad.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
             ["DllLoad.ProcessFileName"] = procFileName,
-            ["DllLoad.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "-" : processPath,
+            ["DllLoad.ProcessName"] = resolvedProc,
             ["DllLoad.TargetDllFileName"] = System.IO.Path.GetFileName(resolvedDll),
             ["DllLoad.TargetDllPath"] = resolvedDll,
             ["DllLoad.User"] = "WIN-913056QNOGK\\DELL",
@@ -367,15 +399,27 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
     }
 
-    public static string BuildThreatEventFileAccessLog(string computerId, int processId, string processGuid, string processPath, string filePath)
+    public static string BuildThreatEventFileAccessLog(string computerId, int processId, string processGuid, string processPath, string filePath, bool isHit = true)
     {
         // external: ThreatLog_File_GetJson — THREAT_EVENT_TYPE_FILE=30
         // Fields align with WLJsonParse.cpp::ThreatLog_File_GetJson, prefix "FileAccess."
-        var resolvedFile = string.IsNullOrWhiteSpace(filePath) ? "\\device\\harddiskvolume3\\windows\\system32\\mimilsa.log" : filePath;
+        // isHit=true  → 对齐老工具 bHit=TRUE：dns.exe 访问 mimilsa.log（Mimikatz痕迹文件），触发 IOC 规则
+        // isHit=false → 对齐老工具 bHit=FALSE（miss包）：e.exe 访问普通文件，不触发告警
+        string resolvedFile, resolvedProc;
+        if (isHit)
+        {
+            resolvedFile = "C:\\Windows\\Prefetch\\mimilsa.log";
+            resolvedProc = string.IsNullOrWhiteSpace(processPath) ? "D:\\dns.exe" : processPath;
+        }
+        else
+        {
+            resolvedFile = "C:\\Users\\DELL\\Documents\\report.txt";
+            resolvedProc = "D:\\e.exe";
+        }
         var fileName = System.IO.Path.GetFileName(resolvedFile);
         var fileExt = System.IO.Path.GetExtension(fileName).TrimStart('.');
-        var fileFolder = System.IO.Path.GetDirectoryName(resolvedFile)?.Replace('/', '\\') ?? "\\device\\harddiskvolume3\\windows\\system32";
-        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "dns.exe" : processPath);
+        var fileFolder = System.IO.Path.GetDirectoryName(resolvedFile)?.Replace('/', '\\') ?? "C:\\Windows\\Prefetch";
+        var procFileName = System.IO.Path.GetFileName(resolvedProc);
         var cmdContent = new Dictionary<string, object?>
         {
             ["EventType"] = 30,  // THREAT_EVENT_TYPE_FILE
@@ -384,7 +428,7 @@ public static class LogJsonBuilder
             ["FileAccess.ProcessId"] = processId,
             ["FileAccess.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
             ["FileAccess.ProcessFileName"] = procFileName,
-            ["FileAccess.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "D:\\dns.exe" : processPath,
+            ["FileAccess.ProcessName"] = resolvedProc,
             ["FileAccess.CommandLine"] = $"{procFileName} set",
             ["FileAccess.User"] = "WIN-913056QNOGK\\DELL",
             ["FileAccess.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",
@@ -408,12 +452,24 @@ public static class LogJsonBuilder
         return JsonSerializer.Serialize(new object[] { person }, JsonOptions);
     }
 
-    public static string BuildThreatEventRegAccessLog(string computerId, int processId, string processGuid, string processPath, string regKey)
+    public static string BuildThreatEventRegAccessLog(string computerId, int processId, string processGuid, string processPath, string regKey, bool isHit = true)
     {
         // external: ThreatLog_Reg_GetJson — THREAT_EVENT_TYPE_REG=40
         // Fields align with WLJsonParse.cpp::ThreatLog_Reg_GetJson, prefix "Registry."
-        var resolvedKey = string.IsNullOrWhiteSpace(regKey) ? "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\TVqQAAMAAAAEAAAA" : regKey;
-        var procFileName = System.IO.Path.GetFileName(string.IsNullOrWhiteSpace(processPath) ? "test_reg.exe" : processPath);
+        // isHit=true  → 对齐老工具 bHit=TRUE：test_reg.exe 访问注册表，进程名不在白名单触发告警
+        // isHit=false → 对齐老工具 bHit=FALSE（miss包）：c.exe 访问普通键，不触发告警
+        string resolvedProc, resolvedKey;
+        if (isHit)
+        {
+            resolvedProc = string.IsNullOrWhiteSpace(processPath) ? "C:\\Windows\\system32\\test_reg.exe" : processPath;
+            resolvedKey  = string.IsNullOrWhiteSpace(regKey) ? "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\TVqQAAMAAAAEAAAA" : regKey;
+        }
+        else
+        {
+            resolvedProc = "C:\\c.exe";
+            resolvedKey  = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+        }
+        var procFileName = System.IO.Path.GetFileName(resolvedProc);
         var cmdContent = new Dictionary<string, object?>
         {
             ["EventType"] = 40,  // THREAT_EVENT_TYPE_REG
@@ -422,7 +478,7 @@ public static class LogJsonBuilder
             ["Registry.ProcessId"] = processId,
             ["Registry.ProcessGuid"] = string.IsNullOrWhiteSpace(processGuid) ? Guid.NewGuid().ToString("B") : processGuid,
             ["Registry.ProcessFileName"] = procFileName,
-            ["Registry.ProcessName"] = string.IsNullOrWhiteSpace(processPath) ? "C:\\Windows\\system32\\test_reg.exe" : processPath,
+            ["Registry.ProcessName"] = resolvedProc,
             ["Registry.CommandLine"] = $"{procFileName} for test parameters...",
             ["Registry.User"] = "WIN-913056QNOGK\\DELL",
             ["Registry.UserSid"] = "S-1-5-21-3782372158-3025124834-3246284786-1000",

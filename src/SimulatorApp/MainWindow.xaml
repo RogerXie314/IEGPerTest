@@ -150,9 +150,6 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="LabelCol" />
@@ -171,21 +168,18 @@
                                 <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">数量：</TextBlock>
                                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding RegCount, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">并发数：</TextBlock>
-                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding RegConcurrency, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
-
-                                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center">超时(ms)：</TextBlock>
-                                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding RegTimeoutMs, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
-
-                                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
-                                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding RegRetryIntervalSec, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
-
-                                <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center">客户端版本：</TextBlock>
-                                <ComboBox Grid.Row="7" Grid.Column="1" Width="170" HorizontalAlignment="Left" Margin="8,2,0,2"
+                                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">客户端版本：</TextBlock>
+                                <ComboBox Grid.Row="4" Grid.Column="1" Width="170" HorizontalAlignment="Left" Margin="8,2,0,2"
                                           ItemsSource="{Binding ClientVersionList}"
                                           SelectedItem="{Binding RegClientVersion, Mode=TwoWay}" />
 
-                                <Button Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Width="120" Margin="0,8,0,0" Command="{Binding RegisterCommand}">并发注册</Button>
+                                <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Height="30" Width="90" Command="{Binding RegisterCommand}">并发注册</Button>
+                                    <Button Height="30" Width="55" Margin="8,0,0,0"
+                                            Background="White" Foreground="#555" BorderBrush="#CCC"
+                                            ToolTip="并发数、超时、轮间隔等高级设置"
+                                            Click="ShowRegAdvanced_Click">高级…</Button>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -351,30 +345,28 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">客户端数：</TextBlock>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WhitelistClientCount, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
+                                <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                          IsChecked="{Binding EnableWhitelistOnReg, Mode=TwoWay}"
+                                          Margin="0,2,0,6"
+                                          ToolTip="对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单&#xa;等效 WLServerTestDlg 注册线程中立即调用 Send_FileLog_WL_ToServer">注册后自动上传（全量一次）</CheckBox>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">并发度：</TextBlock>
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WhitelistConcurrency, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">轮间隔(秒)：</TextBlock>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding WhitelistCycleIntervalSec, Mode=TwoWay}" Width="90" HorizontalAlignment="Left" Margin="8,2,0,2"
-                                         ToolTip="每轮随机上传后等待的秒数（默认900=15分钟）" />
-
-                                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="75" Height="28" Command="{Binding StartWhitelistUploadCommand}">添加任务</Button>
+                                    <Button Grid.Column="0" Width="90" Height="28" Command="{Binding StartWhitelistUploadCommand}"
+                                            ToolTip="立即对全部已注册客户端上传一次白名单">立即上传全量</Button>
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
                                 </Grid>
                             </Grid>
@@ -439,7 +431,14 @@
                                 <TextBox   Grid.Row="4" Grid.Column="3" Text="{Binding LogThreatEps, Mode=TwoWay}" Width="50" HorizontalAlignment="Left" Margin="4,2,0,2" />
                                 <TextBlock Grid.Row="4" Grid.Column="4" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="4,0,0,0">轮/秒</TextBlock>
 
-                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
+                                <!-- 命中轮比：对齐老工具 bHit=1/71，避免告警风暴熔断 -->
+                                <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,0">
+                                    <TextBlock VerticalAlignment="Center">命中每</TextBlock>
+                                    <TextBox Text="{Binding LogThreatHitEvery, Mode=TwoWay}" Width="45" Margin="4,2" />
+                                    <TextBlock VerticalAlignment="Center" Foreground="#666" FontSize="11">轮中发 1 轮 hit 包（0=均命中，默认 71）</TextBlock>
+                                </StackPanel>
+
+                                <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,12,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
@@ -449,7 +448,7 @@
                                     <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopLogSendCommand}">结束任务</Button>
                                 </Grid>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
+                                <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="6" Margin="0,6,0,0"
                                            Foreground="Gray" FontSize="11"
                                            Text="威胁检测：每轮依次发送全部勾选类型（对齐C++ SendThreatLog），轮/秒=EPS/N种" />
                             </Grid>
@@ -499,46 +498,24 @@
                                     <TextBlock Width="80">已完成轮次：</TextBlock>
                                     <TextBlock Text="{Binding RegRound}" />
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="80" VerticalAlignment="Top">失败原因：</TextBlock>
-                                    <TextBlock Text="{Binding RegFailureDetail}" TextWrapping="Wrap" Foreground="DarkOrange" MaxWidth="140" />
-                                </StackPanel>
                             </StackPanel>
 
                             <!-- 心跳统计 -->
                             <StackPanel Grid.Row="0" Grid.Column="2">
                                 <TextBlock FontWeight="Bold">心跳统计</TextBlock>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                    <TextBlock Width="90">目标客户端：</TextBlock>
-                                    <TextBlock Text="{Binding HbTotal}" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90" ToolTip="TCP模式=当前持有TCP连接的客户端数；HTTPS模式=本轮HTTP响应成功数">在线客户端：</TextBlock>
-                                    <TextBlock Text="{Binding HbConnected}" Foreground="DodgerBlue" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90" ToolTip="WriteAsync 未抛异常。数据已进入 OS TCP 发送缓冲区，不代表平台已处理。">已发送/失败：</TextBlock>
-                                    <TextBlock Text="{Binding HbTcpOk}" Foreground="Green" />
-                                    <TextBlock Text=" / " Margin="2,0" />
-                                    <TextBlock Text="{Binding HbTcpFail}" Foreground="Red" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90" FontWeight="SemiBold" ToolTip="平台有回包：服务端对本次连接返回过数据。这是最接近「平台真实在线」的客户端侧指标。" Foreground="#E67E00">▶ 平台回包：</TextBlock>
-                                    <TextBlock Text="{Binding HbServerReplied}" Foreground="#E67E00" FontWeight="SemiBold" />
+                                    <TextBlock Width="70" ToolTip="在线/目标">在线/目标：</TextBlock>
+                                    <TextBlock Text="{Binding HbConnected}" Foreground="DodgerBlue" FontWeight="SemiBold" />
                                     <TextBlock Text=" / " Margin="2,0" Foreground="Gray"/>
                                     <TextBlock Text="{Binding HbTotal}" Foreground="Gray" />
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Width="90">UDP 成功/失败：</TextBlock>
-                                    <TextBlock Text="{Binding HbUdpOk}" Foreground="Green" />
-                                    <TextBlock Text=" / " Margin="2,0" />
-                                    <TextBlock Text="{Binding HbUdpFail}" Foreground="Red" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                    <TextBlock Width="90" FontWeight="SemiBold" Foreground="#7B68EE">策略收到/回包：</TextBlock>
-                                    <TextBlock Text="{Binding PolicyReceived}" Foreground="#7B68EE" />
-                                    <TextBlock Text=" / " Margin="2,0" Foreground="Gray"/>
-                                    <TextBlock Text="{Binding PolicyReplied}" Foreground="MediumPurple" />
+                                <StackPanel Margin="0,4,0,0">
+                                    <TextBlock FontWeight="SemiBold" Foreground="#7B68EE">策略收到/回包：</TextBlock>
+                                    <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                                        <TextBlock Text="{Binding PolicyReceived}" Foreground="#7B68EE" />
+                                        <TextBlock Text=" / " Margin="2,0" Foreground="Gray"/>
+                                        <TextBlock Text="{Binding PolicyReplied}" Foreground="MediumPurple" />
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 
