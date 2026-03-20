@@ -11,9 +11,8 @@ add_library(NativeSender SHARED
 
 target_link_libraries(NativeSender PRIVATE ws2_32)
 
-# 和 SimulatorApp 发布到同一个 artifacts 目录
+# 输出到 build/Release，由 dotnet publish 打包进单文件 EXE
 set_target_properties(NativeSender PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../artifacts/SimulatorAppPublish"
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/../../artifacts/SimulatorAppPublish"
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/../../artifacts/SimulatorAppPublish"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/build/Release"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_SOURCE_DIR}/build/Debug"
 )

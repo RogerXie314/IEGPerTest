@@ -12,6 +12,23 @@
   <ItemGroup>
     <ProjectReference Include="..\\SimulatorLib\\SimulatorLib.csproj" />
   </ItemGroup>
+  <!-- 原生 C++ DLL：先由 publish 脚本编译，再由 dotnet publish 打进单文件 EXE -->
+  <ItemGroup>
+    <None Include="..\..\src\NativeEngine\build\Release\NativeEngine.dll"
+          Condition="Exists('..\..\src\NativeEngine\build\Release\NativeEngine.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
+      <Link>NativeEngine.dll</Link>
+    </None>
+    <None Include="..\..\src\NativeSender\build\Release\NativeSender.dll"
+          Condition="Exists('..\..\src\NativeSender\build\Release\NativeSender.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
+      <Link>NativeSender.dll</Link>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SSH.NET" Version="2024.2.0" />
   </ItemGroup>

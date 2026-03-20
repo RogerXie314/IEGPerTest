@@ -1,4 +1,5 @@
-# Publish SimulatorApp as a single self-contained exe (Brotli compressed, ~73 MB)
+# Publish SimulatorApp as a single self-contained exe (Brotli compressed)
+# NativeEngine.dll + NativeSender.dll 全部打包进同一个 EXE，发布物只有一个文件。
 # Automatically bumps patch version, updates docs, and git commits on each run.
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
@@ -64,8 +65,49 @@ $csproj.Project.PropertyGroup.FileVersion    = "$newVer.0"
 $csproj.Save((Resolve-Path $projectPath))
 Write-Host "Version: $oldVer -> $newVer" -ForegroundColor Cyan
 
-# -- 2. Publish ---------------------------------------------------------------
-Write-Host "Publishing SimulatorApp v$newVer (single-file compressed)..." -ForegroundColor Cyan
+# -- 2. 先编译 C++ DLL（dotnet publish 打包时需要它们已存在）-----------------
+$cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+
+# -- 2a. NativeEngine.dll -------------------------------------------------------
+$neDir = "$PSScriptRoot\..\src\NativeEngine"
+if (Test-Path $cmake) {
+    Write-Host "Building NativeEngine.dll..." -ForegroundColor Cyan
+    Push-Location "$neDir\build"
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+} else {
+    Write-Warning "CMake not found; skipping NativeEngine rebuild (using existing dll if present)"
+}
+$neDll = "$neDir\build\Release\NativeEngine.dll"
+if (-not (Test-Path $neDll)) {
+    Write-Error "NativeEngine.dll not found — publish aborted"
+    exit 1
+}
+Write-Host "NativeEngine.dll ready: $([math]::Round((Get-Item $neDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
+
+# -- 2b. NativeSender.dll -------------------------------------------------------
+# CMakeLists.txt 输出到 build/Release；CMakeCache.txt 存在时强制重新配置以确保路径正确。
+$nsDir = "$PSScriptRoot\..\src\NativeSender"
+if (Test-Path $cmake) {
+    Write-Host "Building NativeSender.dll..." -ForegroundColor Cyan
+    if (-not (Test-Path "$nsDir\build")) { New-Item -ItemType Directory "$nsDir\build" | Out-Null }
+    # 每次重新配置确保 CMakeCache 中的输出路径与 CMakeLists.txt 一致
+    Push-Location "$nsDir\build"
+    & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+} else {
+    Write-Warning "CMake not found; skipping NativeSender rebuild (using existing dll if present)"
+}
+$nsDll = "$nsDir\build\Release\NativeSender.dll"
+if (-not (Test-Path $nsDll)) {
+    Write-Error "NativeSender.dll not found — publish aborted"
+    exit 1
+}
+Write-Host "NativeSender.dll ready: $([math]::Round((Get-Item $nsDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
+
+# -- 3. Publish（dotnet publish 会将两个 DLL 打包进单文件 EXE）----------------
+Write-Host "Publishing SimulatorApp v$newVer (single-file, DLLs embedded)..." -ForegroundColor Cyan
 
 dotnet publish $projectPath `
     -c Release `
@@ -81,60 +123,17 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-# -- 2b. Build & copy NativeEngine.dll (C++ non-blocking socket engine) -------
-$cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-$neDir = "$PSScriptRoot\..\src\NativeEngine"
-if (Test-Path $cmake) {
-    Write-Host "Building NativeEngine.dll..." -ForegroundColor Cyan
-    Push-Location "$neDir\build"
-    & $cmake --build . --config Release | Out-Null
-    Pop-Location
-} else {
-    Write-Warning "CMake not found; skipping NativeEngine rebuild (using existing dll if present)"
-}
-$neDll = "$neDir\build\Release\NativeEngine.dll"
-if (Test-Path $neDll) {
-    Copy-Item $neDll -Destination $outputPath -Force
-    $neSize = (Get-Item "$outputPath\NativeEngine.dll").Length / 1KB
-    Write-Host "NativeEngine.dll copied: $([math]::Round($neSize, 1)) KB" -ForegroundColor Cyan
-} else {
-    Write-Warning "NativeEngine.dll not found — C++ engine will be unavailable"
-}
-
-# -- 2c. Build NativeSender.dll (Winsock 同步发送层，启动时必须存在) ----------
-$nsDir = "$PSScriptRoot\..\src\NativeSender"
-if (Test-Path $cmake) {
-    Write-Host "Building NativeSender.dll..." -ForegroundColor Cyan
-    # 确保 build 目录已配置
-    if (-not (Test-Path "$nsDir\build\CMakeCache.txt")) {
-        Push-Location "$nsDir"
-        if (-not (Test-Path build)) { New-Item -ItemType Directory build | Out-Null }
-        Push-Location build
-        & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
-        Pop-Location ; Pop-Location
-    }
-    Push-Location "$nsDir\build"
-    & $cmake --build . --config Release | Out-Null
-    Pop-Location
-    # DLL 由 CMake 的 RUNTIME_OUTPUT_DIRECTORY 直接输出到 outputPath
-    if (Test-Path "$outputPath\NativeSender.dll") {
-        $nsSize = (Get-Item "$outputPath\NativeSender.dll").Length / 1KB
-        Write-Host "NativeSender.dll built: $([math]::Round($nsSize, 1)) KB" -ForegroundColor Cyan
-    } else {
-        Write-Warning "NativeSender.dll not found after build — app will crash on startup"
-    }
-} else {
-    Write-Warning "CMake not found; skipping NativeSender rebuild (using existing dll if present)"
-    if (-not (Test-Path "$outputPath\NativeSender.dll")) {
-        Write-Error "NativeSender.dll missing and CMake unavailable — publish aborted"
-        exit 1
-    }
+# 验证：输出目录只应有 SimulatorApp.exe 一个文件
+$publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
+Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
+if ($publishedFiles -contains "NativeEngine.dll" -or $publishedFiles -contains "NativeSender.dll") {
+    Write-Warning "DLL 仍出现在输出目录，未能完全打包——请检查 csproj None 项配置"
 }
 
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
 
-# -- 3. Update docs version number -------------------------------------------
+# -- 4. Update docs version number -------------------------------------------
 # Construct Chinese filename via [char] codes to avoid any console encoding issues:
 # docs/项目实施文档.md
 # 项=9879 目=76EE 实=5B9E 施=65BD 文=6587 档=6863
@@ -153,7 +152,7 @@ if ([System.IO.File]::Exists($docPath)) {
     Write-Warning "Doc not found at $docPath, skipping"
 }
 
-# -- 4. Git commit + push -----------------------------------------------------
+# -- 5. Git commit + push -----------------------------------------------------
 Push-Location "$PSScriptRoot\.."
 git add src/SimulatorApp/SimulatorApp.csproj
 git add docs/
