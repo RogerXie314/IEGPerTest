@@ -1165,38 +1165,11 @@ namespace SimulatorApp.ViewModels
                                 var catsArr = threatCats;
                                 int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
 
-                                // 预构建 payload 池（并行，避免热路径回调时做 JSON+Zlib 开销）
-                                // 对齐老工具：每客户端每类型 71 个不同 payload（独立 GUID + messageIndex 变化），
-                                // 回调 O(1) 查找，无 CPU 竞争；payload 元数越多越不易平台去重，71=hitEvery 整周期
-                                const int poolSize = 71;
-                                int tc = catsArr.Length;
-                                var payloadPool = new byte[actualLogClients * tc * poolSize][];
-                                System.Threading.Tasks.Parallel.For(0, actualLogClients, ci =>
-                                {
-                                    for (int ti = 0; ti < tc; ti++)
-                                    {
-                                        for (int n = 0; n < poolSize; n++)
-                                        {
-                                            bool hit = (n % hitEvery == 0);
-                                            payloadPool[ci * tc * poolSize + ti * poolSize + n] =
-                                                SimulatorLib.Workers.LogWorker.BuildTemplatePayload(
-                                                    catsArr[ti], clientsArr[ci], isHit: hit, messageIndex: n);
-                                        }
-                                    }
-                                });
-                                RunOnUi(() => AppendStatus("[NativeEngine] payload 池预构建完成"));
-
-                                // 回调只做 O(1) 数组查找 + Marshal.Copy，无 JSON/Zlib 热路径开销
-                                _nativeEngine.OnBuildLogPayload = (clientIdx, typeIdx, msgCount) =>
-                                {
-                                    if ((uint)clientIdx >= (uint)actualLogClients || (uint)typeIdx >= (uint)tc) return null;
-                                    return payloadPool[clientIdx * tc * poolSize + typeIdx * poolSize + (msgCount % poolSize)];
-                                };
-
                                 int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
                                 _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
-                                    intervalMs, LogMessagesPerClient, sleepBetweenTypesMs: 50);
-                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动: {threatCats.Length}种类型, {actualLogClients}客户端(各自IP)"));
+                                    intervalMs, LogMessagesPerClient,
+                                    hitEvery: hitEvery, sleepBetweenTypesMs: 50);
+                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动（纯C++热路径）: {threatCats.Length}种类型, {actualLogClients}客户端"));
 
                                 // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
                                 var ne = _nativeEngine;

@@ -19,13 +19,10 @@ namespace SimulatorLib.Network
         // ── 保持委托引用，防止 GC 回收 ──
         private NeedReregisterDelegate? _pinnedReregister;
         private BuildHBPayloadDelegate? _pinnedBuildHB;
-        private BuildLogPayloadDelegate? _pinnedBuildLog;
 
         // ── 外部可注册的回调 ──
         public Action<string>? OnNeedReregister { get; set; }
         public Func<string, uint, byte[]?>? OnBuildHBPayload { get; set; }
-        /// <summary>动态构建日志 payload：(clientIdx, typeIdx, msgCount) → 打包好的字节，null 表示跳过</summary>
-        public Func<int, int, int, byte[]?>? OnBuildLogPayload { get; set; }
 
         // ==================== Native Structs ====================
 
@@ -38,6 +35,8 @@ namespace SimulatorLib.Network
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public string ip;
             public int tcpPort;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+            public string computerIdTemplate;
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -74,10 +73,6 @@ namespace SimulatorLib.Network
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int BuildHBPayloadDelegate(IntPtr clientIdPtr, int deviceId, IntPtr outBuf, int outBufSize);
 
-        /// <summary>对齐老工具：DLL 线程每次发送前回调，动态构建 payload（新时间戳、rand 字段）</summary>
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int BuildLogPayloadDelegate(int clientIdx, int typeIdx, int msgCount, IntPtr outBuf, int outBufSize);
-
         // ==================== P/Invoke ====================
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
@@ -93,7 +88,7 @@ namespace SimulatorLib.Network
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int NE_StartLogSend(
-            BuildLogPayloadDelegate buildPayload,
+            int hitEvery,
             int typeCount,
             int logClientCount,
             int intervalMs,
@@ -140,7 +135,8 @@ namespace SimulatorLib.Network
                     clientId = clients[i].ClientId ?? "",
                     deviceId = (int)clients[i].DeviceId,
                     ip = clients[i].IP ?? "",
-                    tcpPort = clients[i].TcpPort
+                    tcpPort = clients[i].TcpPort,
+                    computerIdTemplate = clients[i].ClientId ?? ""
                 };
             }
 
@@ -155,18 +151,17 @@ namespace SimulatorLib.Network
         public void StartHeartbeat() => NE_StartHeartbeat();
 
         /// <summary>
-        /// 启动日志发送。对齐老工具：DLL 线程每次循环回调 C# 动态构建 payload（实时时间戳+rand 字段）。
-        /// 调用前必须先设置 OnBuildLogPayload。
+        /// 启动日志发送（纯 C++ 热路径：JSON 构建+zlib+PT 打包全在 DLL 内完成）。
         /// </summary>
         public void StartLogSend(
             int typeCount,
             int logClientCount,
             int intervalMs,
             int totalMessages,
+            int hitEvery = 71,
             int sleepBetweenTypesMs = 50)
         {
-            _pinnedBuildLog = new BuildLogPayloadDelegate(OnBuildLogPayloadNative);
-            NE_StartLogSend(_pinnedBuildLog, typeCount, logClientCount,
+            NE_StartLogSend(hitEvery, typeCount, logClientCount,
                 intervalMs, totalMessages, sleepBetweenTypesMs);
         }
 
@@ -214,24 +209,6 @@ namespace SimulatorLib.Network
             }
         }
 
-        // 对齐老工具：每次发送前动态构建 payload（新时间戳、rand 字段）
-        private int OnBuildLogPayloadNative(int clientIdx, int typeIdx, int msgCount, IntPtr outBuf, int outBufSize)
-        {
-            try
-            {
-                byte[]? payload = OnBuildLogPayload?.Invoke(clientIdx, typeIdx, msgCount);
-                if (payload == null || payload.Length == 0) return 0;
-                if (payload.Length > outBufSize) return 0;
-
-                Marshal.Copy(payload, 0, outBuf, payload.Length);
-                return payload.Length;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
         // ==================== IDisposable ====================
 
         public void Dispose()
@@ -241,7 +218,6 @@ namespace SimulatorLib.Network
             try { NE_Shutdown(); } catch { }
             _pinnedReregister = null;
             _pinnedBuildHB = null;
-            _pinnedBuildLog = null;
         }
     }
 }

@@ -1,7 +1,8 @@
 // NativeEngine — 心跳+日志发送 C++ DLL
 // 直接翻译老 C++ 工具 WLServerTest 的核心逻辑：
 //   非阻塞 socket + OS 线程 + Sleep + send/recv
-// payload 打包由 C# (PtProtocol) 完成，DLL 只负责连接管理与发送。
+// v3.8.2: 日志 payload 构建（JSON snprintf + zlib compress + PT 打包）全部移入 C++，
+//         零 P/Invoke 热路径，对齐老工具 SendThreatLog_ToserverTCP 行为。
 
 #define NATIVEENGINE_EXPORTS
 #include "native_engine.h"
@@ -12,8 +13,12 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <atomic>
 #include <vector>
+
+// zlib — 使用 IEG 预编译静态库
+#include "zlib.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -23,6 +28,7 @@
 
 struct ClientSlot {
     char     clientId[64];
+    char     computerIdTemplate[64]; // ComputerID 用于日志 JSON
     int32_t  deviceId;
     char     ip[32];
     int32_t  tcpPort;
@@ -68,7 +74,7 @@ static std::atomic<int64_t> s_logSendFail{0};
 
 // 日志发送配置
 struct LogSendConfig {
-    NE_BuildLogPayloadCallback buildPayload;  // 每次发送前回调 C# 动态构建 payload
+    int32_t hitEvery;            // 每 N 轮第1轮发 hit，其余 miss（老工具 bHit=1/71）
     int32_t typeCount;
     int32_t logClientCount;
     int32_t intervalMs;
@@ -344,19 +350,193 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
 }
 
 // ============================================================
-//  日志发送线程（对齐 ThreadFunc_MsgLogSend）
+//  PT 协议打包（对齐 Protocal.cpp GetPortocal compress_zlib + encrypt_none）
+// ============================================================
+
+// WL_PORTOCAL_HEAD = 48 字节，Big-Endian
+// [0-1]   szFlag       "PT"
+// [2]     cProtoVer    1
+// [3]     cSource      3 (em_portocal_Windows_IEG)
+// [4-5]   nBodyLen     uint16 BE  (压缩后 body 大小)
+// [6]     nEncryptType 0 (none)
+// [7]     nCompressType 1 (zlib)
+// [8]     nFillLen     0
+// [9]     nReserve     0
+// [10-11] nRandomKey   0 BE
+// [12-15] nSerialNumber 0 BE
+// [16-19] CheckSum     uint32 BE (crc32 of original json)
+// [20-23] nSessionID   0 BE
+// [24-31] nTime        int64 BE (time(NULL))
+// [32-35] nCmdID       uint32 BE
+// [36-39] nDeviceID    uint32 BE
+// [40-41] nSrcLen      uint16 BE (original json len)
+// [42-47] sznReserve   0
+
+static inline uint16_t be16(uint16_t v) { return htons(v); }
+static inline uint32_t be32(uint32_t v) { return htonl(v); }
+static uint64_t be64(uint64_t v) {
+    return ((uint64_t)htonl((uint32_t)(v >> 32))) |
+           ((uint64_t)htonl((uint32_t)(v & 0xFFFFFFFF)) << 32);
+}
+
+// 将 json+jsonLen 打包为 PT 协议包写入 outBuf（需足够大：48 + compressBound(jsonLen)）
+// 返回实际写入字节数，失败返回 -1
+static int PackPT(const char* json, int jsonLen,
+                  uint32_t cmdId, uint32_t deviceId,
+                  uint8_t* outBuf, int outBufCapacity)
+{
+    // 1. CRC32 over original JSON
+    uLong crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, (const Bytef*)json, (uInt)jsonLen);
+
+    // 2. zlib compress
+    uLong compBound = compressBound((uLong)jsonLen);
+    if ((int)(48 + compBound) > outBufCapacity) return -1;
+
+    uint8_t* compBuf = outBuf + 48; // body directly after header
+    uLong compLen = compBound;
+    int zret = compress(compBuf, &compLen, (const Bytef*)json, (uLong)jsonLen);
+    if (zret != Z_OK) return -1;
+
+    // 3. Fill 48-byte header
+    uint8_t* h = outBuf;
+    memset(h, 0, 48);
+    h[0] = 'P'; h[1] = 'T';
+    h[2] = 1;   // cProtoVer
+    h[3] = 3;   // cSource = em_portocal_Windows_IEG
+
+    uint16_t bodyLenBE = be16((uint16_t)compLen);
+    memcpy(h + 4, &bodyLenBE, 2);
+
+    h[6] = 0;   // nEncryptType  = none
+    h[7] = 1;   // nCompressType = zlib
+
+    // h[8-9] = 0 (nFillLen, nReserve)
+    // h[10-11] = 0 (nRandomKey)
+    // h[12-15] = 0 (nSerialNumber)
+
+    uint32_t crcBE = be32((uint32_t)crc);
+    memcpy(h + 16, &crcBE, 4);
+
+    // h[20-23] = 0 (nSessionID)
+
+    uint64_t timeBE = be64((uint64_t)time(NULL));
+    memcpy(h + 24, &timeBE, 8);  // nTime
+
+    uint32_t cmdIdBE = be32(cmdId);
+    memcpy(h + 32, &cmdIdBE, 4);
+
+    uint32_t devIdBE = be32(deviceId);
+    memcpy(h + 36, &devIdBE, 4);
+
+    uint16_t srcLenBE = be16((uint16_t)jsonLen);
+    memcpy(h + 40, &srcLenBE, 2);
+
+    // h[42-47] = 0 (sznReserve)
+
+    return (int)(48 + compLen);
+}
+
+// ============================================================
+//  日志 JSON 构建（对齐 SimulateJson.cpp + C# LogJsonBuilder 的 JSON 格式）
+// ============================================================
+
+// 当前时间字符串：用作 ProcGuid，对齐 ReturnCurrentTimeWstr() "YYYY-M-D H:M:S"
+static void FormatTimeGuid(char* buf, int size) {
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    snprintf(buf, size, "%04d-%d-%d %d:%02d:%02d",
+             st.wYear, st.wMonth, st.wDay,
+             st.wHour, st.wMinute, st.wSecond);
+}
+
+// 3 种威胁类型索引 (按 C# 侧 threatCats 数组顺序：ProcStart, RegAccess, FileAccess)
+// 对应 C# GetSelectedCategories() 中的选项顺序（ProcStart=0, RegAccess=1, FileAccess=2）
+// typeIdx → EventType: 0→ProcStart(60), 1→Reg(40), 2→File(30)
+// THREAT_EVENT_UPLOAD_CMDID = 21
+
+static const uint32_t THREAT_CMDID = 21;
+
+// 构建威胁日志 JSON，写入 buf，返回长度（含 null 终止符不计入）
+// typeIdx: 0=ProcStart(60), 1=Reg(40), 2=File(30)
+// isHit: true=命中载荷(危险), false=miss载荷
+static int BuildThreatJson(int typeIdx, bool isHit,
+                           const char* computerID,
+                           char* buf, int bufSize)
+{
+    char timeGuid[32];
+    FormatTimeGuid(timeGuid, sizeof(timeGuid));
+
+    unsigned int pid = (unsigned int)(rand() % 60000 + 1000);
+    long long ts = (long long)time(NULL);
+
+    int written = 0;
+    if (typeIdx == 0) {
+        // ProcStart (EventType=60)
+        // hit: cmd.exe; miss: a.exe (对齐 C# LogJsonBuilder)
+        const char* procName = isHit
+            ? "C:\\\\Windows\\\\System32\\\\cmd.exe"
+            : "C:\\\\Windows\\\\System32\\\\a.exe";
+        written = snprintf(buf, bufSize,
+            "[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{"
+            "\"EventType\":60,"
+            "\"Process.TimeStamp\":%lld,"
+            "\"Process.ProcessId\":%u,"
+            "\"Process.ProcessGuid\":\"%s\","
+            "\"Process.ProcessName\":\"%s\","
+            "\"Process.CommandLine\":\"\\\"%s\\\" /c whoami\","
+            "\"Process.ParentProcessName\":\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\","
+            "\"threat\":%s}}]",
+            computerID, ts, pid, timeGuid, procName, procName,
+            isHit ? "true" : "false");
+    } else if (typeIdx == 1) {
+        // Reg (EventType=40)
+        const char* procExe = isHit
+            ? "C:\\\\Windows\\\\System32\\\\cmd.exe"
+            : "C:\\\\Windows\\\\System32\\\\a.exe";
+        written = snprintf(buf, bufSize,
+            "[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{"
+            "\"EventType\":40,"
+            "\"Registry.TimeStamp\":%lld,"
+            "\"Registry.ProcessId\":%u,"
+            "\"Registry.ProcessGuid\":\"%s\","
+            "\"Registry.ProcessName\":\"%s\","
+            "\"Registry.RegistryKey\":\"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\TVqQAAMAAAAEAAAA\","
+            "\"threat\":%s}}]",
+            computerID, ts, pid, timeGuid, procExe,
+            isHit ? "true" : "false");
+    } else {
+        // File (EventType=30)
+        const char* filePath = isHit
+            ? "\\\\device\\\\harddiskvolume3\\\\windows\\\\system32\\\\mimilsa.log"
+            : "\\\\device\\\\harddiskvolume3\\\\windows\\\\system32\\\\a.log";
+        const char* procExe = isHit
+            ? "D:\\\\dns.exe"
+            : "D:\\\\a.exe";
+        written = snprintf(buf, bufSize,
+            "[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{"
+            "\"EventType\":30,"
+            "\"FileAccess.TimeStamp\":%lld,"
+            "\"FileAccess.ProcessId\":%u,"
+            "\"FileAccess.ProcessGuid\":\"%s\","
+            "\"FileAccess.ProcessName\":\"%s\","
+            "\"FileAccess.FilePath\":\"%s\","
+            "\"threat\":%s}}]",
+            computerID, ts, pid, timeGuid, procExe, filePath,
+            isHit ? "true" : "false");
+    }
+    return (written > 0 && written < bufSize) ? written : -1;
+}
+
+// ============================================================
+//  日志发送线程（对齐 ThreadFunc_MsgLogSend，零 P/Invoke）
 // ============================================================
 
 static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
-    // 对齐老工具 pHeapArgs->sock 值拷贝语义：
-    // 老工具在 AfxBeginThread 创建线程时将 g_sock[i] 值拷贝到 pHeapArgs->sock，
-    // 线程内部始终使用这个常量句柄，HB 重连后 g_sock[i] 变化对 log 线程透明。
-    // 若 HB 重连并关闭旧 socket，log 线程对旧 handle 的 send() 会失败，
-    // 但老工具不检查返回值，继续循环；我们同样不对失败断连，对齐该行为。
-    // 等待 socket 就绪（HB 与 Log 同时启动时的竞争窗口，通常 < 几百 ms）。
+    // 等待 socket 就绪
     SOCKET sock = INVALID_SOCKET;
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         sock = slot.sock;
@@ -367,11 +547,15 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
 
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
+    int hitEvery = (g_logCfg.hitEvery > 1) ? g_logCfg.hitEvery : 1;
 
-    // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 payload（新时间戳、rand PID 等）
-    // 使用栈上缓冲区，大小 128KB，足够容纳任意压缩后 payload
-    static const int kBufSize = 128 * 1024;
-    std::vector<uint8_t> payloadBuf(kBufSize);
+    // 栈上 JSON buffer（足够大，snprintf 结果通常 < 1KB）
+    static const int kJsonBufSize = 4096;
+    // PT 包 buffer：48 header + compressBound(4096) ≈ 48 + 4112 = 4160，留宽到 8KB
+    static const int kPtBufSize = 8192;
+
+    char jsonBuf[kJsonBufSize];
+    std::vector<uint8_t> ptBuf(kPtBufSize);
 
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
@@ -382,29 +566,33 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
             continue;
         }
 
+        // 该轮是否 hit：每 hitEvery 轮中第 1 轮 hit
+        bool isHit = (msgCount % hitEvery == 0);
+
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
-            // 每次发送前回调 C# 动态构建 payload（对齐老工具实时 rand()+timestamp）
-            int payloadLen = 0;
-            if (g_logCfg.buildPayload) {
-                payloadLen = g_logCfg.buildPayload(idx, t, msgCount,
-                    payloadBuf.data(), kBufSize);
-            }
-            if (payloadLen <= 0) {
-                s_logSendFail++;
-                break;
-            }
+            // 1. 构建 JSON
+            int jsonLen = BuildThreatJson(t, isHit,
+                slot.computerIdTemplate[0] ? slot.computerIdTemplate : slot.clientId,
+                jsonBuf, kJsonBufSize);
+            if (jsonLen <= 0) { s_logSendFail++; break; }
 
-            bool ok = SendAll(sock, payloadBuf.data(), payloadLen);
-            if (ok) {
+            // 2. PT 打包（zlib compress + 48 byte header）
+            int ptLen = PackPT(jsonBuf, jsonLen, THREAT_CMDID,
+                               (uint32_t)slot.deviceId,
+                               ptBuf.data(), kPtBufSize);
+            if (ptLen <= 0) { s_logSendFail++; break; }
+
+            // 3. 发送
+            if (SendAll(sock, ptBuf.data(), ptLen)) {
                 s_logSendOk++;
             } else {
                 s_logSendFail++;
                 break;
             }
 
-            // 对齐老工具 SendThreatLog_ToserverTCP：File→Sleep(50)→ProcStart→Sleep(50)→Reg
+            // 对齐老工具 SendThreatLog_ToserverTCP：类型间 Sleep(50ms)
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
         }
@@ -446,6 +634,7 @@ NE_API int32_t NE_Init(
     for (int i = 0; i < clientCount; i++) {
         auto& s = g_clients[i];
         strncpy(s.clientId, clients[i].clientId, sizeof(s.clientId) - 1);
+        strncpy(s.computerIdTemplate, clients[i].computerIdTemplate, sizeof(s.computerIdTemplate) - 1);
         s.deviceId = clients[i].deviceId;
         strncpy(s.ip, clients[i].ip, sizeof(s.ip) - 1);
         s.tcpPort = clients[i].tcpPort;
@@ -487,7 +676,7 @@ NE_API int32_t NE_StartHeartbeat() {
 }
 
 NE_API int32_t NE_StartLogSend(
-    NE_BuildLogPayloadCallback buildPayload,
+    int32_t hitEvery,
     int32_t typeCount,
     int32_t logClientCount,
     int32_t intervalMs,
@@ -496,11 +685,11 @@ NE_API int32_t NE_StartLogSend(
 {
     InterlockedExchange(&g_stopLog, 0);
 
-    g_logCfg.buildPayload       = buildPayload;
-    g_logCfg.typeCount          = typeCount;
-    g_logCfg.logClientCount     = logClientCount;
-    g_logCfg.intervalMs         = intervalMs;
-    g_logCfg.totalMessages      = totalMessages;
+    g_logCfg.hitEvery            = hitEvery;
+    g_logCfg.typeCount           = typeCount;
+    g_logCfg.logClientCount      = logClientCount;
+    g_logCfg.intervalMs          = intervalMs;
+    g_logCfg.totalMessages       = totalMessages;
     g_logCfg.sleepBetweenTypesMs = sleepBetweenTypesMs;
 
     int count = (logClientCount > g_clientCount) ? g_clientCount : logClientCount;

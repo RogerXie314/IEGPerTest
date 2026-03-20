@@ -18,6 +18,7 @@ typedef struct {
     int32_t  deviceId;
     char     ip[32];              // 如 "10.254.197.1"
     int32_t  tcpPort;             // 心跳/日志 TCP端口 (默认=platformPort)
+    char     computerIdTemplate[64]; // ComputerID 用于日志 JSON（通常与 clientId 相同）
 } NE_ClientInfo;
 
 // ---------- 引擎配置 ----------
@@ -59,8 +60,6 @@ typedef int32_t (__stdcall *NE_BuildLogPayloadCallback)(
     int32_t clientIdx, int32_t typeIdx, int32_t msgCount,
     uint8_t* outBuf, int32_t outBufSize);
 
-// ---------- API ----------
-
 // 初始化引擎。成功返回0。
 NE_API int32_t NE_Init(
     const NE_Config* config,
@@ -72,15 +71,15 @@ NE_API int32_t NE_Init(
 // 启动心跳线程（每客户端1个OS线程）。
 NE_API int32_t NE_StartHeartbeat();
 
-// 启动日志发送线程。
-// buildPayload: 每次发送前回调 C# 动态构建 payload（对齐老工具实时 rand+timestamp）
-// typeCount: 日志类型数量
-// logClientCount: 发日志的客户端数（从第0个开始）
-// intervalMs: 每轮日志间隔（ms）
-// totalMessages: 每客户端发送总条数（0=无限）
-// sleepBetweenTypesMs: 类型间 Sleep (老工具=50ms)
+// 启动日志发送线程（纯 C++ 路径：JSON 构建+压缩+PT 打包全在 DLL 内完成，零 P/Invoke 热路径）。
+// hitEvery:              每 N 轮中第 1 轮发 hit 包，其余发 miss 包（1 = 全 hit，71 = 老工具默认）
+// typeCount:             日志类型数量（对应勾选的威胁类型数）
+// logClientCount:        发日志的客户端数（从第0个开始）
+// intervalMs:            每轮日志间隔（ms），由 EPS 计算得出
+// totalMessages:         每客户端发送总条数（0=无限）
+// sleepBetweenTypesMs:   类型间 Sleep（对齐老工具=50ms）
 NE_API int32_t NE_StartLogSend(
-    NE_BuildLogPayloadCallback buildPayload,
+    int32_t hitEvery,
     int32_t typeCount,
     int32_t logClientCount,
     int32_t intervalMs,
