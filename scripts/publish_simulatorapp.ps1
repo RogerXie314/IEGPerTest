@@ -1,4 +1,4 @@
-# Publish SimulatorApp as a single self-contained exe (Brotli compressed)
+﻿# Publish SimulatorApp as a single self-contained exe (Brotli compressed)
 # NativeEngine.dll + NativeSender.dll 全部打包进同一个 EXE，发布物只有一个文件。
 # Automatically bumps patch version, updates docs, and git commits on each run.
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
@@ -127,7 +127,7 @@ if ($LASTEXITCODE -ne 0) {
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
 if ($publishedFiles -contains "NativeEngine.dll" -or $publishedFiles -contains "NativeSender.dll") {
-    Write-Warning "DLL 仍出现在输出目录，未能完全打包——请检查 csproj None 项配置"
+    Write-Warning "DLL still in output dir -- csproj None item may be misconfigured"
 }
 
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
