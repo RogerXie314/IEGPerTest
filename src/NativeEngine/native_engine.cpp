@@ -461,14 +461,17 @@ NE_API int32_t NE_Init(
 NE_API int32_t NE_StartHeartbeat() {
     InterlockedExchange(&g_stopHB, 0);
 
-    // 对齐老工具错峰：每线程获得 startDelayMs = i * connectGateMs，自行 Sleep 后再连接。
-    // 效果与老工具 AfxBeginThread+Sleep(500) 完全一致（各客户端相差 500ms 上线），
-    // 区别是本函数立即返回（不阻塞调用线程250秒），C# 侧可以随时调用 StartLogSend。
+    // 对齐老工具：AfxBeginThread → Sleep(500) → AfxBeginThread → Sleep(500) → ...
+    // 主循环串行创建线程，每创建一个后 Sleep(connectGateMs)，
+    // 使任何时刻的线程数 == 已到时间上线的客户端数（观感与老工具完全一致）。
+    // 线程本身内部不再需要 startDelayMs，直接建连即可。
     for (int i = 0; i < g_clientCount; i++) {
-        int delayMs = g_config.connectGateMs > 0 ? i * g_config.connectGateMs : 0;
-        HBGroupArg* args = new HBGroupArg{i, 1, delayMs};
+        if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
+        HBGroupArg* args = new HBGroupArg{i, 1, 0};  // startDelayMs=0，由外层 Sleep 控制错峰
         HANDLE h = CreateThread(NULL, 0, HBThreadProc, (LPVOID)args, 0, NULL);
         g_clients[i].hbThread = h;
+        if (g_config.connectGateMs > 0)
+            Sleep(g_config.connectGateMs);  // 对齐 AfxBeginThread 后的 Sleep(500)
     }
     return 0;
 }
