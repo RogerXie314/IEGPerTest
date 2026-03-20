@@ -739,7 +739,7 @@ namespace SimulatorApp.ViewModels
 
                         RunOnUi(() => AppendStatus($"开始心跳任务（NativeEngine C++ 模式，{clients.Count} 客户端，间隔 {HbInterval}ms）"));
 
-                        // 统计轮询先启动，StartHeartbeat 内部 Sleep(500ms)×N 会阻塞约250秒
+                        // 统计轮询先启动，StartHeartbeat 内部 Sleep(gateMs)×N 期间持续轮询
                         _neStatsCts?.Cancel();
                         _neStatsCts = new CancellationTokenSource();
                         var neCt = _neStatsCts.Token;
@@ -1145,26 +1145,35 @@ namespace SimulatorApp.ViewModels
                     {
                         if (_nativeEngine != null)
                         {
-                            // ── NativeEngine 路径：C++ 发送日志（每客户端独立 payload 含各自 IP/ClientId）──
+                            // 对齐老工具：客户端未就绪时硬拦截（等效 WLServerTestDlg 行 1934 的 AfxMessageBox + return）
+                            var neStats = _nativeEngine.GetStats();
+                            if (neStats.hbTotal > 0 && LogThreatClientCount > neStats.hbConnected)
+                            {
+                                RunOnUi(() => AppendStatus(
+                                    $"[错误] 没有足够的客户端可以运行：仅 {neStats.hbConnected}/{neStats.hbTotal} 已上线，" +
+                                    $"请等待足够客户端上线后再添加日志任务。"));
+                                return;
+                            }
+                            // ── NativeEngine 路径：C++ 发送日志（对齐老工具：每次循环回调动态构建 JSON）──
                             var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
                             int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
                             if (actualLogClients > 0)
                             {
-                                // 为每个客户端构建独立的 payload 数组
-                                var perClientPayloads = new List<byte[][]>();
-                                for (int ci = 0; ci < actualLogClients; ci++)
+                                // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 JSON（新时间戳、rand 字段）
+                                // 注册回调，DLL 线程每次发送前调用此回调获取新 payload
+                                var clientsArr = clients;
+                                var catsArr = threatCats;
+                                int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
+                                _nativeEngine.OnBuildLogPayload = (clientIdx, typeIdx, msgCount) =>
                                 {
-                                    var clientPayloads = new byte[threatCats.Length][];
-                                    for (int ti = 0; ti < threatCats.Length; ti++)
-                                    {
-                                        clientPayloads[ti] = LogWorker.BuildTemplatePayload(
-                                            threatCats[ti], clients[ci], isHit: false);
-                                    }
-                                    perClientPayloads.Add(clientPayloads);
-                                }
+                                    if (clientIdx >= clientsArr.Count || typeIdx >= catsArr.Length) return null;
+                                    bool isHit = (msgCount % hitEvery == 0);
+                                    return SimulatorLib.Workers.LogWorker.BuildTemplatePayload(
+                                        catsArr[typeIdx], clientsArr[clientIdx], isHit: isHit);
+                                };
 
                                 int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
-                                _nativeEngine.StartLogSend(perClientPayloads, actualLogClients,
+                                _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
                                     intervalMs, LogMessagesPerClient, sleepBetweenTypesMs: 50);
                                 RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动: {threatCats.Length}种类型, {actualLogClients}客户端(各自IP)"));
 

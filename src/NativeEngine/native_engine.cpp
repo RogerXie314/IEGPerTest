@@ -68,8 +68,7 @@ static std::atomic<int64_t> s_logSendFail{0};
 
 // 日志发送配置
 struct LogSendConfig {
-    // per-client payloads: payloads[clientIdx * typeCount + typeIdx]
-    std::vector<std::vector<uint8_t>> payloads;
+    NE_BuildLogPayloadCallback buildPayload;  // 每次发送前回调 C# 动态构建 payload
     int32_t typeCount;
     int32_t logClientCount;
     int32_t intervalMs;
@@ -369,12 +368,14 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
 
+    // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 payload（新时间戳、rand PID 等）
+    // 使用栈上缓冲区，大小 128KB，足够容纳任意压缩后 payload
+    static const int kBufSize = 128 * 1024;
+    std::vector<uint8_t> payloadBuf(kBufSize);
+
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // sock 为启动时的快照（对齐老工具 pHeapArgs->sock），不随 HB 重连改变。
-        // HB 重连后该 handle 已被 closesocket，send() 返回 WSAENOTSOCK → SendAll false，
-        // 老工具行为：静默失败继续循环，不做任何处理。
         if (sock == INVALID_SOCKET) {
             if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
             msgCount++;
@@ -384,8 +385,18 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
-            const auto& payload = g_logCfg.payloads[idx * g_logCfg.typeCount + t];
-            bool ok = SendAll(sock, payload.data(), (int)payload.size());
+            // 每次发送前回调 C# 动态构建 payload（对齐老工具实时 rand()+timestamp）
+            int payloadLen = 0;
+            if (g_logCfg.buildPayload) {
+                payloadLen = g_logCfg.buildPayload(idx, t, msgCount,
+                    payloadBuf.data(), kBufSize);
+            }
+            if (payloadLen <= 0) {
+                s_logSendFail++;
+                break;
+            }
+
+            bool ok = SendAll(sock, payloadBuf.data(), payloadLen);
             if (ok) {
                 s_logSendOk++;
             } else {
@@ -394,7 +405,6 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
             }
 
             // 对齐老工具 SendThreatLog_ToserverTCP：File→Sleep(50)→ProcStart→Sleep(50)→Reg
-            // 每个子 payload 发送后 Sleep(50ms)（最后一个除外）
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
         }
@@ -403,7 +413,6 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
 
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // Sleep 在循环末尾（对齐老工具：先发完再等间隔）
         if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
     }
     return 0;
@@ -478,8 +487,7 @@ NE_API int32_t NE_StartHeartbeat() {
 }
 
 NE_API int32_t NE_StartLogSend(
-    const uint8_t** payloadTemplates,
-    const int32_t* payloadSizes,
+    NE_BuildLogPayloadCallback buildPayload,
     int32_t typeCount,
     int32_t logClientCount,
     int32_t intervalMs,
@@ -488,21 +496,12 @@ NE_API int32_t NE_StartLogSend(
 {
     InterlockedExchange(&g_stopLog, 0);
 
-    g_logCfg.payloads.clear();
-    g_logCfg.typeCount = typeCount;
-    g_logCfg.logClientCount = logClientCount;
-    g_logCfg.intervalMs = intervalMs;
-    g_logCfg.totalMessages = totalMessages;
+    g_logCfg.buildPayload       = buildPayload;
+    g_logCfg.typeCount          = typeCount;
+    g_logCfg.logClientCount     = logClientCount;
+    g_logCfg.intervalMs         = intervalMs;
+    g_logCfg.totalMessages      = totalMessages;
     g_logCfg.sleepBetweenTypesMs = sleepBetweenTypesMs;
-
-    // payloadTemplates 是 [logClientCount * typeCount] 的扁平数组
-    // payloadTemplates[clientIdx * typeCount + typeIdx]
-    int totalPayloads = logClientCount * typeCount;
-    for (int p = 0; p < totalPayloads; p++) {
-        g_logCfg.payloads.emplace_back(
-            payloadTemplates[p],
-            payloadTemplates[p] + payloadSizes[p]);
-    }
 
     int count = (logClientCount > g_clientCount) ? g_clientCount : logClientCount;
     for (int i = 0; i < count; i++) {

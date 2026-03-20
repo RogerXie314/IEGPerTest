@@ -52,6 +52,13 @@ typedef int32_t (__stdcall *NE_BuildHBPayloadCallback)(
     const char* clientId, int32_t deviceId,
     uint8_t* outBuf, int32_t outBufSize);
 
+// ---------- 回调：每次发送前动态构建日志 payload（对齐老工具每次循环实时构建 JSON）----------
+// clientIdx: 客户端索引, typeIdx: 日志类型索引, msgCount: 当前线程已发条数
+// C# 填充 outBuf，返回写入字节数；返回 <=0 表示失败/跳过
+typedef int32_t (__stdcall *NE_BuildLogPayloadCallback)(
+    int32_t clientIdx, int32_t typeIdx, int32_t msgCount,
+    uint8_t* outBuf, int32_t outBufSize);
+
 // ---------- API ----------
 
 // 初始化引擎。成功返回0。
@@ -66,16 +73,14 @@ NE_API int32_t NE_Init(
 NE_API int32_t NE_StartHeartbeat();
 
 // 启动日志发送线程。
-// payloadTemplates: 预打包好的 payload 数组（每种日志类型一个）
-// payloadSizes: 每个 payload 的大小
+// buildPayload: 每次发送前回调 C# 动态构建 payload（对齐老工具实时 rand+timestamp）
 // typeCount: 日志类型数量
 // logClientCount: 发日志的客户端数（从第0个开始）
 // intervalMs: 每轮日志间隔（ms）
 // totalMessages: 每客户端发送总条数（0=无限）
-// sleepBetweenTypesMs: 类型间 Sleep (老工具=50)
+// sleepBetweenTypesMs: 类型间 Sleep (老工具=50ms)
 NE_API int32_t NE_StartLogSend(
-    const uint8_t** payloadTemplates,
-    const int32_t* payloadSizes,
+    NE_BuildLogPayloadCallback buildPayload,
     int32_t typeCount,
     int32_t logClientCount,
     int32_t intervalMs,
