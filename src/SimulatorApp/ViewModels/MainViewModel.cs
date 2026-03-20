@@ -572,7 +572,7 @@ namespace SimulatorApp.ViewModels
                     RegFailureDetail = detailSb.ToString().Trim();
                     AppendStatus($"注册任务完成（共{summary.Rounds}轮）：成功={summary.Success}  失败={summary.Failed}");
                     if (summary.FailureReasons.Count > 0)
-                        AppendStatus("失败原因：\r\n" + detailSb.ToString().TrimEnd());
+                        System.Diagnostics.Debug.WriteLine("[注册失败原因] " + detailSb.ToString().TrimEnd());
                 });
 
                 // 将统计追加写入 RegistrationStats.log 文件
@@ -712,7 +712,7 @@ namespace SimulatorApp.ViewModels
                             // 回调由 C++ OS 线程同步调用；.GetAwaiter().GetResult() 阻塞该线程直到重注册完成，
                             // 使 C++ 在拿到新 DeviceId 后再重连（与老工具同线程串行行为一致）
                             if (!clientLookup.TryGetValue(clientId, out var cRereg)) return;
-                            RunOnUi(() => AppendStatus($"[NativeEngine] 客户端 {clientId} 收到 NOREGISTER，执行 HTTPS 重注册..."));
+                            System.Diagnostics.Debug.WriteLine($"[NativeEngine] NOREGISTER {clientId}, re-registering...");
                             try
                             {
                                 var newc = HeartbeatWorker.ReregisterClientAsync(
@@ -721,11 +721,11 @@ namespace SimulatorApp.ViewModels
                                 if (newc != null)
                                 {
                                     clientLookup[clientId] = newc;
-                                    RunOnUi(() => AppendStatus($"[NativeEngine] 重注册成功 {clientId} deviceId={newc.DeviceId}"));
+                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg OK {clientId} deviceId={newc.DeviceId}");
                                 }
                                 else
                                 {
-                                    RunOnUi(() => AppendStatus($"[NativeEngine] ⚠ 重注册失败 {clientId}，使用旧凭据重连"));
+                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg FAIL {clientId}");
                                 }
                             }
                             catch { }
@@ -764,7 +764,8 @@ namespace SimulatorApp.ViewModels
                                     if (offline > 0 && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
                                     {
                                         _lastHbLogTime = DateTime.Now;
-                                        AppendStatus($"[NativeEngine] ⚠ 连接:{stats.hbConnected}/{stats.hbTotal}  HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包(在线):{stats.hbReplied}  回包累计:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}  断线:{stats.disconnects}  重连:{stats.reconnects}");
+                                        AppendStatus($"[心跳] ⚠ 在线:{stats.hbConnected}/{stats.hbTotal}  断线:{stats.disconnects} 重连:{stats.reconnects}");
+                                        System.Diagnostics.Debug.WriteLine($"[NativeEngine] HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包:{stats.hbReplied}  回包累计:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}");
                                     }
 
                                     if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
@@ -820,10 +821,10 @@ namespace SimulatorApp.ViewModels
                                         if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
                                         if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
                                         string reasonStr = reasons.Count > 0
-                                            ? "  离线原因: " + string.Join(", ", reasons)
+                                            ? "  原因: " + string.Join(", ", reasons)
                                             : string.Empty;
                                         AppendStatus(
-                                            $"[心跳] ⚠ 总:{s.Total}  TCP连接:{s.Connected}  平台回包:{s.ServerReplied}  TCP离线:{offline}↓" +
+                                            $"[心跳] ⚠ 在线:{s.Connected}/{s.Total}  离线:{offline}↓" +
                                             reasonStr);
                                     }
                                 }

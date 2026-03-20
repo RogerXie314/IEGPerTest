@@ -352,19 +352,32 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
+    // 对齐老工具 pHeapArgs->sock 值拷贝语义：
+    // 老工具在 AfxBeginThread 创建线程时将 g_sock[i] 值拷贝到 pHeapArgs->sock，
+    // 线程内部始终使用这个常量句柄，HB 重连后 g_sock[i] 变化对 log 线程透明。
+    // 若 HB 重连并关闭旧 socket，log 线程对旧 handle 的 send() 会失败，
+    // 但老工具不检查返回值，继续循环；我们同样不对失败断连，对齐该行为。
+    // 等待 socket 就绪（HB 与 Log 同时启动时的竞争窗口，通常 < 几百 ms）。
+    SOCKET sock = INVALID_SOCKET;
+    while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
+        sock = slot.sock;
+        if (sock != INVALID_SOCKET) break;
+        Sleep(100);
+    }
+    if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
+
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
 
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // 对齐老工具 g_sock[i]：每轮从 slot 读取当前 socket，HB 线程重连后自动使用新连接
-        SOCKET sock = slot.sock;
+        // sock 为启动时的快照（对齐老工具 pHeapArgs->sock），不随 HB 重连改变。
+        // HB 重连后该 handle 已被 closesocket，send() 返回 WSAENOTSOCK → SendAll false，
+        // 老工具行为：静默失败继续循环，不做任何处理。
         if (sock == INVALID_SOCKET) {
-            // 短轮询：HB 线程建立连接后，日志线程最多 100ms 内感知并开始发送。
-            // 老工具场景：用户先开 HB 等全部就绪再开日志，此处几乎不触发。
-            // 新工具场景：允许日志和 HB 同时启动，100ms 轮询确保 socket 就绪后立即跟上。
-            Sleep(100);
+            if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
+            msgCount++;
             continue;
         }
 
@@ -489,8 +502,10 @@ NE_API int32_t NE_StartLogSend(
 
     int count = (logClientCount > g_clientCount) ? g_clientCount : logClientCount;
     for (int i = 0; i < count; i++) {
-        g_clients[i].logThread = CreateThread(
-            NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
+        HANDLE h = CreateThread(NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
+        // 对齐老工具 AfxBeginThread(..., THREAD_PRIORITY_TIME_CRITICAL, ...)（第 2170 行）
+        if (h) SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+        g_clients[i].logThread = h;
     }
     return 0;
 }
