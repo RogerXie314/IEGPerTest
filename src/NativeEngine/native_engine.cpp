@@ -534,6 +534,7 @@ static int BuildThreatJson(int typeIdx, bool isHit,
 
 // ============================================================
 //  日志发送线程（对齐 ThreadFunc_MsgLogSend，零 P/Invoke）
+//  v3.8.6 修复：send 失败后检测 HB 重连，自动切换到新 socket
 // ============================================================
 
 static DWORD WINAPI LogThreadProc(LPVOID param) {
@@ -564,15 +565,24 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
+        // v3.8.6: socket 失效后，轮询等待 HB 线程重连成功且完成首次认证
         if (sock == INVALID_SOCKET) {
-            if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
-            msgCount++;
-            continue;
+            SOCKET newSock = slot.sock;
+            if (newSock != INVALID_SOCKET
+                && InterlockedCompareExchange(&slot.lastReplyOk, 1, 1)) {
+                // HB 已重连且收到平台回包（认证完成），切换到新 socket
+                sock = newSock;
+            } else {
+                if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
+                msgCount++;
+                continue;
+            }
         }
 
         // 该轮是否 hit：每 hitEvery 轮中第 1 轮 hit
         bool isHit = (msgCount % hitEvery == 0);
 
+        bool sendFailed = false;
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
@@ -593,12 +603,19 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 s_logSendOk++;
             } else {
                 s_logSendFail++;
+                sendFailed = true;
                 break;
             }
 
             // 对齐老工具 SendThreatLog_ToserverTCP：类型间 Sleep(50ms)
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
+        }
+
+        // v3.8.6: send 失败后，将本地 sock 置为 INVALID，下一轮进入重连检测
+        // 不关闭 socket（生命周期由 HB 线程独占管理），只丢弃本地快照
+        if (sendFailed) {
+            sock = INVALID_SOCKET;
         }
 
         msgCount++;
