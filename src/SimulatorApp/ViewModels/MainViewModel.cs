@@ -34,8 +34,8 @@ namespace SimulatorApp.ViewModels
         private int _logMessagesPerClient = 50;
         private int _logHttpsClientCount = 0;
         private int _logHttpsEps = 0;
-        private int _logThreatClientCount = 5;
-        private int _logThreatEps = 1;
+        private int _logThreatClientCount = 0;
+        private int _logThreatEps = 0;
         private int _logThreatHitEvery = 71;
         private long _logTotalMessages;
         private long _logSuccess;

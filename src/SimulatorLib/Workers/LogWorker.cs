@@ -828,7 +828,7 @@ namespace SimulatorLib.Workers
 
             var userName = $"user_{Math.Abs(client.DeviceId.GetHashCode()) % 10000:D4}";
             var baseOctet = (Math.Abs(client.DeviceId.GetHashCode()) % 200) + 1;
-            var dstIp = $"10.0.{baseOctet}.{(messageIndex % 254) + 1}";
+            var attackerIp = $"10.0.{baseOctet}.{(messageIndex % 254) + 1}"; // 攻击源（外部攻击者）
             var srcPort = ClampPort(10000 + (messageIndex % 50000));
             var dstPort = (messageIndex % 3) switch
             {
@@ -987,7 +987,8 @@ namespace SimulatorLib.Workers
 
                 // LogCategory.Process 已由上面的专门if分支处理（进程审计、非白名单、白名单防篡改）
 
-                LogCategory.VulDefense => (CmdWords.SocketCmd.LogVulDefense, LogJsonBuilder.BuildVulDefenseLog(client.ClientId, srcIp: client.IP, srcPort: srcPort, dstIp: dstIp, dstPort: dstPort)),
+                // 漏洞防护：当前主机（client.IP）是被攻击端（DstIp），攻击者是外部IP（SrcIp）
+                LogCategory.VulDefense => (CmdWords.SocketCmd.LogVulDefense, LogJsonBuilder.BuildVulDefenseLog(client.ClientId, srcIp: attackerIp, srcPort: srcPort, dstIp: client.IP, dstPort: dstPort)),
 
                 LogCategory.Illegal => (CmdWords.SocketCmd.LogIllegal, LogJsonBuilder.BuildIllegalConnectLog(client.ClientId, host: $"test{messageIndex % 100}.example.com", ip: "93.184.216.34", state: 1)),
 
@@ -1070,7 +1071,7 @@ namespace SimulatorLib.Workers
 
                 LogCategory.OSResource => (CmdWords.SocketCmd.LogOsResource, LogJsonBuilder.BuildOsResourceLog(client.ClientId, message: $"CPU usage high idx={messageIndex} client={client.ClientId}", resourceType: (messageIndex % 3) + 1)),
 
-                LogCategory.FireWall => (CmdWords.SocketCmd.LogFireWall, LogJsonBuilder.BuildFireWallLog(client.ClientId, logContent: $"Firewall event idx={messageIndex} blocked connection to {dstIp}:{dstPort}", type: (messageIndex % 2))),
+                LogCategory.FireWall => (CmdWords.SocketCmd.LogFireWall, LogJsonBuilder.BuildFireWallLog(client.ClientId, logContent: $"Firewall event idx={messageIndex} blocked connection to {attackerIp}:{dstPort}", type: (messageIndex % 2))),
 
                 // 未知分类fallback到客户端操作日志
                 _ => (CmdWords.SocketCmd.LogAdmin, LogJsonBuilder.BuildClientAdminLog(client.ClientId, userName, $"Fallback: unknown category={category} idx={messageIndex}", success: true)),
