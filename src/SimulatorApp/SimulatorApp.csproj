@@ -5,14 +5,14 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <Version>3.8.6</Version>
-    <AssemblyVersion>3.8.6.0</AssemblyVersion>
-    <FileVersion>3.8.6.0</FileVersion>
+    <Version>3.8.7</Version>
+    <AssemblyVersion>3.8.7.0</AssemblyVersion>
+    <FileVersion>3.8.7.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\\SimulatorLib\\SimulatorLib.csproj" />
   </ItemGroup>
-  <!-- 闁告鍠撻弫?C++ DLL闁挎稒鑹鹃崢娑㈡偨?publish 闁煎瓨纰嶅﹢鎵磽閺嶎剛妲柨娑樿嫰閸熲偓闁?dotnet publish 闁瑰灚鎹佺换姗€宕￠弴鐔哥€ù?EXE -->
+  <!-- 闂佸憡顭囬崰鎾诲极?C++ DLL闂佹寧绋掗懝楣冨储濞戙垺鍋?publish 闂佺厧鐡ㄧ喊宥咃耿閹殿喚纾介柡宥庡墰濡差垶鏌ㄥ☉妯垮闁哥啿鍋撻梺?dotnet publish 闂佺懓鐏氶幑浣烘崲濮椻偓瀹曪繝寮撮悢鍝モ偓顔济?EXE -->
   <ItemGroup>
     <None Include="..\..\src\NativeEngine\build\Release\NativeEngine.dll" Condition="Exists('..\..\src\NativeEngine\build\Release\NativeEngine.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
