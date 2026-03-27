@@ -40,6 +40,10 @@ namespace SimulatorLib.RawPacket
         [JsonIgnore] public string SrcIp  { get; set; } = "";
         [JsonIgnore] public string DstIp  { get; set; } = "";
         [JsonIgnore] public string DstMac { get; set; } = "";
+        /// <summary>帧长度（显示用）</summary>
+        [JsonIgnore] public int FrameLen => FrameData?.Length ?? 0;
+        /// <summary>协议信息摘要（显示用）</summary>
+        [JsonIgnore] public string Info   { get; set; } = "";
     }
 
     public class RateConfig
@@ -72,5 +76,8 @@ namespace SimulatorLib.RawPacket
         public ulong  SendBytes  { get; set; }
         public ulong  SendFail   { get; set; }
         public double CurrentPps { get; set; }
+        public double CurrentBps { get; set; }
+        public double AvgPps     { get; set; }
+        public double AvgBps     { get; set; }
     }
 }

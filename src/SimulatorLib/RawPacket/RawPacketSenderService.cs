@@ -15,7 +15,9 @@ namespace SimulatorLib.RawPacket
         private readonly List<StreamConfig>     _streams  = new();
         private SendTaskStatus _status = SendTaskStatus.Idle;
         private ulong    _lastSendTotal;
+        private ulong    _lastSendBytes;
         private DateTime _lastStatsTime;
+        private DateTime _startTime;
         private int      _selectedAdapterIndex = -1;
 
         public IReadOnlyList<NicAdapterInfo> Adapters => _adapters;
@@ -55,6 +57,7 @@ namespace SimulatorLib.RawPacket
             }
 
             _lastStatsTime = DateTime.UtcNow;
+            _startTime     = DateTime.UtcNow;
             return true;
         }
 
@@ -147,6 +150,7 @@ namespace SimulatorLib.RawPacket
 
             bool ok = _interop.Start();
             _status = ok ? SendTaskStatus.Running : SendTaskStatus.Error;
+            if (ok) { _startTime = DateTime.UtcNow; _lastSendTotal = 0; _lastSendBytes = 0; }
             if (!ok) LastError = "启动发包失败，请检查 Npcap 权限";
             return ok;
         }
@@ -158,30 +162,39 @@ namespace SimulatorLib.RawPacket
             _status = SendTaskStatus.Stopped;
         }
 
-        /// <summary>刷新统计数据（含 PPS 计算）。</summary>
+        /// <summary>刷新统计数据（含 PPS/BPS 计算）。</summary>
         public void RefreshStats()
         {
             var raw = _interop.GetStats();
             var now = DateTime.UtcNow;
             double elapsed = (now - _lastStatsTime).TotalSeconds;
-            double pps = elapsed > 0
-                ? (raw.SendTotal - _lastSendTotal) / elapsed
-                : 0;
+            double totalElapsed = (now - _startTime).TotalSeconds;
+
+            double curPps = elapsed > 0 ? (raw.SendTotal - _lastSendTotal) / elapsed : 0;
+            double curBps = elapsed > 0 ? (raw.SendBytes - _lastSendBytes) * 8.0 / elapsed : 0;
+            double avgPps = totalElapsed > 0 ? raw.SendTotal / totalElapsed : 0;
+            double avgBps = totalElapsed > 0 ? raw.SendBytes * 8.0 / totalElapsed : 0;
+
             _lastSendTotal = raw.SendTotal;
+            _lastSendBytes = raw.SendBytes;
             _lastStatsTime = now;
+
             Stats = new SendStats
             {
                 SendTotal  = raw.SendTotal,
                 SendBytes  = raw.SendBytes,
                 SendFail   = raw.SendFail,
-                CurrentPps = pps,
+                CurrentPps = curPps,
+                CurrentBps = curBps,
+                AvgPps     = avgPps,
+                AvgBps     = avgBps,
             };
         }
 
         /// <summary>
-        /// 为 [startIp, endIp] 范围内每个 IP 克隆模板帧，设置目的 IP，返回 StreamConfig 列表。
+        /// 为 [startIp, endIp] 范围内每个 IP 克隆模板帧，设置【源 IP】，返回 StreamConfig 列表。
         /// </summary>
-        public List<StreamConfig> ExpandIpRange(
+        public List<StreamConfig> ExpandSrcIpRange(
             StreamConfig template, uint startIp, uint endIp)
         {
             var result = new List<StreamConfig>();
@@ -189,7 +202,7 @@ namespace SimulatorLib.RawPacket
             {
                 var clone = CloneStream(template);
                 clone.Name = $"{template.Name}_{InputValidator.UintToIp(ip)}";
-                PacketTemplateBuilder.SetDestinationIp(clone.FrameData, ip);
+                PacketTemplateBuilder.SetSourceIp(clone.FrameData, ip);
                 result.Add(clone);
             }
             return result;

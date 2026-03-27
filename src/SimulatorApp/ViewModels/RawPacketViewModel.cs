@@ -46,11 +46,14 @@ namespace SimulatorApp.ViewModels
         private StreamConfig?   _selectedStream;
         private string _destIp       = "";
         private string _destMac      = "";
-        private string _srcIpStart   = "";
-        private string _srcIpEnd     = "";
+        // 源IP变化规则（对应图2：起始值/最大不超过/步长）
+        private string _srcIpStart   = "192.168.0.1";
+        private string _srcIpMax     = "192.168.255.255";
+        private string _srcIpStep    = "1";
+        private bool   _srcIpRuleEnabled = false;
         private string _destIpError  = "";
         private string _destMacError = "";
-        private string _srcIpRangeError = "";
+        private string _srcIpRuleError = "";
         private string _rateError    = "";
         private string _statusText   = "";
         private string _npcapStatusText = "未知";
@@ -107,16 +110,35 @@ namespace SimulatorApp.ViewModels
             }
         }
 
+        // ── 源IP变化规则 ─────────────────────────────────────────────────
+        public bool SrcIpRuleEnabled
+        {
+            get => _srcIpRuleEnabled;
+            set { _srcIpRuleEnabled = value; OnPropertyChanged(); }
+        }
+
         public string SrcIpStart
         {
             get => _srcIpStart;
-            set { _srcIpStart = value; OnPropertyChanged(); ValidateSrcIpRange(); }
+            set { _srcIpStart = value; OnPropertyChanged(); ValidateSrcIpRule(); }
         }
 
-        public string SrcIpEnd
+        public string SrcIpMax
         {
-            get => _srcIpEnd;
-            set { _srcIpEnd = value; OnPropertyChanged(); ValidateSrcIpRange(); }
+            get => _srcIpMax;
+            set { _srcIpMax = value; OnPropertyChanged(); ValidateSrcIpRule(); }
+        }
+
+        public string SrcIpStep
+        {
+            get => _srcIpStep;
+            set { _srcIpStep = value; OnPropertyChanged(); ValidateSrcIpRule(); }
+        }
+
+        public string SrcIpRuleError
+        {
+            get => _srcIpRuleError;
+            private set { _srcIpRuleError = value; OnPropertyChanged(); }
         }
 
         public string DestIpError
@@ -129,12 +151,6 @@ namespace SimulatorApp.ViewModels
         {
             get => _destMacError;
             private set { _destMacError = value; OnPropertyChanged(); }
-        }
-
-        public string SrcIpRangeError
-        {
-            get => _srcIpRangeError;
-            private set { _srcIpRangeError = value; OnPropertyChanged(); }
         }
 
         public string RateError
@@ -277,20 +293,47 @@ namespace SimulatorApp.ViewModels
         }
 
         // ── Private helpers ───────────────────────────────────────────────
-        private void ValidateSrcIpRange()
+        private void ValidateSrcIpRule()
         {
-            if (string.IsNullOrWhiteSpace(_srcIpStart) && string.IsNullOrWhiteSpace(_srcIpEnd))
+            if (!_srcIpRuleEnabled) { SrcIpRuleError = ""; return; }
+            if (!InputValidator.IsValidIpv4(_srcIpStart))
+            { SrcIpRuleError = "起始值格式无效"; return; }
+            if (!InputValidator.IsValidIpv4(_srcIpMax))
+            { SrcIpRuleError = "最大值格式无效"; return; }
+            if (!uint.TryParse(_srcIpStep, out var step) || step < 1)
+            { SrcIpRuleError = "步长须 ≥ 1"; return; }
+            if (InputValidator.IpToUint(_srcIpStart) > InputValidator.IpToUint(_srcIpMax))
+            { SrcIpRuleError = "起始值不能大于最大值"; return; }
+            SrcIpRuleError = "";
+        }
+
+        /// <summary>将源IP变化规则转换为 FieldRuleConfig（作用于 IP 源地址字段，偏移26，宽度4）。</summary>
+        private FieldRuleConfig? BuildSrcIpRule()
+        {
+            if (!_srcIpRuleEnabled) return null;
+            if (!InputValidator.IsValidIpv4(_srcIpStart) || !InputValidator.IsValidIpv4(_srcIpMax)) return null;
+            if (!uint.TryParse(_srcIpStep, out var step) || step < 1) return null;
+
+            uint startUint = InputValidator.IpToUint(_srcIpStart);
+            uint maxUint   = InputValidator.IpToUint(_srcIpMax);
+
+            // 网络字节序（大端）存入 base_value / max_value
+            byte[] ToBeBytes(uint v) => new byte[]
             {
-                SrcIpRangeError = "";
-                return;
-            }
-            if (!InputValidator.IsValidIpv4(_srcIpStart) || !InputValidator.IsValidIpv4(_srcIpEnd))
+                (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v,
+                0, 0, 0, 0
+            };
+
+            return new FieldRuleConfig
             {
-                SrcIpRangeError = "起始/结束 IP 格式无效";
-                return;
-            }
-            SrcIpRangeError = InputValidator.IsValidIpRange(_srcIpStart, _srcIpEnd)
-                ? "" : "起始 IP 必须 ≤ 结束 IP";
+                Valid     = true,
+                Offset    = 26,   // IP saddr 在以太网帧中的偏移
+                Width     = 4,
+                BitsFrom  = -1,
+                BaseValue = ToBeBytes(startUint),
+                MaxValue  = ToBeBytes(maxUint),
+                StepSize  = step,
+            };
         }
 
         private RateConfig BuildRateConfig()
@@ -329,7 +372,7 @@ namespace SimulatorApp.ViewModels
                 DestMacError = "目的 MAC 必填且格式正确";
                 ok = false;
             }
-            if (!string.IsNullOrWhiteSpace(_srcIpRangeError))
+            if (!string.IsNullOrWhiteSpace(_srcIpRuleError))
                 ok = false;
 
             // 速率验证（最大速率模式跳过）
@@ -357,15 +400,13 @@ namespace SimulatorApp.ViewModels
         {
             if (!ValidateForStart()) return;
 
-            // Clear existing streams in service
-            foreach (var s in Streams.ToList())
-                _service.RemoveStream(s.Id);
+            // 清空旧 Stream
+            foreach (var s in Streams.ToList()) _service.RemoveStream(s.Id);
             Streams.Clear();
 
-            // Load selected builtin packets
             var dstMacBytes = ParseMac(_destMac);
             var dstIpUint   = InputValidator.IpToUint(_destIp);
-            var srcMacBytes = new byte[] { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
+            var srcIpRule   = BuildSrcIpRule(); // null = 不启用源IP变化
 
             foreach (var item in BuiltinPackets.Where(b => b.IsSelected))
             {
@@ -374,7 +415,6 @@ namespace SimulatorApp.ViewModels
                     var loaded = BuiltinPacketLoader.Load(item.ResourceName);
                     foreach (var sc in loaded)
                     {
-                        // Apply dest IP/MAC
                         if (sc.FrameData.Length >= 34)
                         {
                             PacketTemplateBuilder.SetDestinationMac(sc.FrameData, dstMacBytes);
@@ -383,6 +423,14 @@ namespace SimulatorApp.ViewModels
                         sc.DstIp  = _destIp;
                         sc.DstMac = _destMac;
                         sc.Type   = PacketType.Custom;
+
+                        // 附加源IP变化规则
+                        if (srcIpRule != null)
+                        {
+                            sc.Rules.Clear();
+                            sc.Rules.Add(srcIpRule);
+                        }
+
                         AddStreamToService(sc);
                     }
                 }
@@ -390,23 +438,6 @@ namespace SimulatorApp.ViewModels
                 {
                     MessageBox.Show($"加载内置报文 {item.Name} 失败：{ex.Message}", "错误",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            }
-
-            // Expand IP range if provided
-            if (!string.IsNullOrWhiteSpace(_srcIpStart) && !string.IsNullOrWhiteSpace(_srcIpEnd)
-                && string.IsNullOrEmpty(_srcIpRangeError))
-            {
-                var startUint = InputValidator.IpToUint(_srcIpStart);
-                var endUint   = InputValidator.IpToUint(_srcIpEnd);
-                var toExpand  = Streams.ToList();
-                foreach (var s in toExpand)
-                {
-                    _service.RemoveStream(s.Id);
-                    Streams.Remove(s);
-                    var expanded = _service.ExpandIpRange(s, startUint, endUint);
-                    foreach (var es in expanded)
-                        AddStreamToService(es);
                 }
             }
 
@@ -539,11 +570,8 @@ namespace SimulatorApp.ViewModels
 
         private void RefreshStats()
         {
-            if (_service.Status == SendTaskStatus.Running)
-            {
-                _service.RefreshStats();
-                Stats = _service.Stats;
-            }
+            _service.RefreshStats();
+            Stats = _service.Stats;
         }
 
         private void AddStreamToService(StreamConfig sc)
