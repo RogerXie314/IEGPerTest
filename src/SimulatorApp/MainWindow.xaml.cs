@@ -32,6 +32,12 @@ namespace SimulatorApp
         {
             new RegAdvancedWindow { Owner = this, DataContext = DataContext }.ShowDialog();
         }
+
+        private void BtnRawPacket_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new SimulatorApp.Views.RawPacketWindow();
+            win.Show();
+        }
     }
 }
 

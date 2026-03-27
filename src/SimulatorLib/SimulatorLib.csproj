@@ -3,5 +3,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\external\攻击报文\ms08067-winXP.etc"
+                      LogicalName="ms08067-winXP.etc" />
+    <EmbeddedResource Include="..\..\external\攻击报文\ms17010-win7.etc"
+                      LogicalName="ms17010-win7.etc" />
+    <EmbeddedResource Include="..\..\external\攻击报文\ms20796-win10.etc"
+                      LogicalName="ms20796-win10.etc" />
+  </ItemGroup>
 </Project>

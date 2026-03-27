@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using SimulatorLib.RawPacket;
 
 namespace SimulatorLib.Persistence
 {
@@ -65,6 +66,8 @@ namespace SimulatorLib.Persistence
         public string SshCollectTo { get; set; } = "";
 
         private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.json");
+
+        public RawPacketSenderConfig RawPacketSender { get; set; } = new();
 
         public static async Task<AppConfig> LoadAsync()
         {

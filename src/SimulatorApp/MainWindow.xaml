@@ -55,6 +55,9 @@
         <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
             <TextBlock FontSize="18" FontWeight="Bold">模拟工具（原型）</TextBlock>
             <TextBlock Margin="12,4,0,0" Foreground="Gray">— 注册 / 心跳 / 日志 模拟</TextBlock>
+            <Button Content="攻击报文发送" Click="BtnRawPacket_Click"
+                    Margin="16,0,0,0" Padding="8,4"
+                    Background="#FF7043" BorderBrush="#E64A19"/>
         </StackPanel>
 
         <Grid Grid.Row="1" Margin="0,12,0,0">

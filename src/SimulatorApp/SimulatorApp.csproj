@@ -5,9 +5,9 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <Version>3.8.7</Version>
-    <AssemblyVersion>3.8.7.0</AssemblyVersion>
-    <FileVersion>3.8.7.0</FileVersion>
+    <Version>3.9.0</Version>
+    <AssemblyVersion>3.9.0.0</AssemblyVersion>
+    <FileVersion>3.9.0.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\\SimulatorLib\\SimulatorLib.csproj" />
@@ -25,6 +25,12 @@
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
       <Link>NativeSender.dll</Link>
+    </None>
+    <None Include="..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll" Condition="Exists('..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
+      <Link>RawPacketEngine.dll</Link>
     </None>
   </ItemGroup>
   <ItemGroup>

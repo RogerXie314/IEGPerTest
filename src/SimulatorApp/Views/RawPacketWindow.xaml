@@ -1,0 +1,133 @@
+<Window x:Class="SimulatorApp.Views.RawPacketWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="攻击报文发送" Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- 顶部：网卡选择 + Npcap 状态 -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,4">
+      <Label Content="网卡："/>
+      <ComboBox Width="350" ItemsSource="{Binding Adapters}"
+                SelectedItem="{Binding SelectedAdapter}"
+                DisplayMemberPath="DisplayText"/>
+      <Label Content="Npcap：" Margin="16,0,0,0"/>
+      <TextBlock Text="{Binding NpcapStatusText}" VerticalAlignment="Center"/>
+    </StackPanel>
+
+    <!-- 中间：左/中/右三列 -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="200"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- 左侧：内置攻击报文 + 目的IP/MAC -->
+      <StackPanel Grid.Column="0" Margin="8">
+        <Label Content="内置攻击报文" FontWeight="Bold"/>
+        <ItemsControl ItemsSource="{Binding BuiltinPackets}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <CheckBox IsChecked="{Binding IsSelected}"
+                        Content="{Binding DisplayText}"
+                        Margin="0,2"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Separator Margin="0,8"/>
+        <Label Content="目的 IP："/>
+        <TextBox Text="{Binding DestIp, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
+        <TextBlock Text="{Binding DestIpError}" Foreground="Red" FontSize="11"/>
+        <Label Content="目的 MAC：" Margin="0,4,0,0"/>
+        <TextBox Text="{Binding DestMac, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
+        <TextBlock Text="{Binding DestMacError}" Foreground="Red" FontSize="11"/>
+        <Label Content="源 IP 起始（可选）：" Margin="0,4,0,0"/>
+        <TextBox Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
+        <Label Content="源 IP 结束（可选）："/>
+        <TextBox Text="{Binding SrcIpEnd, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
+        <TextBlock Text="{Binding SrcIpRangeError}" Foreground="Red" FontSize="11"/>
+      </StackPanel>
+
+      <!-- 中部：Stream 列表 + 操作按钮 -->
+      <Grid Grid.Column="1" Margin="4">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DataGrid Grid.Row="0" ItemsSource="{Binding Streams}"
+                  SelectedItem="{Binding SelectedStream}"
+                  AutoGenerateColumns="False" CanUserAddRows="False"
+                  IsReadOnly="False">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Id}" Width="40" IsReadOnly="True"/>
+            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="120"/>
+            <DataGridTextColumn Header="类型" Binding="{Binding Type}" Width="80" IsReadOnly="True"/>
+            <DataGridTextColumn Header="目的IP" Binding="{Binding DstIp}" Width="110" IsReadOnly="True"/>
+            <DataGridTextColumn Header="目的MAC" Binding="{Binding DstMac}" Width="130" IsReadOnly="True"/>
+            <DataGridCheckBoxColumn Header="启用" Binding="{Binding Enabled}" Width="50"/>
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4">
+          <Button Content="导入报文" Command="{Binding ImportCommand}" Width="80" Margin="0,0,4,0"/>
+          <Button Content="编辑字段" Command="{Binding EditStreamCommand}" Width="80" Margin="0,0,4,0"/>
+          <Button Content="删除" Command="{Binding DeleteStreamCommand}" Width="60" Margin="0,0,4,0"/>
+          <Button Content="清空" Command="{Binding ClearStreamsCommand}" Width="60"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- 右侧：速率配置 + 控制按钮 -->
+      <StackPanel Grid.Column="2" Margin="8">
+        <Label Content="速率配置" FontWeight="Bold"/>
+        <RadioButton Content="包率 (PPS)" IsChecked="{Binding IsPpsMode}" Margin="0,2"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2">
+          <TextBox Text="{Binding PpsValue, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+          <Label Content="pps"/>
+        </StackPanel>
+        <RadioButton Content="间隔 (μs)" IsChecked="{Binding IsIntervalMode}" Margin="0,2"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2">
+          <TextBox Text="{Binding IntervalUs, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+          <Label Content="μs"/>
+        </StackPanel>
+        <RadioButton Content="最大速率" IsChecked="{Binding IsFastestMode}" Margin="0,2"/>
+        <Separator Margin="0,8"/>
+        <Label Content="发包模式" FontWeight="Bold"/>
+        <RadioButton Content="持续" IsChecked="{Binding IsContinuousMode}" Margin="0,2"/>
+        <RadioButton Content="定量" IsChecked="{Binding IsBurstMode}" Margin="0,2"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2">
+          <TextBox Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}" Width="80"
+                   IsEnabled="{Binding IsBurstMode}"/>
+          <Label Content="次"/>
+        </StackPanel>
+        <TextBlock Text="{Binding RateError}" Foreground="Red" FontSize="11"/>
+        <Separator Margin="0,8"/>
+        <Button Content="开始发送" Command="{Binding StartCommand}"
+                Background="#FF4CAF50" Foreground="White"
+                Height="32" Margin="0,4"/>
+        <Button Content="停止" Command="{Binding StopCommand}"
+                Background="#FFF44336" Foreground="White"
+                Height="32" Margin="0,4"/>
+        <TextBlock Text="{Binding StatusText}" Margin="0,4" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- 底部：统计 -->
+    <Border Grid.Row="2" Background="#FFF5F5F5" Padding="8,4">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="已发包：" FontWeight="Bold"/>
+        <TextBlock Text="{Binding Stats.SendTotal}" Margin="0,0,16,0"/>
+        <TextBlock Text="已发字节：" FontWeight="Bold"/>
+        <TextBlock Text="{Binding Stats.SendBytes}" Margin="0,0,16,0"/>
+        <TextBlock Text="失败：" FontWeight="Bold"/>
+        <TextBlock Text="{Binding Stats.SendFail}" Margin="0,0,16,0"/>
+        <TextBlock Text="当前PPS：" FontWeight="Bold"/>
+        <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}" Margin="0,0,16,0"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

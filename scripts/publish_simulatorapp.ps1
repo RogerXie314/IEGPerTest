@@ -106,6 +106,25 @@ if (-not (Test-Path $nsDll)) {
 }
 Write-Host "NativeSender.dll ready: $([math]::Round((Get-Item $nsDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
+# -- 2c. RawPacketEngine.dll -------------------------------------------------------
+$rpeDir = "$PSScriptRoot\..\src\RawPacketEngine"
+if (Test-Path $cmake) {
+    Write-Host "Building RawPacketEngine.dll..." -ForegroundColor Cyan
+    if (-not (Test-Path "$rpeDir\build")) { New-Item -ItemType Directory "$rpeDir\build" | Out-Null }
+    Push-Location "$rpeDir\build"
+    & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+} else {
+    Write-Warning "CMake not found; skipping RawPacketEngine rebuild (using existing dll if present)"
+}
+$rpeDll = "$rpeDir\build\Release\RawPacketEngine.dll"
+if (-not (Test-Path $rpeDll)) {
+    Write-Error "RawPacketEngine.dll not found — publish aborted"
+    exit 1
+}
+Write-Host "RawPacketEngine.dll ready: $([math]::Round((Get-Item $rpeDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
+
 # -- 3. Publish（dotnet publish 会将两个 DLL 打包进单文件 EXE）----------------
 Write-Host "Publishing SimulatorApp v$newVer (single-file, DLLs embedded)..." -ForegroundColor Cyan
 
@@ -126,7 +145,7 @@ if ($LASTEXITCODE -ne 0) {
 # 验证：输出目录只应有 SimulatorApp.exe 一个文件
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
-if ($publishedFiles -contains "NativeEngine.dll" -or $publishedFiles -contains "NativeSender.dll") {
+if ($publishedFiles -contains "NativeEngine.dll" -or $publishedFiles -contains "NativeSender.dll" -or $publishedFiles -contains "RawPacketEngine.dll") {
     Write-Warning "DLL still in output dir -- csproj None item may be misconfigured"
 }
 
