@@ -54,15 +54,13 @@ namespace SimulatorApp.ViewModels
         private string _rateError    = "";
         private string _statusText   = "";
         private string _npcapStatusText = "未知";
-        private bool   _isPpsMode      = true;
-        private bool   _isIntervalMode = false;
-        private bool   _isFastestMode  = false;
-        private bool   _isContinuousMode = true;
-        private bool   _isBurstMode    = false;
-        private string _ppsValue       = "1000";
-        private string _intervalUs     = "1000";
-        private string _burstCount     = "100";
-        private SendStats _stats       = new();
+        // 速率配置：0=PPS, 1=间隔, 2=最大速率
+        private int    _speedModeIndex  = 0;
+        // 发包模式：0=持续, 1=定量
+        private int    _sendModeIndex   = 0;
+        private string _speedValue      = "1000";
+        private string _burstCount      = "100";
+        private SendStats _stats        = new();
 
         // ── Observable collections ────────────────────────────────────────
         public ObservableCollection<NicAdapterInfo>   Adapters      { get; } = new();
@@ -157,46 +155,34 @@ namespace SimulatorApp.ViewModels
             private set { _npcapStatusText = value; OnPropertyChanged(); }
         }
 
-        public bool IsPpsMode
+        // ── 速率配置（下拉绑定）─────────────────────────────────────────
+        public int SpeedModeIndex
         {
-            get => _isPpsMode;
-            set { _isPpsMode = value; OnPropertyChanged(); if (value) { _isIntervalMode = false; _isFastestMode = false; OnPropertyChanged(nameof(IsIntervalMode)); OnPropertyChanged(nameof(IsFastestMode)); } }
+            get => _speedModeIndex;
+            set
+            {
+                _speedModeIndex = value; OnPropertyChanged();
+                OnPropertyChanged(nameof(SpeedValueVisible));
+                OnPropertyChanged(nameof(SpeedValueUnit));
+                // 切换到最大速率时清空速率错误
+                if (value == 2) RateError = "";
+            }
         }
 
-        public bool IsIntervalMode
+        public int SendModeIndex
         {
-            get => _isIntervalMode;
-            set { _isIntervalMode = value; OnPropertyChanged(); if (value) { _isPpsMode = false; _isFastestMode = false; OnPropertyChanged(nameof(IsPpsMode)); OnPropertyChanged(nameof(IsFastestMode)); } }
+            get => _sendModeIndex;
+            set
+            {
+                _sendModeIndex = value; OnPropertyChanged();
+                OnPropertyChanged(nameof(BurstCountVisible));
+            }
         }
 
-        public bool IsFastestMode
+        public string SpeedValue
         {
-            get => _isFastestMode;
-            set { _isFastestMode = value; OnPropertyChanged(); if (value) { _isPpsMode = false; _isIntervalMode = false; OnPropertyChanged(nameof(IsPpsMode)); OnPropertyChanged(nameof(IsIntervalMode)); } }
-        }
-
-        public bool IsContinuousMode
-        {
-            get => _isContinuousMode;
-            set { _isContinuousMode = value; OnPropertyChanged(); if (value) { _isBurstMode = false; OnPropertyChanged(nameof(IsBurstMode)); } }
-        }
-
-        public bool IsBurstMode
-        {
-            get => _isBurstMode;
-            set { _isBurstMode = value; OnPropertyChanged(); if (value) { _isContinuousMode = false; OnPropertyChanged(nameof(IsContinuousMode)); } }
-        }
-
-        public string PpsValue
-        {
-            get => _ppsValue;
-            set { _ppsValue = value; OnPropertyChanged(); }
-        }
-
-        public string IntervalUs
-        {
-            get => _intervalUs;
-            set { _intervalUs = value; OnPropertyChanged(); }
+            get => _speedValue;
+            set { _speedValue = value; OnPropertyChanged(); }
         }
 
         public string BurstCount
@@ -204,6 +190,21 @@ namespace SimulatorApp.ViewModels
             get => _burstCount;
             set { _burstCount = value; OnPropertyChanged(); }
         }
+
+        /// <summary>速率数值输入框可见性（最大速率模式时隐藏）</summary>
+        public System.Windows.Visibility SpeedValueVisible
+            => _speedModeIndex == 2
+               ? System.Windows.Visibility.Collapsed
+               : System.Windows.Visibility.Visible;
+
+        /// <summary>速率数值单位标签</summary>
+        public string SpeedValueUnit => _speedModeIndex == 1 ? "μs" : "pps";
+
+        /// <summary>定量次数输入框可见性</summary>
+        public System.Windows.Visibility BurstCountVisible
+            => _sendModeIndex == 1
+               ? System.Windows.Visibility.Visible
+               : System.Windows.Visibility.Collapsed;
 
         public SendStats Stats
         {
@@ -295,21 +296,22 @@ namespace SimulatorApp.ViewModels
         private RateConfig BuildRateConfig()
         {
             var cfg = new RateConfig();
-            if (IsFastestMode)
+            switch (_speedModeIndex)
             {
-                cfg.SpeedType = SpeedType.Fastest;
+                case 2: // 最大速率
+                    cfg.SpeedType  = SpeedType.Fastest;
+                    cfg.SpeedValue = 0;
+                    break;
+                case 1: // 间隔模式
+                    cfg.SpeedType  = SpeedType.Interval;
+                    cfg.SpeedValue = long.TryParse(_speedValue, out var iv) ? iv : 1000;
+                    break;
+                default: // PPS
+                    cfg.SpeedType  = SpeedType.Pps;
+                    cfg.SpeedValue = long.TryParse(_speedValue, out var pps) ? pps : 1000;
+                    break;
             }
-            else if (IsIntervalMode)
-            {
-                cfg.SpeedType = SpeedType.Interval;
-                cfg.SpeedValue = long.TryParse(_intervalUs, out var iv) ? iv : 1000;
-            }
-            else
-            {
-                cfg.SpeedType = SpeedType.Pps;
-                cfg.SpeedValue = long.TryParse(_ppsValue, out var pps) ? pps : 1000;
-            }
-            cfg.SendMode   = IsBurstMode ? SendMode.Burst : SendMode.Continuous;
+            cfg.SendMode   = _sendModeIndex == 1 ? SendMode.Burst : SendMode.Continuous;
             cfg.BurstCount = long.TryParse(_burstCount, out var bc) ? bc : 100;
             return cfg;
         }
@@ -330,27 +332,23 @@ namespace SimulatorApp.ViewModels
             if (!string.IsNullOrWhiteSpace(_srcIpRangeError))
                 ok = false;
 
-            if (!IsFastestMode)
+            // 速率验证（最大速率模式跳过）
+            if (_speedModeIndex != 2)
             {
-                if (IsPpsMode && (!long.TryParse(_ppsValue, out var pps) || !InputValidator.IsValidPps(pps)))
+                if (_speedModeIndex == 0) // PPS
                 {
-                    RateError = "PPS 须为 1~1000000";
-                    ok = false;
+                    if (!long.TryParse(_speedValue, out var pps) || !InputValidator.IsValidPps(pps))
+                    { RateError = "包率须为 1 ~ 1,000,000 pps"; ok = false; }
+                    else RateError = "";
                 }
-                else if (IsIntervalMode && (!long.TryParse(_intervalUs, out var iv) || iv < 1))
+                else // 间隔
                 {
-                    RateError = "间隔须 ≥ 1 μs";
-                    ok = false;
-                }
-                else
-                {
-                    RateError = "";
+                    if (!long.TryParse(_speedValue, out var iv) || iv < 1)
+                    { RateError = "间隔须 ≥ 1 μs"; ok = false; }
+                    else RateError = "";
                 }
             }
-            else
-            {
-                RateError = "";
-            }
+            else { RateError = ""; }
 
             return ok;
         }

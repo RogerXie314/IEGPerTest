@@ -84,35 +84,48 @@
       <!-- 右侧：速率配置 + 控制按钮 -->
       <StackPanel Grid.Column="2" Margin="8">
         <Label Content="速率配置" FontWeight="Bold"/>
-        <RadioButton Content="包率 (PPS)" IsChecked="{Binding IsPpsMode}" Margin="0,2"/>
-        <StackPanel Orientation="Horizontal" Margin="0,2">
-          <TextBox Text="{Binding PpsValue, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-          <Label Content="pps"/>
-        </StackPanel>
-        <RadioButton Content="间隔 (μs)" IsChecked="{Binding IsIntervalMode}" Margin="0,2"/>
-        <StackPanel Orientation="Horizontal" Margin="0,2">
-          <TextBox Text="{Binding IntervalUs, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-          <Label Content="μs"/>
-        </StackPanel>
-        <RadioButton Content="最大速率" IsChecked="{Binding IsFastestMode}" Margin="0,2"/>
-        <Separator Margin="0,8"/>
-        <Label Content="发包模式" FontWeight="Bold"/>
-        <RadioButton Content="持续" IsChecked="{Binding IsContinuousMode}" Margin="0,2"/>
-        <RadioButton Content="定量" IsChecked="{Binding IsBurstMode}" Margin="0,2"/>
-        <StackPanel Orientation="Horizontal" Margin="0,2">
-          <TextBox Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}" Width="80"
-                   IsEnabled="{Binding IsBurstMode}"/>
-          <Label Content="次"/>
+
+        <!-- 速率模式下拉 -->
+        <ComboBox SelectedIndex="{Binding SpeedModeIndex}" Margin="0,4,0,2">
+          <ComboBoxItem Content="包率模式 (PPS)"/>
+          <ComboBoxItem Content="间隔模式 (μs)"/>
+          <ComboBoxItem Content="最大速率"/>
+        </ComboBox>
+
+        <!-- 速率数值（最大速率时隐藏） -->
+        <StackPanel Orientation="Horizontal" Margin="0,2"
+                    Visibility="{Binding SpeedValueVisible}">
+          <TextBox Text="{Binding SpeedValue, UpdateSourceTrigger=PropertyChanged}"
+                   Width="90"/>
+          <TextBlock Text="{Binding SpeedValueUnit}" VerticalAlignment="Center" Margin="4,0,0,0"/>
         </StackPanel>
         <TextBlock Text="{Binding RateError}" Foreground="Red" FontSize="11"/>
+
         <Separator Margin="0,8"/>
-        <Button Content="开始发送" Command="{Binding StartCommand}"
+        <Label Content="发包模式" FontWeight="Bold"/>
+
+        <!-- 发包模式下拉 -->
+        <ComboBox SelectedIndex="{Binding SendModeIndex}" Margin="0,4,0,2">
+          <ComboBoxItem Content="持续发送（手动停止）"/>
+          <ComboBoxItem Content="定量发送"/>
+        </ComboBox>
+
+        <!-- 定量次数（持续模式时隐藏） -->
+        <StackPanel Orientation="Horizontal" Margin="0,2"
+                    Visibility="{Binding BurstCountVisible}">
+          <TextBox Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+          <TextBlock Text="次" VerticalAlignment="Center" Margin="4,0,0,0"/>
+        </StackPanel>
+
+        <Separator Margin="0,8"/>
+        <Button Content="▶ 开始发送" Command="{Binding StartCommand}"
                 Background="#FF4CAF50" Foreground="White"
-                Height="32" Margin="0,4"/>
-        <Button Content="停止" Command="{Binding StopCommand}"
+                Height="34" Margin="0,4" FontSize="13"/>
+        <Button Content="■ 停止" Command="{Binding StopCommand}"
                 Background="#FFF44336" Foreground="White"
-                Height="32" Margin="0,4"/>
-        <TextBlock Text="{Binding StatusText}" Margin="0,4" TextWrapping="Wrap"/>
+                Height="34" Margin="0,4" FontSize="13"/>
+        <TextBlock Text="{Binding StatusText}" Margin="0,4" TextWrapping="Wrap"
+                   FontSize="11" Foreground="#555"/>
       </StackPanel>
     </Grid>
 

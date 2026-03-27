@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using System.Text.RegularExpressions;
 
 namespace SimulatorLib.RawPacket
 {
@@ -40,18 +42,53 @@ namespace SimulatorLib.RawPacket
             int count = _interop.GetAdapterCount();
             for (int i = 0; i < count; i++)
             {
-                var (name, ipv4) = _interop.GetAdapterInfo(i);
+                var (pcapName, ipv4) = _interop.GetAdapterInfo(i);
+                // 从 pcap 名称中提取 GUID，再查 .NET NetworkInterface 获取友好名称
+                string friendly = GetFriendlyName(pcapName, ipv4);
                 _adapters.Add(new NicAdapterInfo
                 {
                     Index        = i,
-                    PcapName     = name,
-                    FriendlyName = name,
+                    PcapName     = pcapName,
+                    FriendlyName = friendly,
                     Ipv4         = ipv4,
                 });
             }
 
             _lastStatsTime = DateTime.UtcNow;
             return true;
+        }
+
+        /// <summary>从 pcap 设备名（含 GUID）匹配 .NET NetworkInterface 友好名称。</summary>
+        private static string GetFriendlyName(string pcapName, string ipv4)
+        {
+            try
+            {
+                // pcapName 格式：rpcap://\Device\NPF_{GUID} 或 \Device\NPF_{GUID}
+                var m = Regex.Match(pcapName, @"\{([0-9A-Fa-f\-]{36})\}");
+                string guid = m.Success ? m.Groups[1].Value.ToUpperInvariant() : "";
+
+                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    // NetworkInterface.Id 通常就是 GUID（不含花括号）
+                    if (!string.IsNullOrEmpty(guid) &&
+                        nic.Id.ToUpperInvariant() == guid)
+                        return nic.Name;
+
+                    // 备用：按 IPv4 地址匹配
+                    if (!string.IsNullOrEmpty(ipv4))
+                    {
+                        foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                        {
+                            if (ua.Address.ToString() == ipv4)
+                                return nic.Name;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 兜底：截取 GUID 部分显示
+            return string.IsNullOrEmpty(ipv4) ? pcapName : ipv4;
         }
 
         /// <summary>选择发包适配器。</summary>

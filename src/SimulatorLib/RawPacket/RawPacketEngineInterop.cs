@@ -1,13 +1,14 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
-
-#pragma warning disable CS8500 // unsafe pointer to managed type
 
 namespace SimulatorLib.RawPacket
 {
+    /// <summary>
+    /// RPE_Rule 纯值类型（fixed buffer，无托管引用），可安全 fixed 传指针。
+    /// 布局与 C++ RPE_Rule (#pragma pack(1)) 完全对齐：34 字节。
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct RpeRule
+    public unsafe struct RpeRule
     {
         public byte   Valid;
         public uint   Flags;
@@ -15,24 +16,19 @@ namespace SimulatorLib.RawPacket
         public byte   Width;
         public sbyte  BitsFrom;
         public sbyte  BitsLen;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
-        public byte[] Rsv;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public byte[] BaseValue;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public byte[] MaxValue;
+        public fixed byte Rsv[4];
+        public fixed byte BaseValue[8];
+        public fixed byte MaxValue[8];
         public uint   StepSize;
     }
 
     /// <summary>
-    /// P/Invoke wrapper for RawPacketEngine.dll — 基于 Npcap 的原始报文发送引擎。
+    /// P/Invoke wrapper for RawPacketEngine.dll。
     /// </summary>
     public sealed unsafe class RawPacketEngineInterop : IDisposable
     {
         private const string DLL = "RawPacketEngine.dll";
         private bool _disposed;
-
-        // ── P/Invoke 声明 ────────────────────────────────────────────────
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int RPE_Init();
@@ -45,21 +41,16 @@ namespace SimulatorLib.RawPacket
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int RPE_GetAdapterInfo(
-            int    index,
-            byte*  name,    int nameLen,
-            byte*  ipv4,    int ipv4Len);
+            int index, byte* name, int nameLen, byte* ipv4, int ipv4Len);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int RPE_SelectAdapter(int index);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int RPE_AddStream(
-            byte*    data,
-            int      len,
+            byte* data, int len,
             [MarshalAs(UnmanagedType.LPStr)] string name,
-            RpeRule* rules,
-            int      ruleCount,
-            uint     checksumFlags);
+            RpeRule* rules, int ruleCount, uint checksumFlags);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern void RPE_ClearStreams();
@@ -69,10 +60,7 @@ namespace SimulatorLib.RawPacket
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern void RPE_SetRateConfig(
-            int   speedType,
-            long  speedValue,
-            int   sndMode,
-            long  sndCount);
+            int speedType, long speedValue, int sndMode, long sndCount);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern int RPE_Start();
@@ -82,63 +70,42 @@ namespace SimulatorLib.RawPacket
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern void RPE_GetStats(
-            ulong* sendTotal,
-            ulong* sendBytes,
-            ulong* sendFail);
+            ulong* sendTotal, ulong* sendBytes, ulong* sendFail);
 
-        // ── 托管包装方法 ─────────────────────────────────────────────────
+        // ── 托管包装 ─────────────────────────────────────────────────────
 
         public bool Init() => RPE_Init() == 0;
 
         public void Cleanup()
         {
-            if (!_disposed)
-            {
-                RPE_Cleanup();
-                _disposed = true;
-            }
+            if (!_disposed) { RPE_Cleanup(); _disposed = true; }
         }
 
         public int GetAdapterCount() => RPE_GetAdapterCount();
 
-        public (string Name, string Ipv4) GetAdapterInfo(int index)
+        public (string PcapName, string Ipv4) GetAdapterInfo(int index)
         {
-            const int BufSize = 256;
-            byte* nameBuf = stackalloc byte[BufSize];
-            byte* ipv4Buf = stackalloc byte[BufSize];
-
-            int ret = RPE_GetAdapterInfo(index, nameBuf, BufSize, ipv4Buf, BufSize);
-            if (ret != 0) return ("", "");
-
-            string name = Marshal.PtrToStringAnsi((IntPtr)nameBuf) ?? "";
-            string ipv4 = Marshal.PtrToStringAnsi((IntPtr)ipv4Buf) ?? "";
-            return (name, ipv4);
+            const int N = 512;
+            byte* nb = stackalloc byte[N];
+            byte* ib = stackalloc byte[N];
+            if (RPE_GetAdapterInfo(index, nb, N, ib, N) != 0) return ("", "");
+            return (Marshal.PtrToStringAnsi((IntPtr)nb) ?? "",
+                    Marshal.PtrToStringAnsi((IntPtr)ib) ?? "");
         }
 
         public bool SelectAdapter(int index) => RPE_SelectAdapter(index) == 0;
 
         public int AddStream(StreamConfig config)
         {
+            if (config.FrameData == null || config.FrameData.Length == 0) return -1;
             var rules = ConvertRules(config.Rules);
-            if (rules.Length == 0)
+            fixed (byte* data = config.FrameData)
+            fixed (RpeRule* rp = rules)
             {
-                fixed (byte* data = config.FrameData)
-                    return RPE_AddStream(data, config.FrameData.Length,
-                        config.Name, null, 0, config.ChecksumFlags);
-            }
-
-            var handle = GCHandle.Alloc(rules, GCHandleType.Pinned);
-            try
-            {
-                fixed (byte* data = config.FrameData)
-                    return RPE_AddStream(data, config.FrameData.Length,
-                        config.Name,
-                        (RpeRule*)handle.AddrOfPinnedObject(),
-                        rules.Length, config.ChecksumFlags);
-            }
-            finally
-            {
-                handle.Free();
+                return RPE_AddStream(data, config.FrameData.Length,
+                    config.Name ?? "",
+                    rules.Length > 0 ? rp : null,
+                    rules.Length, config.ChecksumFlags);
             }
         }
 
@@ -149,64 +116,49 @@ namespace SimulatorLib.RawPacket
 
         public void SetRateConfig(RateConfig config)
         {
-            int speedType = config.SpeedType switch
+            int st = config.SpeedType switch
             {
-                SpeedType.Pps      => 0,
-                SpeedType.Interval => 1,
-                SpeedType.Fastest  => 2,
-                _                  => 0
+                SpeedType.Interval => 1, SpeedType.Fastest => 2, _ => 0
             };
-            int sndMode = config.SendMode == SendMode.Burst ? 1 : 0;
-            RPE_SetRateConfig(speedType, config.SpeedValue, sndMode, config.BurstCount);
+            RPE_SetRateConfig(st, config.SpeedValue,
+                config.SendMode == SendMode.Burst ? 1 : 0, config.BurstCount);
         }
 
         public bool Start() => RPE_Start() == 0;
-
-        public void Stop() => RPE_Stop();
+        public void Stop()  => RPE_Stop();
 
         public (ulong SendTotal, ulong SendBytes, ulong SendFail) GetStats()
         {
-            ulong total = 0, bytes = 0, fail = 0;
-            RPE_GetStats(&total, &bytes, &fail);
-            return (total, bytes, fail);
+            ulong t = 0, b = 0, f = 0;
+            RPE_GetStats(&t, &b, &f);
+            return (t, b, f);
         }
 
-        // ── 规则转换 ─────────────────────────────────────────────────────
-
-        private static RpeRule[] ConvertRules(System.Collections.Generic.List<FieldRuleConfig> rules)
+        private static RpeRule[] ConvertRules(
+            System.Collections.Generic.List<FieldRuleConfig>? rules)
         {
             if (rules == null || rules.Count == 0) return Array.Empty<RpeRule>();
-
             var result = new RpeRule[rules.Count];
             for (int i = 0; i < rules.Count; i++)
             {
                 var r = rules[i];
-                result[i] = new RpeRule
+                result[i].Valid    = r.Valid ? (byte)1 : (byte)0;
+                result[i].Flags    = r.Flags;
+                result[i].Offset   = r.Offset;
+                result[i].Width    = r.Width;
+                result[i].BitsFrom = r.BitsFrom;
+                result[i].BitsLen  = r.BitsLen;
+                result[i].StepSize = r.StepSize;
+                var bv = r.BaseValue ?? Array.Empty<byte>();
+                var mv = r.MaxValue  ?? Array.Empty<byte>();
+                for (int b = 0; b < 8; b++)
                 {
-                    Valid     = r.Valid ? (byte)1 : (byte)0,
-                    Flags     = r.Flags,
-                    Offset    = r.Offset,
-                    Width     = r.Width,
-                    BitsFrom  = r.BitsFrom,
-                    BitsLen   = r.BitsLen,
-                    Rsv       = new byte[4],
-                    BaseValue = PadTo8(r.BaseValue),
-                    MaxValue  = PadTo8(r.MaxValue),
-                    StepSize  = r.StepSize,
-                };
+                    result[i].BaseValue[b] = b < bv.Length ? bv[b] : (byte)0;
+                    result[i].MaxValue[b]  = b < mv.Length ? mv[b] : (byte)0;
+                }
             }
             return result;
         }
-
-        private static byte[] PadTo8(byte[] src)
-        {
-            var dst = new byte[8];
-            if (src != null)
-                Buffer.BlockCopy(src, 0, dst, 0, Math.Min(src.Length, 8));
-            return dst;
-        }
-
-        // ── IDisposable ──────────────────────────────────────────────────
 
         public void Dispose() => Cleanup();
     }

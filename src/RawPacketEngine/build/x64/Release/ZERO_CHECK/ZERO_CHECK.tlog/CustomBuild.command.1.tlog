@@ -1,0 +1,10 @@
+^D:\DEVELOPMENT\IEGPERTEST\SRC\RAWPACKETENGINE\BUILD\CMAKEFILES\63A2D5F03A760B0E7661354BDFF6724F\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SD:/Development/IEGPerTest/src/RawPacketEngine -BD:/Development/IEGPerTest/src/RawPacketEngine/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/Development/IEGPerTest/src/RawPacketEngine/build/RawPacketEngine.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
