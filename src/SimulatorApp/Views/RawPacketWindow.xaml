@@ -17,12 +17,19 @@
       <Setter Property="Foreground" Value="#607D8B"/>
       <Setter Property="Margin" Value="0,4,0,1"/>
     </Style>
-    <!-- 输入框：拉伸填满左栏，紧凑 padding -->
+    <!-- 输入框：固定宽度160，左对齐，紧凑 -->
     <Style x:Key="ShortInput" TargetType="TextBox">
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Width" Value="160"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
       <Setter Property="Padding" Value="5,2"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Height" Value="24"/>
+    </Style>
+    <!-- 下拉框：固定宽度 -->
+    <Style x:Key="CompactCombo" TargetType="ComboBox">
+      <Setter Property="Width" Value="120"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="FontSize" Value="11"/>
     </Style>
     <Style x:Key="StepNum" TargetType="Border">
       <Setter Property="Background" Value="#1565C0"/>
@@ -151,9 +158,9 @@
                   <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="起始值" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1"/>
+                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Width="140" HorizontalAlignment="Left" Margin="0,2,0,1"/>
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="最大值" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1"/>
+                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Width="140" HorizontalAlignment="Left" Margin="0,2,0,1"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="步长" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
                 <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding SrcIpStep, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1" Width="55" HorizontalAlignment="Left"/>
                 <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
@@ -169,41 +176,31 @@
                 <TextBlock Text="发包配置" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
               </StackPanel>
               <!-- 速率 -->
-              <Grid Margin="0,0,0,4">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="58"/>
-                  <ColumnDefinition Width="24"/>
-                </Grid.ColumnDefinitions>
-                <ComboBox Grid.Column="0" SelectedIndex="{Binding SpeedModeIndex}" FontSize="11">
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <ComboBox SelectedIndex="{Binding SpeedModeIndex}" Width="120" FontSize="11">
                   <ComboBoxItem Content="包率 (PPS)"/>
                   <ComboBoxItem Content="间隔 (μs)"/>
                   <ComboBoxItem Content="最大速率"/>
                 </ComboBox>
-                <TextBox Grid.Column="1" Text="{Binding SpeedValue, UpdateSourceTrigger=PropertyChanged}"
-                         Visibility="{Binding SpeedValueVisible}" Margin="3,0,0,0"
-                         Padding="4,3" FontSize="11" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="{Binding SpeedValueUnit}" Visibility="{Binding SpeedValueVisible}"
-                           VerticalAlignment="Center" FontSize="10" Foreground="#607D8B" Margin="2,0,0,0"/>
-              </Grid>
+                <TextBox Text="{Binding SpeedValue, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding SpeedValueVisible}" Margin="6,0,0,0"
+                         Padding="4,2" FontSize="11" Width="60" Height="24" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding SpeedValueUnit}" Visibility="{Binding SpeedValueVisible}"
+                           VerticalAlignment="Center" FontSize="10" Foreground="#607D8B" Margin="4,0,0,0"/>
+              </StackPanel>
               <TextBlock Text="{Binding RateError}" Foreground="#E53935" FontSize="10"/>
               <!-- 发包模式 -->
-              <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="58"/>
-                  <ColumnDefinition Width="18"/>
-                </Grid.ColumnDefinitions>
-                <ComboBox Grid.Column="0" SelectedIndex="{Binding SendModeIndex}" FontSize="11">
+              <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                <ComboBox SelectedIndex="{Binding SendModeIndex}" Width="120" FontSize="11">
                   <ComboBoxItem Content="持续发送"/>
                   <ComboBoxItem Content="定量发送"/>
                 </ComboBox>
-                <TextBox Grid.Column="1" Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}"
-                         Visibility="{Binding BurstCountVisible}" Margin="3,0,0,0"
-                         Padding="4,3" FontSize="11" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="包" Visibility="{Binding BurstCountVisible}"
-                           VerticalAlignment="Center" FontSize="10" Foreground="#607D8B" Margin="2,0,0,0"/>
-              </Grid>
+                <TextBox Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding BurstCountVisible}" Margin="6,0,0,0"
+                         Padding="4,2" FontSize="11" Width="55" Height="24" VerticalAlignment="Center"/>
+                <TextBlock Text="包" Visibility="{Binding BurstCountVisible}"
+                           VerticalAlignment="Center" FontSize="10" Foreground="#607D8B" Margin="4,0,0,0"/>
+              </StackPanel>
               <TextBlock Text="持续：手动停止；定量：发完自动停止"
                          FontSize="10" Foreground="#90A4AE" Margin="0,2,0,0"/>
 
@@ -284,109 +281,87 @@
         </Border>
 
         <!-- 统计区（说明+数据合并，占剩余全部空间） -->
-        <Border Grid.Row="2" Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
-          <Grid>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>  <!-- 说明文字 -->
-              <RowDefinition Height="*"/>     <!-- 统计卡片 -->
-            </Grid.RowDefinitions>
-
+        <Border Grid.Row="2" Background="#F0F2F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+          <StackPanel>
             <!-- 说明文字 -->
-            <Border Grid.Row="0" Background="#EEF2FF" BorderBrush="#C5CAE9" BorderThickness="0,0,0,1" Padding="10,5">
-              <TextBlock FontSize="10" Foreground="#5C6BC0">
-                <Run FontWeight="SemiBold">实时</Run><Run> = 最近1秒均值；</Run>
-                <Run FontWeight="SemiBold">平均</Run><Run> = 本次启动以来均值。</Run>
-                <Run Foreground="#9E9E9E">  bps = 每秒比特数（带宽）；pps = 每秒包数（速率）</Run>
-              </TextBlock>
-            </Border>
+            <TextBlock Margin="12,6,12,6" FontSize="10" Foreground="#9E9E9E">
+              <Run FontWeight="SemiBold" Foreground="#607D8B">实时</Run><Run> = 最近1秒；</Run>
+              <Run FontWeight="SemiBold" Foreground="#607D8B">平均</Run><Run> = 本次启动以来。</Run>
+              <Run>bps = 每秒比特数；pps = 每秒包数</Run>
+            </TextBlock>
 
-            <!-- 统计卡片区 -->
-            <Grid Grid.Row="1" Margin="12,10,12,10">
+            <!-- 统计卡片：两行 3+3 布局 -->
+            <Grid Margin="10,0,10,10">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>  <!-- 行标签 -->
-                <RowDefinition Height="*"/>     <!-- 发送行卡片 -->
-                <RowDefinition Height="10"/>    <!-- 间距 -->
-                <RowDefinition Height="*"/>     <!-- 失败行卡片 -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="8"/>
+                <RowDefinition Height="Auto"/>
               </Grid.RowDefinitions>
 
-              <!-- 列标签 -->
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="实时 bps" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="实时 pps" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="平均 bps" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-              <TextBlock Grid.Row="0" Grid.Column="3" Text="平均 pps" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-              <TextBlock Grid.Row="0" Grid.Column="4" Text="报文总数" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-              <TextBlock Grid.Row="0" Grid.Column="5" Text="总流量 (B)" FontSize="10" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-
-              <!-- 发送行：绿色卡片 -->
-              <Border Grid.Row="1" Grid.Column="0" Background="#E8F5E9" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.CurrentBps, StringFormat=F0}" FontSize="18" FontWeight="Bold" Foreground="#1B5E20" HorizontalAlignment="Center"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="1" Background="#E8F5E9" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}" FontSize="18" FontWeight="Bold" Foreground="#1B5E20" HorizontalAlignment="Center"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="2" Background="#F1F8E9" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#558B2F" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.AvgBps, StringFormat=F0}" FontSize="18" FontWeight="Bold" Foreground="#33691E" HorizontalAlignment="Center"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="3" Background="#F1F8E9" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#558B2F" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.AvgPps, StringFormat=F1}" FontSize="18" FontWeight="Bold" Foreground="#33691E" HorizontalAlignment="Center"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="4" Background="#E3F2FD" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#1565C0" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.SendTotal}" FontSize="18" FontWeight="Bold" Foreground="#0D47A1" HorizontalAlignment="Center"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="5" Background="#E3F2FD" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="发送" FontSize="10" Foreground="#1565C0" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.SendBytes}" FontSize="18" FontWeight="Bold" Foreground="#0D47A1" HorizontalAlignment="Center"/>
+              <!-- 第一行：实时 bps / 实时 pps / 平均 bps -->
+              <Border Grid.Row="0" Grid.Column="0" Background="White" CornerRadius="8"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="实时 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.CurrentBps, StringFormat=F0}"
+                             FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
                 </StackPanel>
               </Border>
 
-              <!-- 失败行：红色卡片（仅报文总数列显示） -->
-              <Border Grid.Row="3" Grid.Column="0" Background="#FAFAFA" CornerRadius="6" Margin="3,0" BorderBrush="#EEEEEE" BorderThickness="1">
-                <TextBlock Text="—" FontSize="14" Foreground="#BDBDBD" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-              <Border Grid.Row="3" Grid.Column="1" Background="#FAFAFA" CornerRadius="6" Margin="3,0" BorderBrush="#EEEEEE" BorderThickness="1">
-                <TextBlock Text="—" FontSize="14" Foreground="#BDBDBD" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-              <Border Grid.Row="3" Grid.Column="2" Background="#FAFAFA" CornerRadius="6" Margin="3,0" BorderBrush="#EEEEEE" BorderThickness="1">
-                <TextBlock Text="—" FontSize="14" Foreground="#BDBDBD" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-              <Border Grid.Row="3" Grid.Column="3" Background="#FAFAFA" CornerRadius="6" Margin="3,0" BorderBrush="#EEEEEE" BorderThickness="1">
-                <TextBlock Text="—" FontSize="14" Foreground="#BDBDBD" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-              <Border Grid.Row="3" Grid.Column="4" Background="#FFEBEE" CornerRadius="6" Margin="3,0">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="失败" FontSize="10" Foreground="#C62828" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                  <TextBlock Text="{Binding Stats.SendFail}" FontSize="18" FontWeight="Bold" Foreground="#B71C1C" HorizontalAlignment="Center"/>
+              <Border Grid.Row="0" Grid.Column="2" Background="White" CornerRadius="8"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="实时 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}"
+                             FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
                 </StackPanel>
               </Border>
-              <Border Grid.Row="3" Grid.Column="5" Background="#FAFAFA" CornerRadius="6" Margin="3,0" BorderBrush="#EEEEEE" BorderThickness="1">
-                <TextBlock Text="—" FontSize="14" Foreground="#BDBDBD" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+              <Border Grid.Row="0" Grid.Column="4" Background="White" CornerRadius="8"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="平均 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.AvgBps, StringFormat=F0}"
+                             FontSize="22" FontWeight="Bold" Foreground="#1565C0"/>
+                </StackPanel>
+              </Border>
+
+              <!-- 第二行：平均 pps / 报文总数 / 失败数 -->
+              <Border Grid.Row="2" Grid.Column="0" Background="White" CornerRadius="8"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="平均 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.AvgPps, StringFormat=F1}"
+                             FontSize="22" FontWeight="Bold" Foreground="#1565C0"/>
+                </StackPanel>
+              </Border>
+
+              <Border Grid.Row="2" Grid.Column="2" Background="White" CornerRadius="8"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="报文总数" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.SendTotal}"
+                             FontSize="22" FontWeight="Bold" Foreground="#37474F"/>
+                </StackPanel>
+              </Border>
+
+              <Border Grid.Row="2" Grid.Column="4" Background="White" CornerRadius="8"
+                      BorderBrush="#FFCDD2" BorderThickness="1" Padding="12,10">
+                <StackPanel>
+                  <TextBlock Text="发送失败" FontSize="10" Foreground="#EF9A9A" Margin="0,0,0,4"/>
+                  <TextBlock Text="{Binding Stats.SendFail}"
+                             FontSize="22" FontWeight="Bold" Foreground="#C62828"/>
+                </StackPanel>
               </Border>
             </Grid>
-          </Grid>
+          </StackPanel>
         </Border>
 
       </Grid>
