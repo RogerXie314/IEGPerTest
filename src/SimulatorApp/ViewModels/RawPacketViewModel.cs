@@ -230,6 +230,11 @@ namespace SimulatorApp.ViewModels
             private set { _stats = value; OnPropertyChanged(); }
         }
 
+        public System.Windows.Visibility EmptyStreamsVisibility
+            => Streams.Count == 0
+               ? System.Windows.Visibility.Visible
+               : System.Windows.Visibility.Collapsed;
+
         // ── Commands ──────────────────────────────────────────────────────
         public ICommand StartCommand        { get; }
         public ICommand StopCommand         { get; }
@@ -556,6 +561,7 @@ namespace SimulatorApp.ViewModels
             _service.RemoveStream(SelectedStream.Id);
             Streams.Remove(SelectedStream);
             SelectedStream = null;
+            OnPropertyChanged(nameof(EmptyStreamsVisibility));
         }
 
         private void ExecuteClearStreams()
@@ -563,6 +569,7 @@ namespace SimulatorApp.ViewModels
             foreach (var s in Streams.ToList())
                 _service.RemoveStream(s.Id);
             Streams.Clear();
+            OnPropertyChanged(nameof(EmptyStreamsVisibility));
         }
 
         private void OnBuiltinSelectionChanged(object? sender, EventArgs e)
@@ -607,6 +614,7 @@ namespace SimulatorApp.ViewModels
             {
                 sc.Id = id;
                 Streams.Add(sc);
+                OnPropertyChanged(nameof(EmptyStreamsVisibility));
             }
         }
 

@@ -15,14 +15,15 @@
     <Style x:Key="FieldLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="#607D8B"/>
-      <Setter Property="Margin" Value="0,5,0,1"/>
+      <Setter Property="Margin" Value="0,4,0,1"/>
     </Style>
-    <!-- 输入框：固定宽度，不随父容器拉伸 -->
+    <!-- 输入框：固定宽度，紧凑 padding -->
     <Style x:Key="ShortInput" TargetType="TextBox">
       <Setter Property="Width" Value="155"/>
       <Setter Property="HorizontalAlignment" Value="Left"/>
-      <Setter Property="Padding" Value="5,3"/>
+      <Setter Property="Padding" Value="5,2"/>
       <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Height" Value="24"/>
     </Style>
     <Style x:Key="StepNum" TargetType="Border">
       <Setter Property="Background" Value="#1565C0"/>
@@ -95,7 +96,7 @@
 
         <Border Grid.Row="0" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="12,10,12,6">
+            <StackPanel Margin="12,8,12,4">
 
               <!-- ① 选择攻击报文 -->
               <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
@@ -116,7 +117,7 @@
                          FontSize="10" Foreground="#90A4AE" Margin="0,3,0,0" TextWrapping="Wrap"/>
 
               <!-- ② 设置目标 -->
-              <StackPanel Orientation="Horizontal" Margin="0,12,0,5">
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,4">
                 <Border Style="{StaticResource StepNum}">
                   <TextBlock Text="2" Foreground="White" FontSize="9" FontWeight="Bold"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -131,7 +132,7 @@
               <TextBlock Text="{Binding DestMacError}" Foreground="#E53935" FontSize="10"/>
 
               <!-- ③ 源IP递增（可选） -->
-              <StackPanel Orientation="Horizontal" Margin="0,12,0,5">
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,4">
                 <Border Style="{StaticResource StepNumGray}">
                   <TextBlock Text="3" Foreground="White" FontSize="9" FontWeight="Bold"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -151,17 +152,17 @@
                   <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="起始值" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" FontSize="11" Margin="0,4,0,2"/>
+                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1"/>
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="最大值" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" FontSize="11" Margin="0,4,0,2"/>
+                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="步长" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding SrcIpStep, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" FontSize="11" Margin="0,4,0,2" Width="55" HorizontalAlignment="Left"/>
+                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding SrcIpStep, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" Height="22" Margin="0,2,0,1" Width="55" HorizontalAlignment="Left"/>
                 <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                            Text="{Binding SrcIpRuleError}" Foreground="#E53935" FontSize="10" TextWrapping="Wrap"/>
               </Grid>
 
               <!-- ④ 发包配置 -->
-              <StackPanel Orientation="Horizontal" Margin="0,12,0,5">
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,4">
                 <Border Style="{StaticResource StepNum}">
                   <TextBlock Text="4" Foreground="White" FontSize="9" FontWeight="Bold"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -244,22 +245,29 @@
         </Grid.RowDefinitions>
 
         <!-- Stream 列表 -->
-        <DataGrid Grid.Row="0" ItemsSource="{Binding Streams}"
-                  SelectedItem="{Binding SelectedStream}"
-                  AutoGenerateColumns="False" CanUserAddRows="False"
-                  IsReadOnly="True" GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column" FontSize="12"
-                  BorderThickness="0">
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="#" Binding="{Binding Id}" Width="36"/>
-            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="100"/>
-            <DataGridTextColumn Header="源地址" Binding="{Binding SrcIp}" Width="105"/>
-            <DataGridTextColumn Header="目的地址" Binding="{Binding DstIp}" Width="105"/>
-            <DataGridTextColumn Header="协议" Binding="{Binding Type}" Width="65"/>
-            <DataGridTextColumn Header="长度(B)" Binding="{Binding FrameLen}" Width="60"/>
-            <DataGridTextColumn Header="信息" Binding="{Binding Info}" Width="*"/>
-          </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="0">
+          <DataGrid ItemsSource="{Binding Streams}"
+                    SelectedItem="{Binding SelectedStream}"
+                    AutoGenerateColumns="False" CanUserAddRows="False"
+                    IsReadOnly="True" GridLinesVisibility="Horizontal"
+                    HeadersVisibility="Column" FontSize="12"
+                    BorderThickness="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="#" Binding="{Binding Id}" Width="36"/>
+              <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="100"/>
+              <DataGridTextColumn Header="源地址" Binding="{Binding SrcIp}" Width="105"/>
+              <DataGridTextColumn Header="目的地址" Binding="{Binding DstIp}" Width="105"/>
+              <DataGridTextColumn Header="协议" Binding="{Binding Type}" Width="65"/>
+              <DataGridTextColumn Header="长度(B)" Binding="{Binding FrameLen}" Width="60"/>
+              <DataGridTextColumn Header="信息" Binding="{Binding Info}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+          <!-- 空列表占位提示 -->
+          <TextBlock Text="勾选左侧内置报文或点击「导入报文」，报文将显示在此处"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     FontSize="12" Foreground="#BDBDBD"
+                     Visibility="{Binding EmptyStreamsVisibility}"/>
+        </Grid>
 
         <!-- 操作按钮 -->
         <Border Grid.Row="1" Background="#F5F5F5" BorderBrush="#E0E0E0"
