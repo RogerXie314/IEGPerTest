@@ -42,7 +42,7 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 
 > 注意：程序首次运行时会在同目录生成 `config.json` 和 `Clients.log`。
 
-## ✅ 当前状态（v3.9.0）
+## ✅ 当前状态（v3.9.1）
 
 ### 核心架构
 
@@ -52,7 +52,7 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 
 ### 已完成功能
 
-- ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制，RawPacketEngine.dll 内嵌单文件 EXE
+- ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口 v3.9.1）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、源IP变化规则（FieldRule）、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制；界面采用步骤引导两栏布局 + 紧凑统计卡片，RawPacketEngine.dll 内嵌单文件 EXE
 - ✅ 客户端注册、心跳、白名单上传（PT/HTTP/HTTPS）
 - ✅ **TCP 心跳稳定在线**（NativeEngine 非阻塞 socket，每客户端 1 个 OS 线程，对齐老工具 `AfxBeginThread + Sleep(500)` 节奏）
 - ✅ 心跳断线原因监控：`logs/heartbeat_monitor_*.log`（7 种原因：服务端关闭/写失败/连接失败/超时/Session超时/锁竞争跳过/未注册重注册）
@@ -217,4 +217,4 @@ external/                 # IEG 原始 C++ 源码参考（含 zlibstat.lib）
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
 - 修改代码后需重新执行 `publish_simulatorapp.ps1` 更新 exe（脚本自动 bump 版本号 + 构建 C++ DLL + 打包 + git commit/push）
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- 版本演进脉络：`v2.0.0`（UI完善）→ `v2.1.0`（11种日志）→ `v2.2.0`（断线监控）→ `v2.3.0`（外设/EPS/压测模式）→ `v2.4.0`（多IP/诊断窗口）→ `v3.0.0`（威胁检测/任务面板/策略接收）→ `v3.1.0`（TCP流复用/17+日志类型）→ `v3.2.0`（写锁）→ `v3.3.0`（锁超时修复）→ `v3.4.0`（SSH诊断/OS切换）→ `v3.5.0`（协议对齐）→ `v3.6.x`（TCP可靠性/日志分类说明/网口事件/UI清理）→ `v3.7.x`（Channel→直写→NativeEngine C++ 引擎，彻底解决 EPS 振荡和心跳稳定性）→ `v3.8.x`（C++ 热路径零 P/Invoke、策略回调、单文件打包、日志线程重连恢复、漏洞防护攻击方向修正）→ **`v3.9.0`**（攻击报文发送模块：RawPacketEngine DLL + 内置 MS08-067/MS17-010/MS20-796 + .etc/.pcap 导入 + 字段编辑 + 属性测试，当前）
+- 版本演进脉络：... → **`v3.9.x`**（攻击报文发送模块：RawPacketEngine DLL + 内置 MS08-067/MS17-010/MS20-796 + .etc/.pcap 导入 + 字段编辑 + 属性测试；v3.9.1 UI 大幅优化：步骤引导两栏布局、紧凑统计卡片、源IP方向修正，当前）
