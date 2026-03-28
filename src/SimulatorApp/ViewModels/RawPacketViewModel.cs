@@ -19,6 +19,8 @@ namespace SimulatorApp.ViewModels
         // ── Service ──────────────────────────────────────────────────────
         private readonly RawPacketSenderService _service;
         private readonly DispatcherTimer _statsTimer;
+        /// <summary>子窗口自身引用，用于设置对话框 Owner，保持子窗口置顶。</summary>
+        public Window? OwnerWindow { get; set; }
 
         // ── Inner types ───────────────────────────────────────────────────
         public class BuiltinPacketItem : INotifyPropertyChanged
@@ -510,7 +512,7 @@ namespace SimulatorApp.ViewModels
                 dstPort: "",
                 srcPort: "")
             {
-                Owner = Application.Current.MainWindow
+                Owner = OwnerWindow ?? Application.Current.MainWindow
             };
 
             if (dlg.ShowDialog() != true) return;
@@ -570,8 +572,32 @@ namespace SimulatorApp.ViewModels
 
         private void RefreshStats()
         {
-            _service.RefreshStats();
-            Stats = _service.Stats;
+            // 只在运行中刷新实时/平均统计；停止后冻结数值，仅更新状态
+            if (_service.Status == SendTaskStatus.Running)
+            {
+                _service.RefreshStats();
+                Stats = _service.Stats;
+
+                // 检测 DLL 内部是否因定量完成而自动停止（实时PPS归零且总数不再增加）
+                if (_sendModeIndex == 1 && _service.Stats.CurrentPps < 0.01
+                    && _service.Stats.SendTotal > 0)
+                {
+                    // 再取一次确认
+                    _service.RefreshStats();
+                    if (_service.Stats.CurrentPps < 0.01)
+                    {
+                        _service.Stop();
+                        StatusText = $"定量发送完成，共发 {_service.Stats.SendTotal} 包";
+                        Stats = _service.Stats;
+                    }
+                }
+            }
+            // 停止/完成状态：只更新累计值（不重算平均，避免数值漂移）
+            else if (_service.Status == SendTaskStatus.Stopped ||
+                     _service.Status == SendTaskStatus.Completed)
+            {
+                // 冻结：不调用 RefreshStats，保持最后一次统计值
+            }
         }
 
         private void AddStreamToService(StreamConfig sc)

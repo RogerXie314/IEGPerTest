@@ -1,8 +1,9 @@
 <Window x:Class="SimulatorApp.Views.RawPacketWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="攻击报文发送" Height="640" Width="1050"
-        WindowStartupLocation="CenterScreen">
+        Title="攻击报文发送" Height="660" Width="1050"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -27,11 +28,10 @@
         <ColumnDefinition Width="210"/>
       </Grid.ColumnDefinitions>
 
-      <!-- ══ 左侧：内置报文 + 目的地址 + 源IP变化规则 ══ -->
+      <!-- ══ 左侧 ══ -->
       <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="0,0,1,0">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="8,6">
-
             <TextBlock Text="内置攻击报文" FontWeight="SemiBold" Margin="0,0,0,4"/>
             <ItemsControl ItemsSource="{Binding BuiltinPackets}">
               <ItemsControl.ItemTemplate>
@@ -42,7 +42,6 @@
             </ItemsControl>
 
             <Separator Margin="0,8"/>
-
             <TextBlock Text="目的地址" FontWeight="SemiBold" Margin="0,0,0,4"/>
             <TextBlock Text="目的 IP：" FontSize="11" Foreground="#555"/>
             <TextBox Text="{Binding DestIp, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
@@ -52,14 +51,10 @@
             <TextBlock Text="{Binding DestMacError}" Foreground="Red" FontSize="10"/>
 
             <Separator Margin="0,8"/>
-
-            <!-- 源IP变化规则（对齐图2） -->
             <CheckBox IsChecked="{Binding SrcIpRuleEnabled}" Content="启用源IP变化规则"
                       FontWeight="SemiBold" Margin="0,0,0,6"/>
             <Grid IsEnabled="{Binding SrcIpRuleEnabled}">
               <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -69,38 +64,25 @@
                 <ColumnDefinition Width="70"/>
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
-
               <TextBlock Grid.Row="0" Grid.Column="0" Text="起始值" VerticalAlignment="Center" FontSize="11"/>
-              <TextBox   Grid.Row="0" Grid.Column="1"
-                         Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,2"/>
-
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="最大不超过" VerticalAlignment="Center"
-                         FontSize="11" TextWrapping="Wrap"/>
-              <TextBox   Grid.Row="1" Grid.Column="1"
-                         Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,2"/>
-
+              <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding SrcIpStart, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="最大不超过" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"/>
+              <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding SrcIpMax, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
               <TextBlock Grid.Row="2" Grid.Column="0" Text="步长" VerticalAlignment="Center" FontSize="11"/>
-              <TextBox   Grid.Row="2" Grid.Column="1"
-                         Text="{Binding SrcIpStep, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,2"/>
-
+              <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding SrcIpStep, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
               <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-                         Text="{Binding SrcIpRuleError}" Foreground="Red" FontSize="10"
-                         TextWrapping="Wrap"/>
+                         Text="{Binding SrcIpRuleError}" Foreground="Red" FontSize="10" TextWrapping="Wrap"/>
             </Grid>
-
           </StackPanel>
         </ScrollViewer>
       </Border>
 
-      <!-- ══ 中部：Stream 列表 + 统计面板（参考图3） ══ -->
+      <!-- ══ 中部：Stream 列表（固定高度）+ 统计面板（占剩余空间） ══ -->
       <Grid Grid.Column="1" Margin="4">
         <Grid.RowDefinitions>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="120"/>   <!-- Stream 列表，固定高度约减半 -->
+          <RowDefinition Height="Auto"/>  <!-- 操作按钮 -->
+          <RowDefinition Height="*"/>     <!-- 统计面板，占剩余全部空间 -->
         </Grid.RowDefinitions>
 
         <!-- Stream 列表 -->
@@ -115,7 +97,7 @@
             <DataGridTextColumn Header="源地址" Binding="{Binding SrcIp}" Width="110"/>
             <DataGridTextColumn Header="目的地址" Binding="{Binding DstIp}" Width="110"/>
             <DataGridTextColumn Header="协议" Binding="{Binding Type}" Width="70"/>
-            <DataGridTextColumn Header="长度" Binding="{Binding FrameLen}" Width="55"/>
+            <DataGridTextColumn Header="长度(B)" Binding="{Binding FrameLen}" Width="60"/>
             <DataGridTextColumn Header="信息" Binding="{Binding Info}" Width="*"/>
           </DataGrid.Columns>
         </DataGrid>
@@ -128,9 +110,16 @@
           <Button Content="清空" Command="{Binding ClearStreamsCommand}" Width="60"/>
         </StackPanel>
 
-        <!-- 统计面板（参考图3） -->
+        <!-- 统计面板（占剩余空间） -->
         <Border Grid.Row="2" BorderBrush="#CCC" BorderThickness="1" Margin="0,4,0,0">
           <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>  <!-- 说明行 -->
+              <RowDefinition Height="Auto"/>  <!-- 表头 -->
+              <RowDefinition Height="Auto"/>  <!-- 发送行 -->
+              <RowDefinition Height="Auto"/>  <!-- 失败行 -->
+              <RowDefinition Height="*"/>     <!-- 填充 -->
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="70"/>
               <ColumnDefinition Width="*"/>
@@ -140,68 +129,77 @@
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+
+            <!-- 说明行 -->
+            <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="7"
+                    Background="#EEF4FF" BorderBrush="#CCC" BorderThickness="0,0,0,1" Padding="6,3">
+              <TextBlock FontSize="11" Foreground="#444" TextWrapping="Wrap">
+                <Run FontWeight="SemiBold">bps</Run><Run>（bits per second）= 每秒传输比特数，反映带宽占用；</Run>
+                <Run FontWeight="SemiBold">pps</Run><Run>（packets per second）= 每秒发包数，反映发包速率。</Run>
+                <Run Foreground="#888">实时 = 最近1秒均值；平均 = 启动以来总均值。</Run>
+              </TextBlock>
+            </Border>
 
             <!-- 表头 -->
-            <Border Grid.Row="0" Grid.Column="0" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1"/>
-            <Border Grid.Row="0" Grid.Column="1" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="实时bps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="1" Grid.Column="0" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1"/>
+            <Border Grid.Row="1" Grid.Column="1" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="实时 bps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
-            <Border Grid.Row="0" Grid.Column="2" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="实时pps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="1" Grid.Column="2" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="实时 pps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
-            <Border Grid.Row="0" Grid.Column="3" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="平均bps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="1" Grid.Column="3" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="平均 bps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
-            <Border Grid.Row="0" Grid.Column="4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="平均pps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="1" Grid.Column="4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="平均 pps" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
-            <Border Grid.Row="0" Grid.Column="5" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+            <Border Grid.Row="1" Grid.Column="5" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,1,1">
               <TextBlock Text="报文总数" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
-            <Border Grid.Row="0" Grid.Column="6" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,0,1">
-              <TextBlock Text="总流量(B)" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="1" Grid.Column="6" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,0,0,1">
+              <TextBlock Text="总流量 (B)" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
             </Border>
 
             <!-- 发送行 -->
-            <Border Grid.Row="1" Grid.Column="0" BorderBrush="#CCC" BorderThickness="0,0,1,1" Background="#FAFAFA">
-              <TextBlock Text="发送" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="2" Grid.Column="0" BorderBrush="#CCC" BorderThickness="0,0,1,1" Background="#FAFAFA">
+              <TextBlock Text="发送" HorizontalAlignment="Center" FontSize="12" Padding="2" FontWeight="SemiBold"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="1" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding Stats.CurrentBps, StringFormat=F0}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="1" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="{Binding Stats.CurrentBps, StringFormat=F0}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="2" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="2" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="3" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding Stats.AvgBps, StringFormat=F0}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="3" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="{Binding Stats.AvgBps, StringFormat=F0}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="4" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding Stats.AvgPps, StringFormat=F1}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="4" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="{Binding Stats.AvgPps, StringFormat=F1}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="5" BorderBrush="#CCC" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding Stats.SendTotal}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="5" BorderBrush="#CCC" BorderThickness="0,0,1,1">
+              <TextBlock Text="{Binding Stats.SendTotal}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
-            <Border Grid.Row="1" Grid.Column="6" BorderBrush="#CCC" BorderThickness="0,0,0,1">
-              <TextBlock Text="{Binding Stats.SendBytes}" HorizontalAlignment="Right" Padding="4,2" FontSize="11"/>
+            <Border Grid.Row="2" Grid.Column="6" BorderBrush="#CCC" BorderThickness="0,0,0,1">
+              <TextBlock Text="{Binding Stats.SendBytes}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"/>
             </Border>
 
             <!-- 失败行 -->
-            <Border Grid.Row="2" Grid.Column="0" BorderBrush="#CCC" BorderThickness="0,0,1,0" Background="#FAFAFA">
-              <TextBlock Text="发送失败" HorizontalAlignment="Center" FontSize="11" Padding="2"/>
+            <Border Grid.Row="3" Grid.Column="0" BorderBrush="#CCC" BorderThickness="0,0,1,0" Background="#FAFAFA">
+              <TextBlock Text="发送失败" HorizontalAlignment="Center" FontSize="12" Padding="2" FontWeight="SemiBold"/>
             </Border>
-            <Border Grid.Row="2" Grid.Column="1" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
-            <Border Grid.Row="2" Grid.Column="2" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
-            <Border Grid.Row="2" Grid.Column="3" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
-            <Border Grid.Row="2" Grid.Column="4" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
-            <Border Grid.Row="2" Grid.Column="5" BorderBrush="#CCC" BorderThickness="0,0,1,0">
-              <TextBlock Text="{Binding Stats.SendFail}" HorizontalAlignment="Right" Padding="4,2" FontSize="11" Foreground="Red"/>
+            <Border Grid.Row="3" Grid.Column="1" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
+            <Border Grid.Row="3" Grid.Column="2" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
+            <Border Grid.Row="3" Grid.Column="3" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
+            <Border Grid.Row="3" Grid.Column="4" BorderBrush="#CCC" BorderThickness="0,0,1,0"/>
+            <Border Grid.Row="3" Grid.Column="5" BorderBrush="#CCC" BorderThickness="0,0,1,0">
+              <TextBlock Text="{Binding Stats.SendFail}" HorizontalAlignment="Right" Padding="6,3" FontSize="12"
+                         Foreground="Red"/>
             </Border>
-            <Border Grid.Row="2" Grid.Column="6"/>
+            <Border Grid.Row="3" Grid.Column="6"/>
+
+            <!-- 填充区域（空白） -->
+            <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="7" Background="White"/>
           </Grid>
         </Border>
       </Grid>
@@ -210,43 +208,38 @@
       <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0">
         <StackPanel Margin="8,6">
           <TextBlock Text="速率配置" FontWeight="SemiBold" Margin="0,0,0,6"/>
-
           <ComboBox SelectedIndex="{Binding SpeedModeIndex}" Margin="0,0,0,4">
             <ComboBoxItem Content="包率模式 (PPS)"/>
             <ComboBoxItem Content="间隔模式 (μs)"/>
             <ComboBoxItem Content="最大速率"/>
           </ComboBox>
-
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,2"
-                      Visibility="{Binding SpeedValueVisible}">
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,2" Visibility="{Binding SpeedValueVisible}">
             <TextBox Text="{Binding SpeedValue, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
             <TextBlock Text="{Binding SpeedValueUnit}" VerticalAlignment="Center" Margin="4,0,0,0"/>
           </StackPanel>
           <TextBlock Text="{Binding RateError}" Foreground="Red" FontSize="10"/>
 
           <Separator Margin="0,8"/>
-          <TextBlock Text="发包模式" FontWeight="SemiBold" Margin="0,0,0,6"/>
-
+          <TextBlock Text="发包模式" FontWeight="SemiBold" Margin="0,0,0,4"/>
+          <TextBlock FontSize="10" Foreground="#777" TextWrapping="Wrap" Margin="0,0,0,4">
+            持续：一直发直到手动停止。&#x0a;定量：发完指定包数后自动停止。
+          </TextBlock>
           <ComboBox SelectedIndex="{Binding SendModeIndex}" Margin="0,0,0,4">
             <ComboBoxItem Content="持续发送"/>
             <ComboBoxItem Content="定量发送"/>
           </ComboBox>
-
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,4"
-                      Visibility="{Binding BurstCountVisible}">
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,4" Visibility="{Binding BurstCountVisible}">
             <TextBox Text="{Binding BurstCount, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
-            <TextBlock Text="次" VerticalAlignment="Center" Margin="4,0,0,0"/>
+            <TextBlock Text="包" VerticalAlignment="Center" Margin="4,0,0,0"/>
           </StackPanel>
 
           <Separator Margin="0,8"/>
-
           <Button Content="▶ 开始发送" Command="{Binding StartCommand}"
                   Background="#FF4CAF50" Foreground="White"
                   Height="36" Margin="0,4" FontSize="13" FontWeight="SemiBold"/>
           <Button Content="■ 停止" Command="{Binding StopCommand}"
                   Background="#FFF44336" Foreground="White"
                   Height="36" Margin="0,4" FontSize="13" FontWeight="SemiBold"/>
-
           <TextBlock Text="{Binding StatusText}" Margin="0,6" TextWrapping="Wrap"
                      FontSize="11" Foreground="#555"/>
         </StackPanel>

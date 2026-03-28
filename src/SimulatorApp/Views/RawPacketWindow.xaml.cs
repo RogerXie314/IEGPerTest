@@ -11,6 +11,7 @@ namespace SimulatorApp.Views
         {
             InitializeComponent();
             _vm = new RawPacketViewModel();
+            _vm.OwnerWindow = this;
             DataContext = _vm;
             Loaded += async (_, _) => await _vm.InitializeAsync();
         }
