@@ -17,10 +17,9 @@
       <Setter Property="Foreground" Value="#607D8B"/>
       <Setter Property="Margin" Value="0,4,0,1"/>
     </Style>
-    <!-- 输入框：固定宽度，紧凑 padding -->
+    <!-- 输入框：拉伸填满左栏，紧凑 padding -->
     <Style x:Key="ShortInput" TargetType="TextBox">
-      <Setter Property="Width" Value="155"/>
-      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="Padding" Value="5,2"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Height" Value="24"/>
@@ -83,7 +82,7 @@
     <!-- ── 主内容：左侧配置 + 右侧工作区 ── -->
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="230"/>
+        <ColumnDefinition Width="300"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
@@ -128,7 +127,7 @@
               <TextBox Text="{Binding DestIp, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ShortInput}"/>
               <TextBlock Text="{Binding DestIpError}" Foreground="#E53935" FontSize="10"/>
               <TextBlock Text="目的 MAC" Style="{StaticResource FieldLabel}"/>
-              <TextBox Text="{Binding DestMac, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ShortInput}" Width="190"/>
+              <TextBox Text="{Binding DestMac, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ShortInput}"/>
               <TextBlock Text="{Binding DestMacError}" Foreground="#E53935" FontSize="10"/>
 
               <!-- ③ 源IP递增（可选） -->
@@ -214,24 +213,27 @@
 
         <!-- 执行按钮（固定在左侧底部） -->
         <Border Grid.Row="1" Background="#F5F5F5" BorderBrush="#E0E0E0"
-                BorderThickness="0,1,1,0" Padding="12,10">
+                BorderThickness="0,1,1,0" Padding="12,8">
           <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
               <Border Style="{StaticResource StepNum}">
                 <TextBlock Text="5" Foreground="White" FontSize="9" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <TextBlock Text="执行" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
             </StackPanel>
-            <Button Content="▶  开始发送" Command="{Binding StartCommand}"
-                    Background="#2E7D32" Foreground="White" BorderThickness="0"
-                    Height="34" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <Button Content="■  停止" Command="{Binding StopCommand}"
-                    Background="#B71C1C" Foreground="White" BorderThickness="0"
-                    Height="30" FontSize="12"/>
+            <!-- 按钮水平排列，自适应宽度 -->
+            <StackPanel Orientation="Horizontal">
+              <Button Content="▶ 开始" Command="{Binding StartCommand}"
+                      Background="#2E7D32" Foreground="White" BorderThickness="0"
+                      Padding="16,7" FontSize="12" FontWeight="SemiBold" Margin="0,0,8,0"/>
+              <Button Content="■ 停止" Command="{Binding StopCommand}"
+                      Background="#B71C1C" Foreground="White" BorderThickness="0"
+                      Padding="16,7" FontSize="12"/>
+            </StackPanel>
             <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"
                        FontSize="11" Foreground="#37474F" Margin="0,6,0,0"
-                       HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                       FontWeight="SemiBold"/>
           </StackPanel>
         </Border>
       </Grid>
