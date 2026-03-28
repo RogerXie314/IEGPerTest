@@ -238,9 +238,9 @@
       <!-- ══ 右侧工作区 ══ -->
       <Grid Grid.Column="1">
         <Grid.RowDefinitions>
-          <RowDefinition Height="120"/>  <!-- Stream 列表（固定，够显示几行即可） -->
+          <RowDefinition Height="*"/>    <!-- Stream 列表（填满剩余） -->
           <RowDefinition Height="Auto"/> <!-- 操作按钮 -->
-          <RowDefinition Height="*"/>    <!-- 统计区（占剩余全部空间） -->
+          <RowDefinition Height="Auto"/> <!-- 统计区（固定高度160） -->
         </Grid.RowDefinitions>
 
         <!-- Stream 列表 -->
@@ -280,84 +280,80 @@
           </StackPanel>
         </Border>
 
-        <!-- 统计区（说明+数据合并，占剩余全部空间） -->
-        <Border Grid.Row="2" Background="#F0F2F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+        <!-- 统计区（固定高度，紧凑卡片） -->
+        <Border Grid.Row="2" Background="#F0F2F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Height="160">
           <StackPanel>
             <!-- 说明文字 -->
-            <TextBlock Margin="12,6,12,6" FontSize="10" Foreground="#9E9E9E">
+            <TextBlock Margin="12,5,12,5" FontSize="10" Foreground="#9E9E9E">
               <Run FontWeight="SemiBold" Foreground="#607D8B">实时</Run><Run> = 最近1秒；</Run>
               <Run FontWeight="SemiBold" Foreground="#607D8B">平均</Run><Run> = 本次启动以来。</Run>
               <Run>bps = 每秒比特数；pps = 每秒包数</Run>
             </TextBlock>
 
-            <!-- 统计卡片：两行 3+3 布局 -->
-            <Grid Margin="10,0,10,10">
+            <!-- 统计卡片：两行 3+3，固定高度 -->
+            <Grid Margin="10,0,10,8">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="8"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="56"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="56"/>
               </Grid.RowDefinitions>
 
               <!-- 第一行：实时 bps / 实时 pps / 平均 bps -->
-              <Border Grid.Row="0" Grid.Column="0" Background="White" CornerRadius="8"
-                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="实时 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+              <Border Grid.Row="0" Grid.Column="0" Background="White" CornerRadius="6"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="实时 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.CurrentBps, StringFormat=F0}"
-                             FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#2E7D32"/>
                 </StackPanel>
               </Border>
-
-              <Border Grid.Row="0" Grid.Column="2" Background="White" CornerRadius="8"
-                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="实时 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+              <Border Grid.Row="0" Grid.Column="2" Background="White" CornerRadius="6"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="实时 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.CurrentPps, StringFormat=F1}"
-                             FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#2E7D32"/>
                 </StackPanel>
               </Border>
-
-              <Border Grid.Row="0" Grid.Column="4" Background="White" CornerRadius="8"
-                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="平均 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+              <Border Grid.Row="0" Grid.Column="4" Background="White" CornerRadius="6"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="平均 bps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.AvgBps, StringFormat=F0}"
-                             FontSize="22" FontWeight="Bold" Foreground="#1565C0"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#1565C0"/>
                 </StackPanel>
               </Border>
 
               <!-- 第二行：平均 pps / 报文总数 / 失败数 -->
-              <Border Grid.Row="2" Grid.Column="0" Background="White" CornerRadius="8"
-                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="平均 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+              <Border Grid.Row="2" Grid.Column="0" Background="White" CornerRadius="6"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="平均 pps" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.AvgPps, StringFormat=F1}"
-                             FontSize="22" FontWeight="Bold" Foreground="#1565C0"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#1565C0"/>
                 </StackPanel>
               </Border>
-
-              <Border Grid.Row="2" Grid.Column="2" Background="White" CornerRadius="8"
-                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="报文总数" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,4"/>
+              <Border Grid.Row="2" Grid.Column="2" Background="White" CornerRadius="6"
+                      BorderBrush="#E8E8E8" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="报文总数" FontSize="10" Foreground="#9E9E9E" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.SendTotal}"
-                             FontSize="22" FontWeight="Bold" Foreground="#37474F"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#37474F"/>
                 </StackPanel>
               </Border>
-
-              <Border Grid.Row="2" Grid.Column="4" Background="White" CornerRadius="8"
-                      BorderBrush="#FFCDD2" BorderThickness="1" Padding="12,10">
-                <StackPanel>
-                  <TextBlock Text="发送失败" FontSize="10" Foreground="#EF9A9A" Margin="0,0,0,4"/>
+              <Border Grid.Row="2" Grid.Column="4" Background="White" CornerRadius="6"
+                      BorderBrush="#FFCDD2" BorderThickness="1" Padding="10,6">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="发送失败" FontSize="10" Foreground="#EF9A9A" Margin="0,0,0,2"/>
                   <TextBlock Text="{Binding Stats.SendFail}"
-                             FontSize="22" FontWeight="Bold" Foreground="#C62828"/>
+                             FontSize="18" FontWeight="Bold" Foreground="#C62828"/>
                 </StackPanel>
               </Border>
             </Grid>
