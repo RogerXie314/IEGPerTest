@@ -2,10 +2,10 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\Development\IEGPerTest\src\RawPacketEngine\build\x64\Release\ZERO_CHECK</FullPath>
+      <FullPath>D:\Github\IEGPerTest\src\RawPacketEngine\build\x64\Release\ZERO_CHECK</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>D:\Development\IEGPerTest\src\RawPacketEngine\build\Release\RawPacketEngine.dll</FullPath>
+      <FullPath>D:\Github\IEGPerTest\src\RawPacketEngine\build\Release\RawPacketEngine.dll</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

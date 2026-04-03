@@ -1,76 +1,55 @@
 ﻿# Publish SimulatorApp as a self-contained exe with DLLs in same directory
 # NativeEngine.dll + NativeSender.dll + RawPacketEngine.dll 与 EXE 同目录部署。
-# Automatically bumps patch version, updates docs, and git commits on each run.
+# 版本号需手动修改 SimulatorApp.csproj，脚本不再自动递增。
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
 
-# -- 0. Pre-flight: working tree must be clean --------------------------------
-# 正确发布流程：功能代码改完 → 写变更记录 → git commit → 再跑此脚本。
-# 此检查确保"写记录+commit"步骤不被跳过。
-Push-Location "$PSScriptRoot\.."
-$gitStatus = git status --porcelain 2>&1
-Pop-Location
-if ($gitStatus) {
-    Write-Error @"
-发布中止：工作区有未提交的改动：
-
-$gitStatus
-
-正确流程：
-  1. 功能代码改完
-  2. 在 docs/项目实施文档.md 写好变更记录
-  3. git add . && git commit
-  4. 再运行此脚本
-"@
-    exit 1
-}
-
-# -- 1. Auto-bump patch version -----------------------------------------------
+# -- 0. 读取当前版本号（不再检查工作区状态，允许在任意环境打包）-----------
 [xml]$csproj = Get-Content $projectPath
-$oldVer = $csproj.Project.PropertyGroup.Version
-if ($oldVer -match '^(\d+)\.(\d+)\.(\d+)$') {
-    $newVer = "$($matches[1]).$($matches[2]).$([int]$matches[3] + 1)"
-} else {
-    Write-Warning "Cannot parse version '$oldVer', skipping bump"
-    $newVer = $oldVer
-}
+$currentVer = $csproj.Project.PropertyGroup.Version
+Write-Host "当前版本: v$currentVer" -ForegroundColor Cyan
 
-# -- 1b. Pre-flight: changelog entry must exist for the new version ----------
-# 发布前必须在 docs/项目实施文档.md 里写好 "### v{新版本}" 条目，否则中止。
+# 不再自动递增版本号，版本号由开发者手动修改 SimulatorApp.csproj$'
+# 不再检查文档中是否有版本记录（改为可选警告）
 $docFileName2 = [char]0x9879 + [char]0x76EE + [char]0x5B9E + [char]0x65BD + [char]0x6587 + [char]0x6863 + ".md"
 $docPath2 = [System.IO.Path]::Combine((Resolve-Path "$PSScriptRoot\..").Path, "docs", $docFileName2)
 if ([System.IO.File]::Exists($docPath2)) {
     $docLines = [System.IO.File]::ReadAllLines($docPath2, [System.Text.Encoding]::UTF8)
-    $hasEntry = $docLines | Where-Object { $_ -match "^###\s+v$([regex]::Escape($newVer))\b" }
+    $hasEntry = $docLines | Where-Object { $_ -match "^###\s+v$([regex]::Escape($currentVer))\b" }
     if (-not $hasEntry) {
-        Write-Error @"
-发布中止：docs/项目实施文档.md 中缺少 v$newVer 的变更记录。
-
-请先在变更记录区域添加：
-
-  ### v$newVer — $(Get-Date -Format 'yyyy-MM-dd')：<本次改动标题>
-
-  <改动说明>
-
-然后 git add docs/ && git commit，再运行此脚本。
+        Write-Warning @"
+提示：docs/项目实施文档.md 中未找到 v$currentVer 的变更记录。
+建议在发布后补充变更说明。
 "@
-        exit 1
     }
 } else {
-    Write-Warning "Doc not found, skipping changelog check"
+    Write-Warning "文档文件未找到，跳过版本记录检查"
 }
-$csproj.Project.PropertyGroup.Version        = $newVer
-$csproj.Project.PropertyGroup.AssemblyVersion = "$newVer.0"
-$csproj.Project.PropertyGroup.FileVersion    = "$newVer.0"
-$csproj.Save((Resolve-Path $projectPath))
-Write-Host "Version: $oldVer -> $newVer" -ForegroundColor Cyan
 
-# -- 2. 先编译 C++ DLL（dotnet publish 打包时需要它们已存在）-----------------
-$cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+# -- 1. 先编译 C++ DLL（dotnet publish 打包时需要它们已存在）-----------------
+# 支持多个 Visual Studio 版本和路径
+$cmakePaths = @(
+    "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+)
 
-# -- 2a. NativeEngine.dll -------------------------------------------------------
+$cmake = $null
+foreach ($path in $cmakePaths) {
+    if (Test-Path $path) {
+        $cmake = $path
+        Write-Host "找到 CMake: $cmake" -ForegroundColor Green
+        break
+    }
+}
+
+if (-not $cmake) {
+    Write-Warning "未找到 CMake，将跳过 C++ DLL 编译（使用已存在的 DLL）"
+}
+
+# -- 1a. NativeEngine.dll -------------------------------------------------------
 $neDir = "$PSScriptRoot\..\src\NativeEngine"
-if (Test-Path $cmake) {
+if ($cmake -and (Test-Path $cmake)) {
     Write-Host "Building NativeEngine.dll..." -ForegroundColor Cyan
     Push-Location "$neDir\build"
     & $cmake --build . --config Release | Out-Null
@@ -85,10 +64,10 @@ if (-not (Test-Path $neDll)) {
 }
 Write-Host "NativeEngine.dll ready: $([math]::Round((Get-Item $neDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
-# -- 2b. NativeSender.dll -------------------------------------------------------
+# -- 1b. NativeSender.dll -------------------------------------------------------
 # CMakeLists.txt 输出到 build/Release；CMakeCache.txt 存在时强制重新配置以确保路径正确。
 $nsDir = "$PSScriptRoot\..\src\NativeSender"
-if (Test-Path $cmake) {
+if ($cmake -and (Test-Path $cmake)) {
     Write-Host "Building NativeSender.dll..." -ForegroundColor Cyan
     if (-not (Test-Path "$nsDir\build")) { New-Item -ItemType Directory "$nsDir\build" | Out-Null }
     # 每次重新配置确保 CMakeCache 中的输出路径与 CMakeLists.txt 一致
@@ -106,9 +85,9 @@ if (-not (Test-Path $nsDll)) {
 }
 Write-Host "NativeSender.dll ready: $([math]::Round((Get-Item $nsDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
-# -- 2c. RawPacketEngine.dll -------------------------------------------------------
+# -- 1c. RawPacketEngine.dll -------------------------------------------------------
 $rpeDir = "$PSScriptRoot\..\src\RawPacketEngine"
-if (Test-Path $cmake) {
+if ($cmake -and (Test-Path $cmake)) {
     Write-Host "Building RawPacketEngine.dll..." -ForegroundColor Cyan
     if (-not (Test-Path "$rpeDir\build")) { New-Item -ItemType Directory "$rpeDir\build" | Out-Null }
     Push-Location "$rpeDir\build"
@@ -125,8 +104,8 @@ if (-not (Test-Path $rpeDll)) {
 }
 Write-Host "RawPacketEngine.dll ready: $([math]::Round((Get-Item $rpeDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
-# -- 3. Publish（DLL 与 EXE 同目录部署）----------------------------------------
-Write-Host "Publishing SimulatorApp v$newVer (self-contained, DLLs in same directory)..." -ForegroundColor Cyan
+# -- 2. Publish（DLL 与 EXE 同目录部署）----------------------------------------
+Write-Host "Publishing SimulatorApp v$currentVer (self-contained, DLLs in same directory)..." -ForegroundColor Cyan
 
 dotnet publish $projectPath `
     -c Release `
@@ -156,30 +135,6 @@ $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
 $totalSize = (Get-ChildItem $outputPath -File | Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB (total: $([math]::Round($totalSize, 1)) MB)" -ForegroundColor Green
 
-# -- 4. Update docs version number -------------------------------------------
-# Construct Chinese filename via [char] codes to avoid any console encoding issues:
-# docs/项目实施文档.md
-# 项=9879 目=76EE 实=5B9E 施=65BD 文=6587 档=6863
-$docFileName = [char]0x9879 + [char]0x76EE + [char]0x5B9E + [char]0x65BD + [char]0x6587 + [char]0x6863 + ".md"
-$docPath = [System.IO.Path]::Combine((Resolve-Path "$PSScriptRoot\..").Path, "docs", $docFileName)
-$today = (Get-Date).ToString("yyyy-MM-dd")
-if ([System.IO.File]::Exists($docPath)) {
-    $docContent = [System.IO.File]::ReadAllText($docPath, [System.Text.Encoding]::UTF8)
-    $pat1 = "(?<=\| " + [char]0x5F53 + [char]0x524D + [char]0x7248 + [char]0x672C + " \| \*\*v)[\d.]+(?=\*\*)"
-    $pat2 = "(?<=\| " + [char]0x4E0A + [char]0x6B21 + [char]0x66F4 + [char]0x65B0 + " \| )[\d-]+"
-    $docContent = $docContent -replace $pat1, $newVer
-    $docContent = $docContent -replace $pat2, $today
-    [System.IO.File]::WriteAllText($docPath, $docContent, [System.Text.Encoding]::UTF8)
-    Write-Host "Docs updated: v$newVer  $today" -ForegroundColor Cyan
-} else {
-    Write-Warning "Doc not found at $docPath, skipping"
-}
-
-# -- 5. Git commit + push -----------------------------------------------------
-Push-Location "$PSScriptRoot\.."
-git add src/SimulatorApp/SimulatorApp.csproj
-git add docs/
-git commit -m "chore: bump SimulatorApp to v$newVer"
-git push
-Pop-Location
-Write-Host "Committed and pushed: v$newVer" -ForegroundColor Green
+Write-Host "`n打包完成！版本: v$currentVer" -ForegroundColor Green
+Write-Host "输出目录: $outputPath" -ForegroundColor Cyan
+Write-Host "`n提示：版本号和文档更新需手动管理，不再自动提交。" -ForegroundColor Yellow

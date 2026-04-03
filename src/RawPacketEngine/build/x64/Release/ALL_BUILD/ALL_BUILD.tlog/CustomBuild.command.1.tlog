@@ -1,6 +1,6 @@
-^D:\DEVELOPMENT\IEGPERTEST\SRC\RAWPACKETENGINE\CMAKELISTS.TXT
+^D:\GITHUB\IEGPERTEST\SRC\RAWPACKETENGINE\CMAKELISTS.TXT
 setlocal
-"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SD:/Development/IEGPerTest/src/RawPacketEngine -BD:/Development/IEGPerTest/src/RawPacketEngine/build --check-stamp-file D:/Development/IEGPerTest/src/RawPacketEngine/build/CMakeFiles/generate.stamp
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SD:/Github/IEGPerTest/src/RawPacketEngine -BD:/Github/IEGPerTest/src/RawPacketEngine/build --check-stamp-file D:/Github/IEGPerTest/src/RawPacketEngine/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

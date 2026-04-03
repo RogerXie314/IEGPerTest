@@ -4,14 +4,14 @@
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
-    <Version>3.9.1</Version>
-    <AssemblyVersion>3.9.1.0</AssemblyVersion>
-    <FileVersion>3.9.1.0</FileVersion>
+    <Version>3.9.2</Version>
+    <AssemblyVersion>3.9.2.0</AssemblyVersion>
+    <FileVersion>3.9.2.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SimulatorLib\SimulatorLib.csproj" />
   </ItemGroup>
-  <!-- C++ DLL 部署：输出到同目录，运行时必须存在 -->
+  <!-- C++ DLL 闂侇喓鍔庣拋鏌ユ晬濮樺磭缈婚柛鎴濇惈閸╁矂宕ュ畝鈧ú鎷屻亹閺囶亞绀夐弶鈺傚姌椤㈡垿寮捄铏圭畱濡炪倛顕ч悺銊╁捶?-->
   <ItemGroup>
     <None Include="..\..\src\NativeEngine\build\Release\NativeEngine.dll" Condition="Exists('..\..\src\NativeEngine\build\Release\NativeEngine.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

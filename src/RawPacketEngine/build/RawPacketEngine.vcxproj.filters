@@ -1,24 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="D:\Development\IEGPerTest\src\RawPacketEngine\raw_packet_engine.cpp">
+    <ClCompile Include="D:\Github\IEGPerTest\src\RawPacketEngine\raw_packet_engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Development\IEGPerTest\src\RawPacketEngine\raw_packet_engine.h">
+    <ClInclude Include="D:\Github\IEGPerTest\src\RawPacketEngine\raw_packet_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Development\IEGPerTest\src\RawPacketEngine\CMakeLists.txt" />
+    <CustomBuild Include="D:\Github\IEGPerTest\src\RawPacketEngine\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{BCECFF2B-B6F6-382B-A276-2755924E598A}</UniqueIdentifier>
+      <UniqueIdentifier>{A193A65D-4182-39AD-BA03-813E01FC6D7C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{5ECE21B0-1875-3616-B651-235110896CA5}</UniqueIdentifier>
+      <UniqueIdentifier>{34B771A6-6591-3CA4-9691-FEC31A1A113E}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
