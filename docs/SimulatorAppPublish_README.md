@@ -18,21 +18,22 @@
 ### C++ 原生 DLL（3个）
 
 #### 1. NativeEngine.dll (约 73 KB)
-**作用**：心跳和威胁检测日志的高性能发送引擎
+**作用**：心跳和威胁检测日志的 TCP 长连接引擎（100% 对齐老工具 WLServerTest）
 
 **功能**：
-- 非阻塞 socket 管理（对齐老工具 WLServerTest 行为）
+- 非阻塞 socket 管理（对齐老工具 `ThreadFunc_HeartbeatSend_New` 行为）
 - 心跳线程：每客户端 1 个 OS 线程，30 秒周期发送心跳包
 - 日志线程：威胁检测日志（TCP 长连接），每客户端 1 个 OS 线程
 - PT 协议打包：48 字节 Big-Endian 协议头
 - JSON 构建 + zlib 压缩（内嵌 zlibstat.lib）
-- 自动重连和断线检测
+- 心跳线程负责重连和断线检测
 
 **技术细节**：
 - 使用 Winsock 非阻塞 socket（`ioctlsocket(FIONBIO, 1)`）
-- `send()` 返回 `WSAEWOULDBLOCK` 时立即失败，不阻塞
+- `send()` 返回 `WSAEWOULDBLOCK` 时立即失败，不阻塞（对齐老工具）
 - 心跳和日志线程完全独立，socket 生命周期由心跳线程管理
-- 日志线程 send 失败后直接跳过，不关闭 socket
+- 日志线程 send 失败后直接跳过，不关闭 socket（对齐老工具 `ThreadFunc_MsgLogSend`）
+- 每客户端 2 个 OS 线程（心跳 + 日志），对齐老工具线程模型
 
 **依赖**：
 - zlib 静态库（`external/IEG_Code/code/lib/x64/zlibstat.lib`）
@@ -52,7 +53,7 @@
 - 100% 对齐老工具 `CSendInfoToServer::CreateConnection` 行为
 - 不设置 `TCP_NODELAY` 和 `SO_KEEPALIVE`（与老工具一致）
 - 使用阻塞 socket（老工具行为）
-- 1KB 分块发送减少单次 send() 调用的数据量
+- 1KB 分块发送（对齐老工具，不是性能优化，而是行为一致性）
 
 #### 3. RawPacketEngine.dll (约 67 KB)
 **作用**：攻击报文发送引擎（基于 Npcap）
@@ -157,9 +158,9 @@ cmake --build . --config Release
    - 启动时强制检测 3 个 DLL，缺失则报错退出
 
 3. **对齐老工具行为**
-   - 日志线程 send 失败不重连
-   - Socket 生命周期完全由心跳线程管理
-   - 非阻塞 socket，立即失败不阻塞
+   - 日志线程 send 失败不重连（对齐老工具 `ThreadFunc_MsgLogSend`）
+   - Socket 生命周期完全由心跳线程管理（对齐老工具 `ThreadFunc_HeartbeatSend_New`）
+   - 非阻塞 socket，`send()` 返回 `WSAEWOULDBLOCK` 立即失败不阻塞
 
 ## 故障排查
 
