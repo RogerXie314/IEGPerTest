@@ -39,16 +39,20 @@
 - Winsock2 (`ws2_32.lib`)
 
 #### 2. NativeSender.dll (约 12.5 KB)
-**作用**：高性能批量数据发送模块
+**作用**：Winsock 同步发送层（100% 对齐老工具 SendInfoToServer）
 
 **功能**：
-- 批量 TCP 数据发送优化
-- 发送缓冲区管理
-- 错误处理和重试机制
+- TCP 连接管理：非阻塞 connect + select(2s) 超时 + 切回阻塞模式
+- 1KB 分块发送：对齐老工具 `while(nProtocalLen - nSendCount > 0) { send(1024) }`
+- 精确接收：`recv_exact()` 循环接收指定字节数
+- 心跳收发：`SendHeartbeatAndRecv()` 发送心跳包 + 解析 PT 协议头 + 提取 cmdId
+- 威胁日志批发：`SendThreatBatch()` 依次发送 File/ProcStart/Reg 三种类型，间隔 50ms
 
 **技术细节**：
-- 使用 Windows Socket API
-- 优化的发送循环，减少系统调用开销
+- 100% 对齐老工具 `CSendInfoToServer::CreateConnection` 行为
+- 不设置 `TCP_NODELAY` 和 `SO_KEEPALIVE`（与老工具一致）
+- 使用阻塞 socket（老工具行为）
+- 1KB 分块发送减少单次 send() 调用的数据量
 
 #### 3. RawPacketEngine.dll (约 67 KB)
 **作用**：攻击报文发送引擎（基于 Npcap）
