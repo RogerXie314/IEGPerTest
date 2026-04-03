@@ -1,5 +1,5 @@
-﻿# Publish SimulatorApp as a single self-contained exe (Brotli compressed)
-# NativeEngine.dll + NativeSender.dll 全部打包进同一个 EXE，发布物只有一个文件。
+﻿# Publish SimulatorApp as a self-contained exe with DLLs in same directory
+# NativeEngine.dll + NativeSender.dll + RawPacketEngine.dll 与 EXE 同目录部署。
 # Automatically bumps patch version, updates docs, and git commits on each run.
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
@@ -125,15 +125,14 @@ if (-not (Test-Path $rpeDll)) {
 }
 Write-Host "RawPacketEngine.dll ready: $([math]::Round((Get-Item $rpeDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
-# -- 3. Publish（dotnet publish 会将两个 DLL 打包进单文件 EXE）----------------
-Write-Host "Publishing SimulatorApp v$newVer (single-file, DLLs embedded)..." -ForegroundColor Cyan
+# -- 3. Publish（DLL 与 EXE 同目录部署）----------------------------------------
+Write-Host "Publishing SimulatorApp v$newVer (self-contained, DLLs in same directory)..." -ForegroundColor Cyan
 
 dotnet publish $projectPath `
     -c Release `
     -r win-x64 `
     --self-contained true `
     /p:PublishSingleFile=true `
-    /p:IncludeNativeLibrariesForSelfExtract=true `
     /p:EnableCompressionInSingleFile=true `
     -o $outputPath
 
@@ -142,15 +141,20 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-# 验证：输出目录只应有 SimulatorApp.exe 一个文件
+# 验证：输出目录应包含 SimulatorApp.exe 和 3 个 DLL
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
-if ($publishedFiles -contains "NativeEngine.dll" -or $publishedFiles -contains "NativeSender.dll" -or $publishedFiles -contains "RawPacketEngine.dll") {
-    Write-Warning "DLL still in output dir -- csproj None item may be misconfigured"
+
+$requiredDlls = @("NativeEngine.dll", "NativeSender.dll", "RawPacketEngine.dll")
+$missingDlls = $requiredDlls | Where-Object { $publishedFiles -notcontains $_ }
+if ($missingDlls) {
+    Write-Error "Missing required DLLs: $($missingDlls -join ', ')"
+    exit 1
 }
 
 $exeSize = (Get-Item "$outputPath\SimulatorApp.exe").Length / 1MB
-Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB" -ForegroundColor Green
+$totalSize = (Get-ChildItem $outputPath -File | Measure-Object -Property Length -Sum).Sum / 1MB
+Write-Host "Published: $outputPath\SimulatorApp.exe  $([math]::Round($exeSize, 1)) MB (total: $([math]::Round($totalSize, 1)) MB)" -ForegroundColor Green
 
 # -- 4. Update docs version number -------------------------------------------
 # Construct Chinese filename via [char] codes to avoid any console encoding issues:
