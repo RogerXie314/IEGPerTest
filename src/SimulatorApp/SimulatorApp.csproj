@@ -4,32 +4,28 @@
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <Version>3.9.1</Version>
     <AssemblyVersion>3.9.1.0</AssemblyVersion>
     <FileVersion>3.9.1.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\\SimulatorLib\\SimulatorLib.csproj" />
+    <ProjectReference Include="..\SimulatorLib\SimulatorLib.csproj" />
   </ItemGroup>
-  <!-- 闂佸憡顭囬崰鎾诲极?C++ DLL闂佹寧绋掗懝楣冨储濞戙垺鍋?publish 闂佺厧鐡ㄧ喊宥咃耿閹殿喚纾介柡宥庡墰濡差垶鏌ㄥ☉妯垮闁哥啿鍋撻梺?dotnet publish 闂佺懓鐏氶幑浣烘崲濮椻偓瀹曪繝寮撮悢鍝モ偓顔济?EXE -->
+  <!-- C++ DLL 部署：输出到同目录，运行时必须存在 -->
   <ItemGroup>
     <None Include="..\..\src\NativeEngine\build\Release\NativeEngine.dll" Condition="Exists('..\..\src\NativeEngine\build\Release\NativeEngine.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
       <Link>NativeEngine.dll</Link>
     </None>
     <None Include="..\..\src\NativeSender\build\Release\NativeSender.dll" Condition="Exists('..\..\src\NativeSender\build\Release\NativeSender.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
       <Link>NativeSender.dll</Link>
     </None>
     <None Include="..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll" Condition="Exists('..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
       <Link>RawPacketEngine.dll</Link>
     </None>
   </ItemGroup>

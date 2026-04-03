@@ -534,18 +534,21 @@ static int BuildThreatJson(int typeIdx, bool isHit,
 
 // ============================================================
 //  日志发送线程（对齐 ThreadFunc_MsgLogSend，零 P/Invoke）
-//  v3.8.6 修复：send 失败后检测 HB 重连，自动切换到新 socket
+//  完全对齐老工具：send 失败后不重连，直接跳过继续下一轮
 // ============================================================
 
 static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
-    // 等待 socket 就绪
+    // 等待 socket 就绪（启动时 HB 线程可能还未建连）
     SOCKET sock = INVALID_SOCKET;
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         sock = slot.sock;
-        if (sock != INVALID_SOCKET) break;
+        if (sock != INVALID_SOCKET && InterlockedCompareExchange(&slot.lastReplyOk, 1, 1)) {
+            // socket 存在且 HB 已完成首次认证
+            break;
+        }
         Sleep(100);
     }
     if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
@@ -565,24 +568,11 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        // v3.8.6: socket 失效后，轮询等待 HB 线程重连成功且完成首次认证
-        if (sock == INVALID_SOCKET) {
-            SOCKET newSock = slot.sock;
-            if (newSock != INVALID_SOCKET
-                && InterlockedCompareExchange(&slot.lastReplyOk, 1, 1)) {
-                // HB 已重连且收到平台回包（认证完成），切换到新 socket
-                sock = newSock;
-            } else {
-                if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
-                msgCount++;
-                continue;
-            }
-        }
-
         // 该轮是否 hit：每 hitEvery 轮中第 1 轮 hit
         bool isHit = (msgCount % hitEvery == 0);
 
-        bool sendFailed = false;
+        // 对齐老工具：send 失败后不做任何处理，直接进入下一轮 Sleep
+        // socket 生命周期 100% 由 HB 线程管理，Log 线程只负责发送
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
@@ -598,12 +588,13 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                                ptBuf.data(), kPtBufSize);
             if (ptLen <= 0) { s_logSendFail++; break; }
 
-            // 3. 发送
+            // 3. 发送（对齐老工具：失败后直接 goto END，不关闭 socket）
             if (SendAll(sock, ptBuf.data(), ptLen)) {
                 s_logSendOk++;
             } else {
                 s_logSendFail++;
-                sendFailed = true;
+                // 对齐老工具：send 失败后直接 break，不关闭 socket，不重连
+                // socket 由 HB 线程管理，Log 线程只负责发送
                 break;
             }
 
@@ -612,16 +603,11 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
                 Sleep(g_logCfg.sleepBetweenTypesMs);
         }
 
-        // v3.8.6: send 失败后，将本地 sock 置为 INVALID，下一轮进入重连检测
-        // 不关闭 socket（生命周期由 HB 线程独占管理），只丢弃本地快照
-        if (sendFailed) {
-            sock = INVALID_SOCKET;
-        }
-
         msgCount++;
 
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
+        // 对齐老工具：每轮结束后 Sleep(intervalMs)，无论成功失败
         if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
     }
     return 0;

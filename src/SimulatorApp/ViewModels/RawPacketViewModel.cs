@@ -282,7 +282,20 @@ namespace SimulatorApp.ViewModels
                 bool ok = _service.Initialize();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    NpcapStatusText = ok ? "已安装 ✓" : $"未就绪 — {_service.LastError}";
+                    if (!ok)
+                    {
+                        NpcapStatusText = "未就绪 ✗";
+                        MessageBox.Show(
+                            _service.LastError,
+                            "Npcap 初始化失败",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        NpcapStatusText = "已安装 ✓";
+                    }
+                    
                     Adapters.Clear();
                     foreach (var a in _service.Adapters)
                         Adapters.Add(a);

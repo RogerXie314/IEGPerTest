@@ -74,7 +74,11 @@ namespace SimulatorLib.RawPacket
 
         // ── 托管包装 ─────────────────────────────────────────────────────
 
-        public bool Init() => RPE_Init() == 0;
+        /// <summary>
+        /// 初始化 RawPacketEngine。
+        /// 返回值：0=成功, -1=失败, -2=超时（Npcap 未安装或无响应）
+        /// </summary>
+        public int Init() => RPE_Init();
 
         public void Cleanup()
         {

@@ -34,8 +34,8 @@ namespace SimulatorApp.ViewModels
         private int _logMessagesPerClient = 50;
         private int _logHttpsClientCount = 0;
         private int _logHttpsEps = 0;
-        private int _logThreatClientCount = 0;
-        private int _logThreatEps = 0;
+        private int _logThreatClientCount = 50;
+        private int _logThreatEps = 1;
         private int _logThreatHitEvery = 71;
         private long _logTotalMessages;
         private long _logSuccess;
@@ -687,14 +687,17 @@ namespace SimulatorApp.ViewModels
                     // ── Windows 路径：TCP 长连接心跳 ───────────────
                     // 单文件 EXE 模式下 DLL 被解压到 %TEMP%\.net\[hash]\，
                     // AppContext.BaseDirectory 里不再有文件，须用 NativeLibrary.TryLoad 探测。
-                    bool useNativeEngine = System.Runtime.InteropServices.NativeLibrary.TryLoad(
-                        "NativeEngine.dll", typeof(MainViewModel).Assembly, null, out _);
-
-                    if (useNativeEngine)
+                    // 强制使用 NativeEngine C++ DLL（心跳和长连接日志）
+                    if (!System.Runtime.InteropServices.NativeLibrary.TryLoad(
+                        "NativeEngine.dll", typeof(MainViewModel).Assembly, null, out _))
                     {
-                        // ── NativeEngine C++ DLL 路径（非阻塞 socket + OS 线程，对齐老工具）──
-                        var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                        if (clients.Count == 0) { RunOnUi(() => AppendStatus("⚠ 未找到已注册客户端")); return; }
+                        RunOnUi(() => AppendStatus("⚠ 未找到 NativeEngine.dll，无法启动心跳。请确保 DLL 与 EXE 位于同一目录。"));
+                        return;
+                    }
+
+                    // ── NativeEngine C++ DLL 路径（非阻塞 socket + OS 线程，对齐老工具）──
+                    var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                    if (clients.Count == 0) { RunOnUi(() => AppendStatus("⚠ 未找到已注册客户端")); return; }
 
                         var clientLookup = clients.ToDictionary(c => c.ClientId);
 
@@ -763,16 +766,11 @@ namespace SimulatorApp.ViewModels
                                     LogSuccess      = stats.logSendOk;
                                     LogFailed       = stats.logSendFail;
 
-                                    int offline = stats.hbTotal - stats.hbConnected;
-                                    if (offline > 0 && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
-                                    {
-                                        _lastHbLogTime = DateTime.Now;
-                                        AppendStatus($"[心跳] ⚠ 在线:{stats.hbConnected}/{stats.hbTotal}  断线:{stats.disconnects} 重连:{stats.reconnects}");
-                                        System.Diagnostics.Debug.WriteLine($"[NativeEngine] HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail}  回包:{stats.hbReplied}  回包累计:{stats.hbRecvOk}  NoReg:{stats.hbRecvNoReg}");
-                                    }
+                                    // 移除频繁的断线重连日志，仅在 Debug 输出详细统计
+                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] 在线:{stats.hbConnected}/{stats.hbTotal} 断线:{stats.disconnects} 重连:{stats.reconnects} HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail} 回包:{stats.hbReplied}");
 
                                     if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
-                                        hbTaskRec.Detail = $"连接:{stats.hbConnected}/{stats.hbTotal} 断线:{stats.disconnects} 重连:{stats.reconnects}";
+                                        hbTaskRec.Detail = $"连接:{stats.hbConnected}/{stats.hbTotal}";
 
                                     if (_policyWorker != null)
                                     {
@@ -793,86 +791,6 @@ namespace SimulatorApp.ViewModels
                         }
 
                         _nativeEngine.StartHeartbeat();
-                    }
-                    else
-                    {
-                    // ── 原有 C# 实现路径 ───────────────
-                    var tcp = new TcpSender();
-                    var udp = new UdpSender();
-                    _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
-                    _hbStreamRegistry = new HeartbeatStreamRegistry();
-                    var hb = new HeartbeatWorker(tcp, udp, _policyWorker, _hbStreamRegistry);
-                    RunOnUi(() => AppendStatus("开始心跳任务（TCP 模式）" +
-                        (EnablePolicyReceive ? "（策略接收已开启）" : string.Empty) +
-                        (UseLogServer ? $"  + UDP 日志服务器 {LogHost}:{LogPort}" : "") + "..."));
-                    _ = Task.Run(async () =>
-                    {
-                        var progress = new System.Progress<SimulatorLib.Workers.HeartbeatWorker.HeartbeatStats>(s =>
-                        {
-                            RunOnUi(() =>
-                            {
-                                HbTotal         = s.Total;
-                                HbConnected     = s.Connected;
-                                HbTcpOk         = s.SuccessTcp;
-                                HbTcpFail       = s.FailTcp;
-                                HbServerReplied = s.ServerReplied;
-                                HbUdpOk         = s.SuccessUdp;
-                                HbUdpFail       = s.FailUdp;
-
-                                // 仅在出现异常时输出日志；同一状态每 30s 最多一条，避免刷屏
-                                {
-                                    int offline = s.Total - s.Connected;
-                                    bool hasOffline = offline > 0;
-                                    bool hasReasons = s.RsnSessionStale > 0 || s.RsnConnFailed > 0 ||
-                                                         s.RsnConnTimeout  > 0 || s.RsnServerClosed > 0 ||
-                                                         s.RsnWriteFailed  > 0 || s.RsnLockBusy > 0;
-                                    bool hasIssue = hasOffline || hasReasons;
-
-                                    if (hasIssue && (DateTime.Now - _lastHbLogTime).TotalSeconds >= 30)
-                                    {
-                                        _lastHbLogTime = DateTime.Now;
-                                        var reasons = new System.Collections.Generic.List<string>();
-                                        if (s.RsnSessionStale > 0) reasons.Add($"平台踢session:{s.RsnSessionStale}");
-                                        if (s.RsnConnFailed   > 0) reasons.Add($"连接拒绝:{s.RsnConnFailed}");
-                                        if (s.RsnConnTimeout  > 0) reasons.Add($"连接超时:{s.RsnConnTimeout}");
-                                        if (s.RsnServerClosed > 0) reasons.Add($"服务端关闭:{s.RsnServerClosed}");
-                                        if (s.RsnWriteFailed  > 0) reasons.Add($"写入失败:{s.RsnWriteFailed}");
-                                        if (s.RsnLockBusy     > 0) reasons.Add($"⚡锁竞争跳过:{s.RsnLockBusy}");
-                                        string reasonStr = reasons.Count > 0
-                                            ? "  原因: " + string.Join(", ", reasons)
-                                            : string.Empty;
-                                        AppendStatus(
-                                            $"[心跳] ⚠ 在线:{s.Connected}/{s.Total}  离线:{offline}↓" +
-                                            reasonStr);
-                                    }
-                                }
-                            });
-                        });
-                        // drain 速率限制已移除：相位对齐重连后各客户端重连时刻天然散布，积压不会同时涌出，无需限速。
-                        await hb.StartAsync(HbInterval, useLogServer: UseLogServer, platformHost: PlatformHost, platformPort: PlatformPort, logHost: LogHost, logPort: LogPort, concurrency: 500, ct: _hbCts.Token, progress: progress,
-                            osVersion: null).ConfigureAwait(false);
-                        hbTaskRec.MarkStopped();
-                    });
-                    // 定时将策略接收统计同步到 UI
-                    _ = Task.Run(async () =>
-                    {
-                        while (_hbCts != null && !_hbCts.IsCancellationRequested)
-                        {
-                            if (_policyWorker != null)
-                            {
-                                RunOnUi(() =>
-                                {
-                                    PolicyReceived = _policyWorker.ReceivedCount;
-                                    PolicyReplied  = _policyWorker.RepliedCount;
-                                    if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
-                                        hbTaskRec.Detail = $"策略收到:{PolicyReceived} 已回包:{PolicyReplied}";
-                                });
-                            }
-                            try { await Task.Delay(2000, _hbCts.Token).ConfigureAwait(false); }
-                            catch { break; }
-                        }
-                    });
-                    } // end else (C# path)
                 }
             }
             catch (Exception ex)
@@ -955,18 +873,11 @@ namespace SimulatorApp.ViewModels
 
         private async Task PortTestAsync()
         {
-            RunOnUi(() => AppendStatus("开始端口连通测试..."));
+            RunOnUi(() => AppendStatus("连接测试..."));
             bool tcpOk = await TestTcpAsync(PlatformHost, PlatformPort, 1500);
-            RunOnUi(() => AppendStatus($"TCP {PlatformHost}:{PlatformPort} -> {(tcpOk ? "OK" : "FAIL")}"));
-
-            bool logTcpOk = await TestTcpAsync(LogHost, LogPort, 1500);
-            RunOnUi(() => AppendStatus($"TCP {LogHost}:{LogPort} -> {(logTcpOk ? "OK" : "FAIL")}"));
-
-            bool udpOk = await TestUdpAsync(LogHost, LogPort, 1000);
-            RunOnUi(() => AppendStatus($"UDP {LogHost}:{LogPort} -> {(udpOk ? "OK" : "WARN/NO-ACK")}"));
-
             bool httpOk = await TestHttpAsync(PlatformHost, PlatformPort, 2000);
-            RunOnUi(() => AppendStatus($"HTTP http://{PlatformHost}:{PlatformPort}/ -> {(httpOk ? "OK" : "FAIL")}"));
+            
+            RunOnUi(() => AppendStatus($"TCP {PlatformHost}:{PlatformPort} -> {(tcpOk ? "✓" : "✗")}  HTTPS -> {(httpOk ? "✓" : "✗")}"));
         }
 
         private (bool ok, string reason) ValidateInputs()
@@ -1133,7 +1044,7 @@ namespace SimulatorApp.ViewModels
                     // 客户端数=0 表示禁用此通道
                     if (httpsCats.Length > 0 && LogHttpsClientCount > 0)
                     {
-                        var httpsWorker = new LogWorker(new TcpSender(), new UdpSender(), _hbStreamRegistry);
+                        var httpsWorker = new LogWorker(new TcpSender(), new UdpSender(), null);
                         var httpsProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
                         {
                             System.Threading.Interlocked.Exchange(ref httpsOk,   s.Success);
@@ -1161,71 +1072,49 @@ namespace SimulatorApp.ViewModels
                     // 客户端数=0 表示禁用此通道
                     if (threatCats.Length > 0 && LogThreatClientCount > 0)
                     {
-                        if (_nativeEngine != null)
+                        if (_nativeEngine == null)
                         {
-                            // 对齐老工具：客户端未就绪时硬拦截（等效 WLServerTestDlg 行 1934 的 AfxMessageBox + return）
-                            var neStats = _nativeEngine.GetStats();
-                            if (neStats.hbTotal > 0 && LogThreatClientCount > neStats.hbConnected)
-                            {
-                                RunOnUi(() => AppendStatus(
-                                    $"[错误] 没有足够的客户端可以运行：仅 {neStats.hbConnected}/{neStats.hbTotal} 已上线，" +
-                                    $"请等待足够客户端上线后再添加日志任务。"));
-                                return;
-                            }
-                            // ── NativeEngine 路径：C++ 发送日志（对齐老工具：每次循环回调动态构建 JSON）──
-                            var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                            int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
-                            if (actualLogClients > 0)
-                            {
-                                // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 JSON（新时间戳、rand 字段）
-                                // 注册回调，DLL 线程每次发送前调用此回调获取新 payload
-                                var clientsArr = clients;
-                                var catsArr = threatCats;
-                                int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
-
-                                int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
-                                _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
-                                    intervalMs, LogMessagesPerClient,
-                                    hitEvery: hitEvery, sleepBetweenTypesMs: 50);
-                                RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动（纯C++热路径）: {threatCats.Length}种类型, {actualLogClients}客户端"));
-
-                                // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
-                                var ne = _nativeEngine;
-                                workerTasks.Add(Task.Run(async () =>
-                                {
-                                    while (ne != null && ne.IsLogSendRunning())
-                                    {
-                                        try { await Task.Delay(2000, _logCts!.Token).ConfigureAwait(false); }
-                                        catch { break; }
-                                    }
-                                }));
-                            }
+                            RunOnUi(() => AppendStatus("⚠ NativeEngine 未初始化，无法发送威胁检测日志。请先启动心跳。"));
+                            return;
                         }
-                        else
+
+                        // 对齐老工具：客户端未就绪时硬拦截（等效 WLServerTestDlg 行 1934 的 AfxMessageBox + return）
+                        var neStats = _nativeEngine.GetStats();
+                        if (neStats.hbTotal > 0 && LogThreatClientCount > neStats.hbConnected)
                         {
-                        var threatWorker = new LogWorker(new TcpSender(), new UdpSender(), _hbStreamRegistry);
-                        var threatProgress = new Progress<SimulatorLib.Workers.LogSendStats>(s =>
+                            RunOnUi(() => AppendStatus(
+                                $"[错误] 没有足够的客户端可以运行：仅 {neStats.hbConnected}/{neStats.hbTotal} 已上线，" +
+                                $"请等待足够客户端上线后再添加日志任务。"));
+                            return;
+                        }
+                        
+                        // ── NativeEngine 路径：C++ 发送日志（对齐老工具：每次循环回调动态构建 JSON）──
+                        var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                        int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
+                        if (actualLogClients > 0)
                         {
-                            System.Threading.Interlocked.Exchange(ref threatOk,   s.Success);
-                            System.Threading.Interlocked.Exchange(ref threatFail, s.Failed);
-                            ReportCombined();
-                        });
-                        workerTasks.Add(threatWorker.StartAsync(
-                            messagesPerClient:          LogMessagesPerClient,
-                            messagesPerSecondPerClient: LogThreatEps <= 0 ? null : (int?)LogThreatEps,
-                            maxClients:                 LogThreatClientCount,
-                            categories:                 threatCats,
-                            useLogServer:               UseLogServer,
-                            platformHost:               PlatformHost,
-                            platformPort:               PlatformPort,
-                            logHost:                    LogHost,
-                            logPort:                    LogPort,
-                            concurrency:                1,
-                            stressMode:                 false,
-                            localIps:                   null,
-                            ct:                         _logCts.Token,
-                            progress:                   threatProgress,
-                            threatHitEvery:             LogThreatHitEvery));
+                            // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 JSON（新时间戳、rand 字段）
+                            // 注册回调，DLL 线程每次发送前调用此回调获取新 payload
+                            var clientsArr = clients;
+                            var catsArr = threatCats;
+                            int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
+
+                            int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
+                            _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
+                                intervalMs, LogMessagesPerClient,
+                                hitEvery: hitEvery, sleepBetweenTypesMs: 50);
+                            RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动（纯C++热路径）: {threatCats.Length}种类型, {actualLogClients}客户端"));
+
+                            // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
+                            var ne = _nativeEngine;
+                            workerTasks.Add(Task.Run(async () =>
+                            {
+                                while (ne != null && ne.IsLogSendRunning())
+                                {
+                                    try { await Task.Delay(2000, _logCts!.Token).ConfigureAwait(false); }
+                                    catch { break; }
+                                }
+                            }));
                         }
                     }
 

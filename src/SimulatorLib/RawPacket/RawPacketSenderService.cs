@@ -34,9 +34,15 @@ namespace SimulatorLib.RawPacket
         /// <summary>初始化引擎并枚举网络适配器。</summary>
         public bool Initialize()
         {
-            if (!_interop.Init())
+            int initResult = _interop.Init();
+            if (initResult != 0)
             {
-                LastError = "RawPacketEngine 初始化失败，请确认 Npcap 已安装";
+                LastError = initResult switch
+                {
+                    -2 => "Npcap 检测超时（未安装或无响应）\n\n请访问 https://npcap.com/ 下载并安装 Npcap",
+                    -1 => "RawPacketEngine 初始化失败\n\n请确认 Npcap 已正确安装",
+                    _  => $"RawPacketEngine 初始化失败（错误码：{initResult}）"
+                };
                 return false;
             }
 

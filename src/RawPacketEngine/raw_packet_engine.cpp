@@ -83,12 +83,26 @@ int32_t RPE_Init()
         }
         g_adapter_count = 0;
 
-        if (pcap_findalldevs_ex(
+        // 使用 future + timeout 防止 pcap_findalldevs_ex 无响应导致程序挂起
+        auto future = std::async(std::launch::async, [&errbuf]() -> int {
+            return pcap_findalldevs_ex(
                 const_cast<char*>(PCAP_SRC_IF_STRING),
                 nullptr,
                 &g_alldevs,
-                errbuf) == -1)
+                errbuf);
+        });
+
+        // 等待最多 3 秒
+        if (future.wait_for(std::chrono::seconds(3)) == std::future_status::timeout)
         {
+            // 超时：Npcap 可能未安装或驱动未加载
+            return -2;  // -2 表示超时（区别于 -1 的一般错误）
+        }
+
+        int result = future.get();
+        if (result == -1)
+        {
+            // pcap_findalldevs_ex 失败（Npcap 未安装或权限不足）
             return -1;
         }
 
