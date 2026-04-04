@@ -105,19 +105,32 @@ if (-not (Test-Path $rpeDll)) {
 Write-Host "RawPacketEngine.dll ready: $([math]::Round((Get-Item $rpeDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
 # -- 2. Publish（DLL 与 EXE 同目录部署）----------------------------------------
+# 清空输出目录，避免增量构建缓存导致 WPF 原生 DLL 丢失
+if (Test-Path $outputPath) {
+    Remove-Item "$outputPath\*" -Recurse -Force
+}
 Write-Host "Publishing SimulatorApp v$currentVer (self-contained, DLLs in same directory)..." -ForegroundColor Cyan
 
+# ═══════════════════════════════════════════════════════════════════════════
+# 打包方式决策（禁止修改，如需变更必须在提交信息中说明原因）：
+#   ✅ --self-contained true        : 内嵌 .NET 运行时，目标机无需安装 .NET
+#   ✅ PublishSingleFile=true       : 托管程序集合并为单 EXE
+#   ❌ EnableCompressionInSingleFile: 【禁止开启】开启后 WPF 原生 DLL
+#                                     (wpfgfx_cor3/D3DCompiler_47_cor3 等)
+#                                     会被吸入 EXE，同目录不再有这些 DLL，
+#                                     已验证会导致 WPF 启动崩溃。
+#                                     技术原因：.NET 8 WPF 的 SingleFile 压缩
+#                                     会强制内嵌所有原生 DLL，ExcludeFromSingleFile
+#                                     对 SDK 内置 WPF DLL 无效，无法绕过。
+#   ✅ WPF 原生 DLL 必须与 EXE 同目录（不压缩时 dotnet publish 自动输出）
+#   ✅ config.json 由程序首次启动自动生成，发布包无需携带
+# ═══════════════════════════════════════════════════════════════════════════
 dotnet publish $projectPath `
     -c Release `
     -r win-x64 `
     --self-contained true `
     /p:PublishSingleFile=true `
-    /p:EnableCompressionInSingleFile=true `
     -o $outputPath
-# ^^^ EnableCompressionInSingleFile=true: Brotli压缩托管程序集，EXE体积约70MB。
-# ^^^ 安全前提：C++ DLL(NativeEngine/NativeSender/RawPacketEngine)与EXE同目录，
-# ^^^           不使用IncludeNativeLibrariesForSelfExtract，无temp目录提取，不会导致WPF崩溃。
-# ^^^ 禁止删除此参数。如需移除，必须在提交信息中说明原因。
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Publish failed"
@@ -131,8 +144,9 @@ Copy-Item $rpeDll "$outputPath\RawPacketEngine.dll" -Force
 Write-Host "Copied C++ DLLs to $outputPath" -ForegroundColor Cyan
 
 # -- 4. 删除 PDB（不随发布包分发，减小体积）------------------------------------
-Remove-Item "$outputPath\SimulatorApp.pdb" -ErrorAction SilentlyContinue
-Write-Host "Removed SimulatorApp.pdb" -ForegroundColor Cyan
+Remove-Item "$outputPath\SimulatorApp.pdb"  -ErrorAction SilentlyContinue
+Remove-Item "$outputPath\SimulatorLib.pdb"  -ErrorAction SilentlyContinue
+Write-Host "Removed PDB files" -ForegroundColor Cyan
 
 # 验证：输出目录应包含 SimulatorApp.exe 和 3 个 DLL
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
