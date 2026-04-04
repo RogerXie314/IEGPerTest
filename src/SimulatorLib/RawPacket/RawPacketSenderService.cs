@@ -35,7 +35,22 @@ namespace SimulatorLib.RawPacket
         /// <summary>初始化引擎并枚举网络适配器。</summary>
         public bool Initialize()
         {
-            int initResult = _interop.Init();
+            int initResult;
+            try
+            {
+                initResult = _interop.Init();
+            }
+            catch (System.DllNotFoundException)
+            {
+                LastError = "RawPacketEngine.dll 加载失败（Npcap 未安装或缺少 wpcap.dll）\n\n请访问 https://npcap.com/ 下载并安装 Npcap";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LastError = $"RawPacketEngine 初始化异常：{ex.Message}\n\n请确认 Npcap 已正确安装";
+                return false;
+            }
+
             if (initResult != 0)
             {
                 LastError = initResult switch

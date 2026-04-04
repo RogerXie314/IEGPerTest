@@ -72,7 +72,7 @@ if ($cmake -and (Test-Path $cmake)) {
     if (-not (Test-Path "$nsDir\build")) { New-Item -ItemType Directory "$nsDir\build" | Out-Null }
     # 每次重新配置确保 CMakeCache 中的输出路径与 CMakeLists.txt 一致
     Push-Location "$nsDir\build"
-    & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
+    & $cmake -G "Visual Studio 16 2019" -A x64 .. | Out-Null
     & $cmake --build . --config Release | Out-Null
     Pop-Location
 } else {
@@ -91,7 +91,7 @@ if ($cmake -and (Test-Path $cmake)) {
     Write-Host "Building RawPacketEngine.dll..." -ForegroundColor Cyan
     if (-not (Test-Path "$rpeDir\build")) { New-Item -ItemType Directory "$rpeDir\build" | Out-Null }
     Push-Location "$rpeDir\build"
-    & $cmake -G "Visual Studio 17 2022" -A x64 .. | Out-Null
+    & $cmake -G "Visual Studio 16 2019" -A x64 .. | Out-Null
     & $cmake --build . --config Release | Out-Null
     Pop-Location
 } else {
@@ -112,13 +112,18 @@ dotnet publish $projectPath `
     -r win-x64 `
     --self-contained true `
     /p:PublishSingleFile=true `
-    /p:EnableCompressionInSingleFile=true `
     -o $outputPath
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Publish failed"
     exit $LASTEXITCODE
 }
+
+# -- 3. 手动复制 C++ DLL（PublishSingleFile 不会自动打包 None 项）--------------
+Copy-Item $neDll  "$outputPath\NativeEngine.dll"  -Force
+Copy-Item $nsDll  "$outputPath\NativeSender.dll"  -Force
+Copy-Item $rpeDll "$outputPath\RawPacketEngine.dll" -Force
+Write-Host "Copied C++ DLLs to $outputPath" -ForegroundColor Cyan
 
 # 验证：输出目录应包含 SimulatorApp.exe 和 3 个 DLL
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
