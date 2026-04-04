@@ -24,13 +24,13 @@ namespace SimulatorLib.Persistence
 
         public int LogMessagesPerClient { get; set; } = 50;
         /// <summary>HTTPS 短连接通道：客户端个数</summary>
-        public int LogHttpsClientCount { get; set; } = 5;
+        public int LogHttpsClientCount { get; set; } = 0;
         /// <summary>HTTPS 短连接日志：每客户端每秒条数（平台规格 ≤100 EPS）</summary>
-        public int LogHttpsEps { get; set; } = 10;
+        public int LogHttpsEps { get; set; } = 0;
         /// <summary>威胁检测 TCP 长连接通道：客户端个数</summary>
-        public int LogThreatClientCount { get; set; } = 5;
+        public int LogThreatClientCount { get; set; } = 50;
         /// <summary>威胁检测 TCP 长连接日志：每客户端每秒条数（平台规格 6000 EPS）</summary>
-        public int LogThreatEps { get; set; } = 100;
+        public int LogThreatEps { get; set; } = 1;
         /// <summary>
         /// 威胁检测命中轮比：每 N 轮中仅第 1 轮发含命中特征的事件包，其余发无害（miss）包。
         /// 对齐老工具默认值 71（约 1.4% 命中率），避免平台告警风暴触发熔断 FIN 踢人。
