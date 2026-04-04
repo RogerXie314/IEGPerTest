@@ -112,7 +112,12 @@ dotnet publish $projectPath `
     -r win-x64 `
     --self-contained true `
     /p:PublishSingleFile=true `
+    /p:EnableCompressionInSingleFile=true `
     -o $outputPath
+# ^^^ EnableCompressionInSingleFile=true: Brotli压缩托管程序集，EXE体积约70MB。
+# ^^^ 安全前提：C++ DLL(NativeEngine/NativeSender/RawPacketEngine)与EXE同目录，
+# ^^^           不使用IncludeNativeLibrariesForSelfExtract，无temp目录提取，不会导致WPF崩溃。
+# ^^^ 禁止删除此参数。如需移除，必须在提交信息中说明原因。
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Publish failed"
