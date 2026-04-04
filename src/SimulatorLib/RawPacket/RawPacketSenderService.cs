@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace SimulatorLib.RawPacket
 {
@@ -51,8 +52,9 @@ namespace SimulatorLib.RawPacket
             for (int i = 0; i < count; i++)
             {
                 var (pcapName, ipv4) = _interop.GetAdapterInfo(i);
-                // 从 pcap 名称中提取 GUID，再查 .NET NetworkInterface 获取友好名称
-                string friendly = GetFriendlyName(pcapName, ipv4);
+                // 从 pcap 名称中提取 GUID，再查友好名称；无法解析（Npcap 虚拟适配器）则跳过
+                string? friendly = GetFriendlyName(pcapName, ipv4);
+                if (friendly == null) continue;
                 _adapters.Add(new NicAdapterInfo
                 {
                     Index        = i,
@@ -67,8 +69,12 @@ namespace SimulatorLib.RawPacket
             return true;
         }
 
-        /// <summary>从 pcap 设备名（含 GUID）匹配 .NET NetworkInterface 友好名称。</summary>
-        private static string GetFriendlyName(string pcapName, string ipv4)
+        /// <summary>
+        /// 从 pcap 设备名（含 GUID）解析 Windows 友好名称。
+        /// 解析顺序：① NetworkInterface GUID 匹配 → ② NetworkInterface IP 匹配 → ③ 注册表 GUID 查询。
+        /// 全部失败且无 IP 时返回 null（Npcap 专属虚拟适配器，调用方跳过不显示）。
+        /// </summary>
+        private static string? GetFriendlyName(string pcapName, string ipv4)
         {
             try
             {
@@ -78,12 +84,12 @@ namespace SimulatorLib.RawPacket
 
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    // NetworkInterface.Id 通常就是 GUID（不含花括号）
+                    // ① GUID 匹配（nic.Id 在 .NET/Windows 上可能带花括号，统一去掉后比较）
                     if (!string.IsNullOrEmpty(guid) &&
-                        nic.Id.ToUpperInvariant() == guid)
+                        nic.Id.Trim('{', '}').ToUpperInvariant() == guid)
                         return nic.Name;
 
-                    // 备用：按 IPv4 地址匹配
+                    // ② IPv4 地址匹配
                     if (!string.IsNullOrEmpty(ipv4))
                     {
                         foreach (var ua in nic.GetIPProperties().UnicastAddresses)
@@ -93,11 +99,20 @@ namespace SimulatorLib.RawPacket
                         }
                     }
                 }
+
+                // ③ 注册表查询：适用于 Npcap 枚举到但 NetworkInterface 未包含的真实适配器
+                if (!string.IsNullOrEmpty(guid))
+                {
+                    using var key = Registry.LocalMachine.OpenSubKey(
+                        $@"SYSTEM\CurrentControlSet\Control\Network\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\{{{guid}}}\Connection");
+                    var regName = key?.GetValue("Name") as string;
+                    if (!string.IsNullOrEmpty(regName)) return regName;
+                }
             }
             catch { }
 
-            // 兜底：截取 GUID 部分显示
-            return string.IsNullOrEmpty(ipv4) ? pcapName : ipv4;
+            // 无法解析：有 IP 时退化显示 IP，否则返回 null（调用方将跳过此适配器）
+            return string.IsNullOrEmpty(ipv4) ? null : ipv4;
         }
 
         /// <summary>选择发包适配器。</summary>

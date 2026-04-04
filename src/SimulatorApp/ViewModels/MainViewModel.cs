@@ -109,7 +109,6 @@ namespace SimulatorApp.ViewModels
         private int _policyReceived;
         private int _policyReplied;
         private PolicyReceiveWorker? _policyWorker;
-        private HeartbeatStreamRegistry? _hbStreamRegistry;   // 共享心跳流注册表
         private bool _enablePolicyReceive = true;
 
         // 任务面板
@@ -131,7 +130,6 @@ namespace SimulatorApp.ViewModels
         private CancellationTokenSource? _httpsCts;
         private CancellationTokenSource? _logCts;
         private CancellationTokenSource? _uploadCts;
-        private DateTime _lastHbLogTime = DateTime.MinValue; // 心跳状态日志节流
         private NativeEngineInterop? _nativeEngine;          // C++ 非阻塞引擎（可选）
         private CancellationTokenSource? _neStatsCts;        // NativeEngine 统计轮询
 
@@ -215,7 +213,7 @@ namespace SimulatorApp.ViewModels
         public int RegTimeoutMs { get => _regTimeoutMs; set { _regTimeoutMs = value; OnProp(); } }
         public int RegRound { get => _regRound; set { _regRound = value; OnProp(); } }
         public int RegTotal { get => _regTotal; set { _regTotal = value; OnProp(); } }
-        public int RegSuccess { get => _regSuccess; set { _regSuccess = value; OnProp(); } }
+        public int RegSuccess { get => _regSuccess; set { _regSuccess = value; OnProp(); CommandManager.InvalidateRequerySuggested(); } }
         public int RegFailed { get => _regFailed; set { _regFailed = value; OnProp(); } }
         public string RegFailureDetail { get => _regFailureDetail; set { _regFailureDetail = value; OnProp(); } }
 
@@ -298,7 +296,7 @@ namespace SimulatorApp.ViewModels
         public string StatusLog { get => _statusLog; set { _statusLog = value; OnProp(); } }
 
         public int HbTotal { get => _hbTotal; set { _hbTotal = value; OnProp(); } }
-        public int HbConnected { get => _hbConnected; set { _hbConnected = value; OnProp(); } }
+        public int HbConnected { get => _hbConnected; set { _hbConnected = value; OnProp(); CommandManager.InvalidateRequerySuggested(); } }
         public int HbTcpOk { get => _hbTcpOk; set { _hbTcpOk = value; OnProp(); } }
         public int HbTcpFail { get => _hbTcpFail; set { _hbTcpFail = value; OnProp(); } }
         /// <summary>服务端有回包的客户端数（最接近「平台真实在线」的指标）</summary>
@@ -325,10 +323,14 @@ namespace SimulatorApp.ViewModels
         {
             _uiContext = SynchronizationContext.Current;
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
-            StartHeartbeatCommand = new RelayCommand(async _ => await StartHeartbeatAsync());
+            StartHeartbeatCommand = new RelayCommand(
+                async _ => await StartHeartbeatAsync(),
+                _ => RegCount > 0 && RegSuccess >= RegCount);
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
-            StartLogSendCommand = new RelayCommand(async _ => await StartLogSendAsync());
+            StartLogSendCommand = new RelayCommand(
+                async _ => await StartLogSendAsync(),
+                _ => HbTotal > 0 && HbConnected >= HbTotal);
             StopLogSendCommand = new RelayCommand(_ => StopLogSend());
             BrowseWhitelistFileCommand = new RelayCommand(_ => BrowseWhitelistFile());
             StartWhitelistUploadCommand = new RelayCommand(async _ => await StartWhitelistUploadAsync());
@@ -643,7 +645,6 @@ namespace SimulatorApp.ViewModels
 
                 await SaveConfigAsync().ConfigureAwait(false);
                 _hbCts = new CancellationTokenSource();
-                _lastHbLogTime = DateTime.Now;
 
                 var hbTaskRec = AddTaskRecord("心跳", RegCount, HbInterval / 1000);
 
