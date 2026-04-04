@@ -21,28 +21,35 @@ dotnet run --project src/SimulatorApp
 ### 发布独立可执行文件
 
 ```powershell
-# 常规发布（每次发版用这个）：自动 bump 版本号 + 构建 C++ DLL + 打包单文件 + git commit/push
+# 常规发布（每次发版用这个）：构建 C++ DLL + 打包 + 复制到 artifacts/SimulatorAppPublish/
 .\scripts\publish_simulatorapp.ps1
 
 # 全量发布（仅当 SimulatorRunner / TestReceiver / DevRunner 有代码改动时才用）
 .\scripts\publish_all.ps1
 ```
 
-发布产物位于 `artifacts/SimulatorAppPublish/` 目录。
+发布产物位于 `artifacts/SimulatorAppPublish/` 目录。**版本号需手动修改 `SimulatorApp.csproj`**，脚本不自动递增。
 
 ### 部署到无 .NET 环境的机器
 
-发布的应用是**完全自包含单文件 EXE**（NativeEngine.dll + NativeSender.dll 内嵌），只需拷贝一个文件：
+发布的应用是**自包含 EXE**，将以下文件整体拷贝到目标机器：
 
 ```
-SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库 + C++ DLL）
+SimulatorApp.exe              # 主程序（约 155 MB，含 .NET 运行时）
+NativeEngine.dll              # C++ 心跳/威胁日志引擎
+NativeSender.dll              # C++ PT 协议打包
+RawPacketEngine.dll           # C++ 攻击报文发送引擎（需 Npcap 驱动）
+wpfgfx_cor3.dll               # WPF 原生渲染库（及同目录其他 _cor3.dll）
+config.json                   # 配置文件
 ```
 
-在任何 Windows x64 机器上双击即可运行，无需安装 .NET 或额外 DLL。
+在任何 Windows x64 机器上双击即可运行，无需安装 .NET。
 
-> 注意：程序首次运行时会在同目录生成 `config.json` 和 `Clients.log`。
+> **注意**：攻击报文发送功能需额外安装 [Npcap](https://npcap.com/) 驱动；未安装时会弹出友好提示，其余功能不受影响。
 
-## ✅ 当前状态（v3.9.1）
+> 程序首次运行时会在同目录生成 `config.json` 和 `Clients.log`。
+
+## ✅ 当前状态（v3.9.2）
 
 ### 核心架构
 
@@ -52,7 +59,8 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 
 ### 已完成功能
 
-- ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口 v3.9.1）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、源IP变化规则（FieldRule）、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制；界面采用步骤引导两栏布局 + 紧凑统计卡片，RawPacketEngine.dll 内嵌单文件 EXE
+- ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口 v3.9.2）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、源IP变化规则（FieldRule）、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制；界面采用步骤引导两栏布局 + 紧凑统计卡片，RawPacketEngine.dll 与 EXE 同目录部署
+- ✅ **Npcap 未安装时友好提示**：检测失败时显示错误对话框并附下载地址，不再崩溃
 - ✅ 客户端注册、心跳、白名单上传（PT/HTTP/HTTPS）
 - ✅ **TCP 心跳稳定在线**（NativeEngine 非阻塞 socket，每客户端 1 个 OS 线程，对齐老工具 `AfxBeginThread + Sleep(500)` 节奏）
 - ✅ 心跳断线原因监控：`logs/heartbeat_monitor_*.log`（7 种原因：服务端关闭/写失败/连接失败/超时/Session超时/锁竞争跳过/未注册重注册）
@@ -63,7 +71,7 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 - ✅ **日志发送 EPS 精确控制**（deadline 模式）
 - ✅ **防 TLS 握手风暴**：>100 客户端时错峰窗口扩大到 10s
 - ✅ **压测模式**：连接复用 + 信号量门控，单机支持 3000 客户端 / 6000+ EPS
-- ✅ **单文件发布**（约 73 MB，NativeEngine.dll + NativeSender.dll 内嵌 EXE）
+- ✅ **自包含发布**（EXE ~155 MB + WPF 原生 DLL + 3 个 C++ DLL，同目录部署，无需安装 .NET）
 - ✅ 持久化存储（`Clients.log`、`config.json`）
 - ✅ **分通道独立配置**：HTTPS 与威胁检测各自独立配置客户端数和 EPS
 - ✅ **任务面板（TaskPanel）**：所有后台任务统一 DataGrid，实时显示状态/进度/成功/失败计数
@@ -175,7 +183,7 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 ## 📖 下一步建议
 
 **协议完善：**
-- Win2012R2 兼容性（见 `feature/win2012r2-compat` 分支）
+- Win2012R2 兼容性
 - 策略字段覆盖率验证（对齐平台后端期望的全部 JSON 字段）
 
 **稳定性 & 压测：**
@@ -190,7 +198,8 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 - .NET 8.0 (WPF)
 - C++ DLL（NativeEngine：非阻塞 Winsock + OS 线程 + zlib，NativeSender：PT 协议打包）
 - CMake（C++ 构建，MSVC x64）
-- 自包含单文件发布（win-x64，NativeEngine.dll + NativeSender.dll 内嵌）
+- 自包含发布（win-x64，EXE + WPF 原生 DLL + C++ DLL 同目录）
+- C++ DLL（RawPacketEngine：Npcap/pcap 原始报文发送引擎）
 - 持久化：JSON 文件
 - 网络协议：TCP（PT 协议心跳/威胁日志）、HTTPS（注册/通用日志/白名单/策略）
 
@@ -198,10 +207,11 @@ SimulatorApp.exe    # 主程序（约 73 MB，含 .NET 运行时 + WPF 原生库
 
 ```
 src/
-   SimulatorApp/          # WPF 主应用（含子窗口：RegAdvanced/PortAdvanced/TcpDiag/SshLog/LogCategoryHelp）
-   SimulatorLib/          # 核心业务逻辑（Workers/Protocol/Models/Network/Persistence）
+   SimulatorApp/          # WPF 主应用（含子窗口：RegAdvanced/PortAdvanced/TcpDiag/SshLog/LogCategoryHelp/RawPacket）
+   SimulatorLib/          # 核心业务逻辑（Workers/Protocol/Models/Network/Persistence/RawPacket）
    NativeEngine/          # C++ DLL：非阻塞 socket 心跳 + 威胁日志发送引擎
    NativeSender/          # C++ DLL：PT 协议打包
+   RawPacketEngine/       # C++ DLL：Npcap 原始报文发送引擎（攻击报文发送模块）
    SimulatorRunner/       # CLI 运行器
    TestReceiver/          # 测试接收服务器
    DevTools/              # 开发辅助工具
@@ -213,8 +223,8 @@ external/                 # IEG 原始 C++ 源码参考（含 zlibstat.lib）
 
 ## 📝 重要说明
 
-- **默认开发分支：`main`**
+- **唯一分支：`main`**
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
-- 修改代码后需重新执行 `publish_simulatorapp.ps1` 更新 exe（脚本自动 bump 版本号 + 构建 C++ DLL + 打包 + git commit/push）
+- 修改代码后执行 `publish_simulatorapp.ps1` 重新构建（构建 C++ DLL + dotnet publish + 复制 DLL），**版本号手动修改 `SimulatorApp.csproj`**
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- 版本演进脉络：... → **`v3.9.x`**（攻击报文发送模块：RawPacketEngine DLL + 内置 MS08-067/MS17-010/MS20-796 + .etc/.pcap 导入 + 字段编辑 + 属性测试；v3.9.1 UI 大幅优化：步骤引导两栏布局、紧凑统计卡片、源IP方向修正，当前）
+- 版本演进脉络：... → **`v3.9.x`**（攻击报文发送模块：RawPacketEngine DLL + 内置 MS08-067/MS17-010/MS20-796 + .etc/.pcap 导入 + 字段编辑 + 属性测试；v3.9.2 Npcap 崩溃修复 + 打包脚本修复 WPF DLL 丢失，当前）
