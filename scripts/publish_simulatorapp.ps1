@@ -130,6 +130,10 @@ Copy-Item $nsDll  "$outputPath\NativeSender.dll"  -Force
 Copy-Item $rpeDll "$outputPath\RawPacketEngine.dll" -Force
 Write-Host "Copied C++ DLLs to $outputPath" -ForegroundColor Cyan
 
+# -- 4. 删除 PDB（不随发布包分发，减小体积）------------------------------------
+Remove-Item "$outputPath\SimulatorApp.pdb" -ErrorAction SilentlyContinue
+Write-Host "Removed SimulatorApp.pdb" -ForegroundColor Cyan
+
 # 验证：输出目录应包含 SimulatorApp.exe 和 3 个 DLL
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
