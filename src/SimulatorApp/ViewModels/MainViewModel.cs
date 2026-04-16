@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using SimulatorLib.Models;
 using SimulatorLib.Network;
@@ -84,6 +85,7 @@ namespace SimulatorApp.ViewModels
         private int _regTotal;
         private int _regSuccess;
         private int _regFailed;
+        private int _registeredClientCount;  // 已注册客户端总数
         private string _regFailureDetail = string.Empty;
 
         private string _whitelistFilePath = string.Empty;
@@ -217,6 +219,9 @@ namespace SimulatorApp.ViewModels
         public int RegFailed { get => _regFailed; set { _regFailed = value; OnProp(); } }
         public string RegFailureDetail { get => _regFailureDetail; set { _regFailureDetail = value; OnProp(); } }
 
+        // 已注册客户端总数（包括历史注册的，用于判断心跳按钮是否可用）
+        public int RegisteredClientCount { get => _registeredClientCount; set { _registeredClientCount = value; OnProp(); CommandManager.InvalidateRequerySuggested(); } }
+
         public string WhitelistFilePath { get => _whitelistFilePath; set { _whitelistFilePath = value; OnProp(); } }
         /// <summary>对齐老工具：注册完成后自动对全部已注册客户端上传一次白名单</summary>
         public bool EnableWhitelistOnReg { get => _enableWhitelistOnReg; set { _enableWhitelistOnReg = value; OnProp(); } }
@@ -316,6 +321,7 @@ namespace SimulatorApp.ViewModels
         public ICommand StartLogSendCommand { get; }
         public ICommand StopLogSendCommand { get; }
         public ICommand BrowseWhitelistFileCommand { get; }
+        public ICommand PreviewWhitelistCommand { get; }
         public ICommand StartWhitelistUploadCommand { get; }
         public ICommand StopWhitelistUploadCommand { get; }
 
@@ -325,7 +331,7 @@ namespace SimulatorApp.ViewModels
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
             StartHeartbeatCommand = new RelayCommand(
                 async _ => await StartHeartbeatAsync(),
-                _ => RegCount > 0 && RegSuccess >= RegCount);
+                _ => RegisteredClientCount > 0);  // 只要有已注册客户端就可以开始心跳
             StopHeartbeatCommand = new RelayCommand(_ => StopHeartbeat());
             PortTestCommand = new RelayCommand(async _ => await PortTestAsync());
             StartLogSendCommand = new RelayCommand(
@@ -333,6 +339,7 @@ namespace SimulatorApp.ViewModels
                 _ => HbTotal > 0 && HbConnected >= HbTotal);
             StopLogSendCommand = new RelayCommand(_ => StopLogSend());
             BrowseWhitelistFileCommand = new RelayCommand(_ => BrowseWhitelistFile());
+            PreviewWhitelistCommand = new RelayCommand(_ => PreviewWhitelist(), _ => !string.IsNullOrEmpty(WhitelistFilePath) && File.Exists(WhitelistFilePath));
             StartWhitelistUploadCommand = new RelayCommand(async _ => await StartWhitelistUploadAsync());
             StopWhitelistUploadCommand = new RelayCommand(_ => StopWhitelistUpload());
             _ = LoadConfigAsync();
@@ -352,6 +359,11 @@ namespace SimulatorApp.ViewModels
         private async Task LoadConfigAsync()
         {
             var cfg = await AppConfig.LoadAsync().ConfigureAwait(false);
+            
+            // 加载已注册客户端数量
+            var allClients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+            var registeredCount = allClients.Count(c => c.Status == "Registered");
+            
             RunOnUi(() =>
             {
                 PlatformHost = cfg.PlatformHost;
@@ -379,6 +391,9 @@ namespace SimulatorApp.ViewModels
                 EnableWhitelistOnReg = cfg.EnableWhitelistOnReg;
                 WhitelistConcurrency = cfg.WhitelistConcurrency;
 
+                // 设置已注册客户端数量
+                RegisteredClientCount = registeredCount;
+
                 // 操作系统类型（加载后触发版本列表更新）
                 if (!string.IsNullOrEmpty(cfg.ClientOsType) && cfg.ClientOsType != _osType)
                 {
@@ -386,7 +401,7 @@ namespace SimulatorApp.ViewModels
                     OnOsTypeChanged();
                 }
 
-                AppendStatus("配置已加载");
+                AppendStatus($"配置已加载，已注册客户端：{registeredCount} 台");
                 ApplyProjectTypeSelection(); // 按当前项目类型（默认IEG）恢复日志分类勾选
             });
         }
@@ -572,6 +587,8 @@ namespace SimulatorApp.ViewModels
                     RegFailed = summary.Failed;
                     RegRound = summary.Rounds;
                     RegFailureDetail = detailSb.ToString().Trim();
+                    // 更新已注册客户端总数
+                    RegisteredClientCount = summary.Success;
                     AppendStatus($"注册任务完成（共{summary.Rounds}轮）：成功={summary.Success}  失败={summary.Failed}");
                     if (summary.FailureReasons.Count > 0)
                         System.Diagnostics.Debug.WriteLine("[注册失败原因] " + detailSb.ToString().TrimEnd());
@@ -1173,6 +1190,34 @@ namespace SimulatorApp.ViewModels
             catch (Exception ex)
             {
                 AppendStatus("选择文件异常: " + ex.Message);
+            }
+        }
+
+        private void PreviewWhitelist()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(WhitelistFilePath))
+                {
+                    AppendStatus("⚠ 请先选择白名单文件");
+                    return;
+                }
+
+                if (!File.Exists(WhitelistFilePath))
+                {
+                    AppendStatus($"⚠ 文件不存在: {WhitelistFilePath}");
+                    return;
+                }
+
+                var previewWindow = new Views.WhitelistPreviewWindow(WhitelistFilePath)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                previewWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                AppendStatus($"预览白名单失败: {ex.Message}");
             }
         }
 

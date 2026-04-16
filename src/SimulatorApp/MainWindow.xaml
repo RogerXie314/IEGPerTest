@@ -286,7 +286,7 @@
                 </Grid>
 
                 <!-- 右列：心跳设置 / 白名单上传设置 / 日志发送设置 -->
-                <DockPanel Grid.Row="1" Grid.Column="1" Margin="6,0,0,0" LastChildFill="True">
+                <DockPanel Grid.Row="1" Grid.Column="2" Margin="6,0,0,0" LastChildFill="True">
 
                     <Border DockPanel.Dock="Top" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Background="#FAFAFA" Margin="0,0,0,10">
                         <StackPanel>
@@ -367,10 +367,14 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="6" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Width="90" Height="28" Command="{Binding StartWhitelistUploadCommand}"
+                                    <Button Grid.Column="0" Width="100" Height="28" FontSize="12" Command="{Binding StartWhitelistUploadCommand}"
                                             ToolTip="立即对全部已注册客户端上传一次白名单">立即上传全量</Button>
-                                    <Button Grid.Column="2" Width="75" Height="28" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
+                                    <Button Grid.Column="2" Width="70" Height="28" FontSize="12" Command="{Binding StopWhitelistUploadCommand}">结束任务</Button>
+                                    <Button Grid.Column="4" Width="80" Height="28" FontSize="12" Command="{Binding PreviewWhitelistCommand}"
+                                            ToolTip="预览白名单文件内容，查看白名单数量和列表">预览白名单</Button>
                                 </Grid>
                             </Grid>
                         </StackPanel>

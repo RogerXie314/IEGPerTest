@@ -146,6 +146,25 @@ namespace SimulatorLib.Workers
 
         // ── 内部实现 ────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// 读取白名单文件的条目数量（对齐老工具：上报状态时需要 WLFileCount 字段）
+        /// </summary>
+        private static async Task<int> CountWhitelistEntriesAsync(string filePath)
+        {
+            await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, useAsync: true);
+            using var br = new BinaryReader(fs, Encoding.UTF8, leaveOpen: true);
+
+            // 读取文件头
+            var magic = br.ReadUInt16();
+            if (magic != 0xFEFE) return 0;
+
+            var version = br.ReadUInt16();
+            if (version != 2) return 0; // 只支持V2格式
+
+            var entryCount = br.ReadInt32();
+            return entryCount;
+        }
+
         private static HttpClient CreateHttpClient()
         {
             var handler = new HttpClientHandler
@@ -175,6 +194,14 @@ namespace SimulatorLib.Workers
             string platformHost, int platformPort,
             int concurrency, CancellationToken ct)
         {
+            // 读取白名单文件条目数量（对齐老工具：上报状态时需要 WLFileCount 字段）
+            int wlFileCount = 0;
+            try
+            {
+                wlFileCount = await CountWhitelistEntriesAsync(filePath).ConfigureAwait(false);
+            }
+            catch { /* 读取失败时使用 0 */ }
+
             var sem = new SemaphoreSlim(Math.Max(1, concurrency));
             int statsSuccess = 0, statsFail = 0;
             var tasks = new List<Task>(targets.Count);
@@ -193,7 +220,7 @@ namespace SimulatorLib.Workers
                     {
                         var ok = await UploadOneClientAsync(
                             http, client, filePath, fileName,
-                            platformHost, platformPort, ct).ConfigureAwait(false);
+                            platformHost, platformPort, wlFileCount, ct).ConfigureAwait(false);
                         if (ok) Interlocked.Increment(ref statsSuccess);
                         else    Interlocked.Increment(ref statsFail);
                     }
@@ -208,26 +235,27 @@ namespace SimulatorLib.Workers
 
         /// <summary>
         /// 对齐 WLCurl::UploadFile（老工具 WLNetComm.dll 实现）：
-        ///   1. 上报状态 UPLOADING(11)
+        ///   1. 上报状态 UPLOADING(11) + 白名单数量
         ///   2. POST application/octet-stream 上传白名单文件（文件二进制直接作为请求体）
-        ///   3. 上传成功后上报状态 UPDATED(10)
+        ///   3. 上传成功后上报状态 UPDATED(10) + 白名单数量
         /// </summary>
         private static async Task<bool> UploadOneClientAsync(
             HttpClient http,
             ClientRecord c,
             string filePath, string fileName,
             string host, int port,
+            int wlFileCount,
             CancellationToken ct)
         {
             var baseUrl = $"https://{host}:{port}";
 
-            // ① 上传前状态通知
-            await SendScanStatusAsync(http, baseUrl, c.ClientId, SolidifyUploading, ct)
+            // ① 上传前状态通知（包含白名单数量）
+            await SendScanStatusAsync(http, baseUrl, c.ClientId, SolidifyUploading, wlFileCount, ct)
                 .ConfigureAwait(false);
 
-            // ② 构造上传 URL（对齐 C++：去掉 ':'，'\\' → '-'，再 Base64URL 编码）
+            // ② 构造上传 URL（对齐 C++：只使用文件名，去掉 ':'，'\\' → '-'，再 Base64URL 编码）
             var idB64       = Base64UrlEncode(c.ClientId);
-            var modPath     = BuildModifiedPath(filePath);
+            var modPath     = BuildModifiedPath(fileName);  // 使用文件名而不是完整路径
             var pathB64     = Base64UrlEncode(modPath);
             var uploadUrl   = $"{baseUrl}/USM/upLoadSysWhiteFile.do?id={idB64}&filepath={pathB64}";
 
@@ -254,10 +282,10 @@ namespace SimulatorLib.Workers
                 catch { /* 网络异常，继续下一次重试（若还有）*/ }
             }
 
-            // ④ 上传成功后状态通知
+            // ④ 上传成功后状态通知（包含白名单数量）
             if (uploadOk)
             {
-                await SendScanStatusAsync(http, baseUrl, c.ClientId, SolidifyUpdated, ct)
+                await SendScanStatusAsync(http, baseUrl, c.ClientId, SolidifyUpdated, wlFileCount, ct)
                     .ConfigureAwait(false);
             }
 
@@ -267,11 +295,11 @@ namespace SimulatorLib.Workers
         /// <summary>
         /// 对应 sendScanStatus(lpGuid, WL_SOLIDIFY_xxx)：
         ///   POST /USM/clientScanStatus.do
-        ///   Body: [{"ComputerID":"...","CMDTYPE":200,"CMDID":211,"CMDContent":{"SolidifyStatus":N,"SolidifySpeed":0,"Time":"..."}}]
+        ///   Body: [{"ComputerID":"...","CMDTYPE":200,"CMDID":211,"CMDContent":{"SolidifyStatus":N,"SolidifySpeed":0,"WLFileCount":N,"Time":"..."}}]
         /// </summary>
         private static async Task SendScanStatusAsync(
             HttpClient http, string baseUrl, string computerId,
-            int solidifyStatus, CancellationToken ct)
+            int solidifyStatus, int wlFileCount, CancellationToken ct)
         {
             try
             {
@@ -287,6 +315,7 @@ namespace SimulatorLib.Workers
                         {
                             SolidifyStatus = solidifyStatus,
                             SolidifySpeed  = 0,
+                            WLFileCount    = wlFileCount,
                             Time           = time,
                         }
                     }
