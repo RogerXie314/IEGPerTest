@@ -50,7 +50,7 @@ config.json                   # 配置文件
 
 > 程序首次运行时会在同目录生成 `config.json` 和 `Clients.log`。
 
-## ✅ 当前状态（v3.9.2）
+## ✅ 当前状态（v3.9.5）
 
 ### 核心架构
 
@@ -60,7 +60,9 @@ config.json                   # 配置文件
 
 ### 已完成功能
 
-- ✅ **白名单文件预览**（集成到主界面）：点击"预览白名单"按钮可查看.wl文件内容，显示白名单数量、列表、支持搜索和导出，支持V2/V3/V4格式
+- ✅ **客户端版本管理**（v3.9.5）：支持增删改客户端版本列表，配置保存到 JSON 文件，Windows/Linux 版本分别管理，支持恢复默认版本
+- ✅ **Windows Server 识别修复**（v3.9.5）：修复 Windows Server 2012 R2 等系统显示为版本号的问题，支持识别 Server 2022/2019/2016/2012 R2/2012/2008 R2
+- ✅ **白名单文件预览**（v3.9.3）：点击"预览白名单"按钮可查看.wl文件内容，显示白名单数量、列表、支持搜索和导出，支持V2/V3/V4格式
 - ✅ **白名单文件解析工具**（tools/ 目录）：Python 工具，可读取 .wl 文件并显示白名单列表及数量，支持命令行和 GUI 两种界面，支持搜索和导出功能
 - ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口 v3.9.2）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、源IP变化规则（FieldRule）、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制；界面采用步骤引导两栏布局 + 紧凑统计卡片，RawPacketEngine.dll 与 EXE 同目录部署
 - ✅ **Npcap 未安装时友好提示**：检测失败时显示错误对话框并附下载地址，不再崩溃
@@ -219,4 +221,33 @@ artifacts/                # 发布产物输出
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
 - 修改代码后执行 `publish_simulatorapp.ps1` 重新构建（构建 C++ DLL + dotnet publish + 复制 DLL），**版本号手动修改 `SimulatorApp.csproj`**
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- 版本演进脉络：... → **`v3.9.x`**（攻击报文发送模块：RawPacketEngine DLL + 内置 MS08-067/MS17-010/MS20-796 + .etc/.pcap 导入 + 字段编辑 + 属性测试；v3.9.2 Npcap 崩溃修复 + 打包脚本修复 WPF DLL 丢失，当前）
+- 版本演进脉络：... → **`v3.9.x`**（v3.9.5 客户端版本管理 + Windows Server 识别修复；v3.9.3 白名单预览功能；v3.9.2 Npcap 崩溃修复 + 打包脚本修复 WPF DLL 丢失，当前）
+
+## 📋 版本历史
+
+### v3.9.5 — 2026-04-17：客户端版本管理 + Windows Server 识别修复
+
+**新增功能**：
+- **客户端版本管理**：新增版本管理窗口，支持增删改客户端版本列表，配置保存到 JSON 文件（%AppData%/SimulatorApp/client_versions.json），Windows/Linux 版本分别管理，支持恢复默认版本
+- **Windows Server 识别修复**：修复 Windows Server 2012 R2 显示为 "Microsoft Windows 6.3.9600" 的问题，增强 OsInfo.GetWindowsVersionName() 方法，支持识别 Server 2022/2019/2016/2012 R2/2012/2008 R2
+
+**技术实现**：
+- 新增 ClientVersionConfig 类负责版本配置读写
+- 新增 VersionManagementWindow 和 VersionManagementViewModel
+- MainViewModel 从配置文件加载版本列表，不再硬编码
+- 使用 Environment.OSVersion.Version 识别 Windows Server 版本号
+
+### v3.9.3 — 2026-04-16：白名单预览功能 + UI布局修复
+
+**新增功能**：
+- **白名单预览窗口**：新增 WhitelistPreviewWindow 和 WhitelistPreviewViewModel，支持读取 V2/V3/V4 格式白名单文件，显示白名单总数、文件路径、版本信息，支持搜索过滤（路径/哈希）和导出为 CSV 格式
+- **白名单上传功能增强**：上传完成后在状态 JSON 中添加 WLFileCount 字段，平台可显示白名单数量；修复文件名保留问题
+- **心跳功能优化**：新增 RegisteredClientCount 属性，从持久化数据加载已注册客户端数量，修复重启后"开始心跳"按钮不可用的问题
+
+**UI 修复**：
+- 修复右侧列布局 bug（DockPanel 从 Grid.Column=1 改为 Grid.Column=2）
+- 白名单上传设置按钮优化（添加"预览白名单"按钮，调整按钮宽度和字体大小）
+
+**文档**：
+- 新增 docs/白名单预览功能说明.md
+- 新增 docs/白名单预览功能测试指南.md
