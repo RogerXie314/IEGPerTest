@@ -81,7 +81,7 @@ config.json                   # 配置文件
 - ✅ **任务面板（TaskPanel）**：所有后台任务统一 DataGrid，实时显示状态/进度/成功/失败计数
 - ✅ **策略接收（PolicyReceiveWorker）**：TCP cmdId=17 触发 HTTPS 拉取策略 → 回 ACK；NativeEngine 模式通过回调支持
 - ✅ **白名单轮换**：随机轮换，15 分钟周期，HTTPS multipart 上传 + clientScanStatus 通知
-- ✅ **注册版本选择**：ComboBox 选择客户端版本（默认 V300R011C01B030）
+- ✅ **注册版本选择**：ComboBox 选择客户端版本（默认 V300R011C01B030），支持版本管理窗口自定义版本列表
 - ✅ **客户端 OS 类型切换**：注册/心跳时可选 Windows / Linux
 - ✅ **多IP模式运行时连接计数**：每IP实际建连次数原子统计
 - ✅ **连接参数诊断**：一键推荐设置（端口范围/TIME_WAIT），`netsh show` 正则解析（中英文兼容）
@@ -177,15 +177,17 @@ config.json                   # 配置文件
 ## 📖 下一步建议
 
 **协议完善：**
-- Win2012R2 兼容性
 - 策略字段覆盖率验证（对齐平台后端期望的全部 JSON 字段）
+- 更多日志类型的字段完整性验证
 
 **稳定性 & 压测：**
 - `scripts/estimate_client_limit.ps1` 辅助评估单机客户端上限
+- 长时间运行稳定性测试（24小时+）
 
 **UI 增强：**
 - 任务面板列宽自适应 / 支持导出 CSV
 - 实时折线图（EPS、心跳在线数随时间变化）
+- 客户端分组管理功能
 
 ## 🛠️ 技术栈
 
@@ -221,7 +223,7 @@ artifacts/                # 发布产物输出
 - `Clients.log` 和 `config.json` 在程序首次运行时自动生成
 - 修改代码后执行 `publish_simulatorapp.ps1` 重新构建（构建 C++ DLL + dotnet publish + 复制 DLL），**版本号手动修改 `SimulatorApp.csproj`**
 - Git 代理配置（如需要）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- 版本演进脉络：... → **`v3.9.x`**（v3.9.5 客户端版本管理 + Windows Server 识别修复；v3.9.3 白名单预览功能；v3.9.2 Npcap 崩溃修复 + 打包脚本修复 WPF DLL 丢失，当前）
+- 版本演进脉络：... → **`v3.9.x`**（v3.9.5 客户端版本管理 + Windows Server 识别修复，当前；v3.9.3 白名单预览功能；v3.9.2 Npcap 崩溃修复 + 打包脚本修复 WPF DLL 丢失）
 
 ## 📋 版本历史
 
