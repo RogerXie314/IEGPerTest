@@ -99,13 +99,7 @@ namespace SimulatorApp.ViewModels
         // 操作系统类型和客户端版本（注册时影响平台功能可用性）
         private string _osType = "Windows"; // "Windows" 或 "Linux"
         private string _regClientVersion = "V300R011C01B090";
-        private List<string> _clientVersionList = new()
-        {
-            "V300R011C01B090",   // Windows 当前版本
-            "V300R011C01B030",   // Windows 旧版
-            "V300R006C05B270",   // 老版 V6（支持白名单上传）
-            "V300R006C02B090",   // 老版 V6（支持白名单上传）
-        };
+        private List<string> _clientVersionList = new();
 
         // 策略下发接收统计
         private int _policyReceived;
@@ -263,24 +257,25 @@ namespace SimulatorApp.ViewModels
         public string HeartbeatModeLabel =>
             _osType == "Linux" ? "HTTPS（Linux）" : "TCP（Windows）";
 
-        private void OnOsTypeChanged()
+        /// <summary>加载客户端版本列表</summary>
+        private void LoadClientVersions()
         {
+            var config = SimulatorLib.Config.ClientVersionConfig.Load();
             if (_osType == "Linux")
             {
-                _clientVersionList = new List<string> { "V300R011C11B060-Redhat7.x-x64" };
-                _regClientVersion  = "V300R011C11B060-Redhat7.x-x64";
+                _clientVersionList = config.LinuxVersions.ToList();
+                _regClientVersion = _clientVersionList.FirstOrDefault() ?? "V300R011C11B060-Redhat7.x-x64";
             }
             else
             {
-                _clientVersionList = new List<string>
-                {
-                    "V300R011C01B090",
-                    "V300R011C01B030",
-                    "V300R006C05B270",   // 老版 V6（支持白名单上传）
-                    "V300R006C02B090",
-                };
-                _regClientVersion  = "V300R011C01B090";
+                _clientVersionList = config.WindowsVersions.ToList();
+                _regClientVersion = _clientVersionList.FirstOrDefault() ?? "V300R011C01B090";
             }
+        }
+
+        private void OnOsTypeChanged()
+        {
+            LoadClientVersions();
             OnProp(nameof(ClientVersionList));
             OnProp(nameof(RegClientVersion));
             OnProp(nameof(IsOsWindows));
@@ -328,6 +323,10 @@ namespace SimulatorApp.ViewModels
         public MainViewModel()
         {
             _uiContext = SynchronizationContext.Current;
+            
+            // 加载客户端版本列表
+            LoadClientVersions();
+            
             RegisterCommand = new RelayCommand(async _ => await RegisterAsync());
             StartHeartbeatCommand = new RelayCommand(
                 async _ => await StartHeartbeatAsync(),

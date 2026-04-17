@@ -38,6 +38,26 @@ namespace SimulatorApp
             var win = new SimulatorApp.Views.RawPacketWindow();
             win.Show();
         }
+
+        private void ManageVersions_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new Views.VersionManagementWindow { Owner = this };
+            var dialogResult = win.ShowDialog();
+            
+            // 窗口关闭后重新加载版本列表
+            if (DataContext is ViewModels.MainViewModel vm)
+            {
+                // 通过反射调用私有方法 LoadClientVersions
+                var method = vm.GetType().GetMethod("LoadClientVersions", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                method?.Invoke(vm, null);
+                
+                // 触发属性更新
+                vm.GetType().GetMethod("OnProp", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                    .Invoke(vm, new object?[] { "ClientVersionList" });
+            }
+        }
     }
 }
 

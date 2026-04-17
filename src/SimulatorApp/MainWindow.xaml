@@ -172,9 +172,15 @@
                                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding RegCount, Mode=TwoWay}" Width="150" HorizontalAlignment="Left" Margin="8,2,0,2" />
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">客户端版本：</TextBlock>
-                                <ComboBox Grid.Row="4" Grid.Column="1" Width="170" HorizontalAlignment="Left" Margin="8,2,0,2"
-                                          ItemsSource="{Binding ClientVersionList}"
-                                          SelectedItem="{Binding RegClientVersion, Mode=TwoWay}" />
+                                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="8,2,0,2">
+                                    <ComboBox Width="170" HorizontalAlignment="Left"
+                                              ItemsSource="{Binding ClientVersionList}"
+                                              SelectedItem="{Binding RegClientVersion, Mode=TwoWay}" />
+                                    <Button Height="28" Width="75" Margin="8,0,0,0"
+                                            Background="White" Foreground="#555" BorderBrush="#CCC"
+                                            ToolTip="管理客户端版本列表（增删改）"
+                                            Click="ManageVersions_Click">管理版本</Button>
+                                </StackPanel>
 
                                 <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
                                     <Button Height="30" Width="90" Command="{Binding RegisterCommand}">并发注册</Button>

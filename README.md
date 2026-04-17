@@ -7,6 +7,7 @@ IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送
 - **实施文档**：[docs/项目实施文档.md](docs/项目实施文档.md)（含完整变更记录、调试技巧、协议路由表）
 - **经验教训**：[docs/经验教训-日志类型实现.md](docs/经验教训-日志类型实现.md)
 - **项目看板**：[docs/project_dashboard.html](docs/project_dashboard.html)
+- **白名单解析工具**：[tools/README.md](tools/README.md)（.wl文件解析和预览工具，已验证 ✅）
 
 ## 🚀 快速开始
 
@@ -59,6 +60,8 @@ config.json                   # 配置文件
 
 ### 已完成功能
 
+- ✅ **白名单文件预览**（集成到主界面）：点击"预览白名单"按钮可查看.wl文件内容，显示白名单数量、列表、支持搜索和导出，支持V2/V3/V4格式
+- ✅ **白名单文件解析工具**（tools/ 目录）：Python 工具，可读取 .wl 文件并显示白名单列表及数量，支持命令行和 GUI 两种界面，支持搜索和导出功能
 - ✅ **攻击报文发送**（RawPacketEngine C++ DLL + WPF 独立子窗口 v3.9.2）：内置 MS08-067/MS17-010/MS20-796 三种漏洞利用报文，支持导入 `.etc`/`.pcap`、字段编辑、源IP变化规则（FieldRule）、多 Stream Round-Robin 发送、PPS/间隔/最大速率控制；界面采用步骤引导两栏布局 + 紧凑统计卡片，RawPacketEngine.dll 与 EXE 同目录部署
 - ✅ **Npcap 未安装时友好提示**：检测失败时显示错误对话框并附下载地址，不再崩溃
 - ✅ 客户端注册、心跳、白名单上传（PT/HTTP/HTTPS）
@@ -204,6 +207,7 @@ src/
    SimulatorRunner/       # CLI 运行器
    TestReceiver/          # 测试接收服务器
    DevTools/              # 开发辅助工具
+tools/                    # 白名单文件解析工具（Python）
 scripts/                  # 构建和发布脚本
 docs/                     # 文档和经验总结
 artifacts/                # 发布产物输出
