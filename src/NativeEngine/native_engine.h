@@ -99,6 +99,11 @@ NE_API int32_t NE_IsLogSendRunning();
 // 当收到平台 cmdId=17 时调用，C# 侧发 HTTPS 心跳拉取策略并回报。
 NE_API void NE_SetPolicyCallback(NE_PolicyNotifyCallback cb);
 
+// ---------- v3.9.5.3: 新增注册功能，让注册也在C++内完成 ----------
+// 批量注册所有客户端到平台（阻塞调用，完成后返回）。
+// 返回：成功注册的客户端数量。
+NE_API int32_t NE_RegisterAllClients();
+
 // 释放资源。
 NE_API void NE_Shutdown();
 

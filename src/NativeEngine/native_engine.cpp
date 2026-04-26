@@ -32,7 +32,7 @@ struct ClientSlot {
     int32_t  deviceId;
     char     ip[32];
     int32_t  tcpPort;
-    SOCKET   sock;              // 心跳+日志共享 socket (对齐 g_sock[])
+    // SOCKET   sock;              // 移除：改用全局数组 g_sock[]（对齐老工具）
     HANDLE   hbThread;          // 心跳线程句柄
     HANDLE   logThread;         // 日志线程句柄
     volatile long connected;    // 1=已连接
@@ -41,6 +41,10 @@ struct ClientSlot {
 
 // 对齐老工具 HB_CLIENTCOUNT_PER_THREAD = 10
 #define HB_CLIENTS_PER_THREAD  1   // 对齐老工具 HB_CLIENTCOUNT_PER_THREAD = 1（1客户端/线程）
+
+// v3.9.5.3: 注册相关
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
 
 // HB 线程组参数（堆分配，线程启动后 delete）
 struct HBGroupArg {
@@ -53,6 +57,10 @@ struct HBGroupArg {
 static NE_Config             g_config;
 static std::vector<ClientSlot> g_clients;
 static int32_t               g_clientCount = 0;
+
+// 对齐老工具：独立的全局socket数组
+static SOCKET g_sock[1000] = {INVALID_SOCKET};
+static volatile long g_nSocketCount = 0;  // 对齐老工具：使用volatile long（配合InterlockedIncrement）
 
 // 回调
 static NE_NeedReregisterCallback g_onNeedReregister = nullptr;
@@ -90,6 +98,11 @@ static bool g_wsaInited = false;
 // ============================================================
 //  底层 Socket 操作（翻译自 SendInfoToServer.cpp）
 // ============================================================
+
+// 前向声明
+static int PackPT(const char* json, int jsonLen,
+                  uint32_t cmdId, uint32_t deviceId,
+                  uint8_t* outBuf, int outBufCapacity);
 
 // 创建非阻塞 TCP 连接，对齐 C++ CreateConnection
 // 返回 INVALID_SOCKET 表示失败
@@ -215,33 +228,42 @@ static uint32_t RecvHeartbeatReply(SOCKET s) {
 
 // ============================================================
 //  HB 单客户端发送+接收（提取为辅助函数）
+//  v3.9.5.2: 使用 localSock 隔离心跳和日志线程的 socket 操作
 // ============================================================
-static void HBDoSendRecv(ClientSlot& slot) {
+static void HBDoSendRecv(ClientSlot& slot, SOCKET& localSock) {
     InterlockedExchange(&slot.lastReplyOk, 0);
 
+    // v3.9.5.2: 移除心跳回调，C++端直接构建心跳JSON
+    // 对齐老工具心跳格式：[{"ComputerID":"xxx","CMDTYPE":100,"CMDID":1}]
+    char hbJson[512];
+    int hbJsonLen = snprintf(hbJson, sizeof(hbJson),
+        "[{\"ComputerID\":\"%s\",\"CMDTYPE\":100,\"CMDID\":1}]",
+        slot.clientId);
+    if (hbJsonLen <= 0 || hbJsonLen >= (int)sizeof(hbJson)) return;
+
+    // PT打包：zlib压缩 + 48字节头
     uint8_t hbBuf[4096];
-    int32_t hbLen = 0;
-    if (g_onBuildHBPayload)
-        hbLen = g_onBuildHBPayload(slot.clientId, slot.deviceId, hbBuf, sizeof(hbBuf));
+    int32_t hbLen = PackPT(hbJson, hbJsonLen, 1, (uint32_t)slot.deviceId, hbBuf, sizeof(hbBuf));
     if (hbLen <= 0) return;
 
     // 对齐老工具：发送失败 → 重连 → 重试发送 → 继续接收（不 return）
-    bool sendOk = SendAll(slot.sock, hbBuf, hbLen);
+    bool sendOk = SendAll(localSock, hbBuf, hbLen);
     if (!sendOk) {
         s_hbSendFail++;
-        closesocket(slot.sock);
-        slot.sock = CreateConnection(g_config.platformHost,
+        closesocket(localSock);
+        localSock = CreateConnection(g_config.platformHost,
                                      slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-        if (slot.sock != INVALID_SOCKET) {
+        if (localSock != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
+            // 对齐老工具：重连后不更新 g_sock[]
             s_reconnects++;
-            if (SendAll(slot.sock, hbBuf, hbLen)) {
+            if (SendAll(localSock, hbBuf, hbLen)) {
                 s_hbSendOk++;
                 // 继续往下接收（老工具在重连+重发后同样调用 RecvHeartBeatBack_TCP）
             } else {
                 s_hbSendFail++;
-                closesocket(slot.sock);
-                slot.sock = INVALID_SOCKET;
+                closesocket(localSock);
+                localSock = INVALID_SOCKET;
                 InterlockedExchange(&slot.connected, 0);
                 s_disconnects++;
                 return;  // 重试也失败，此轮放弃
@@ -255,7 +277,7 @@ static void HBDoSendRecv(ClientSlot& slot) {
         s_hbSendOk++;
     }
 
-    uint32_t cmdId = RecvHeartbeatReply(slot.sock);
+    uint32_t cmdId = RecvHeartbeatReply(localSock);
     if (cmdId == 1 || cmdId == 17) {
         s_hbRecvOk++;
         InterlockedExchange(&slot.lastReplyOk, 1);
@@ -265,20 +287,21 @@ static void HBDoSendRecv(ClientSlot& slot) {
     } else if (cmdId == 18) {
         // 对齐老工具：NOREGISTER → 关连 → 回调重注册 → 重连 → 重发 HB
         s_hbRecvNoReg++;
-        closesocket(slot.sock);
-        slot.sock = INVALID_SOCKET;
+        closesocket(localSock);
+        localSock = INVALID_SOCKET;
         InterlockedExchange(&slot.connected, 0);
         s_disconnects++;
         if (g_onNeedReregister) g_onNeedReregister(slot.clientId);
-        slot.sock = CreateConnection(g_config.platformHost,
+        localSock = CreateConnection(g_config.platformHost,
                                      slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-        if (slot.sock != INVALID_SOCKET) {
+        if (localSock != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
+            // 对齐老工具：重连后不更新 g_sock[]
             s_reconnects++;
             // 老工具在 NOREGISTER 后重连并重发一次 HB（不接收回包，继续下轮）
-            if (SendAll(slot.sock, hbBuf, hbLen)) s_hbSendOk++;
-            else { s_hbSendFail++; closesocket(slot.sock);
-                   slot.sock = INVALID_SOCKET;
+            if (SendAll(localSock, hbBuf, hbLen)) s_hbSendOk++;
+            else { s_hbSendFail++; closesocket(localSock);
+                   localSock = INVALID_SOCKET;
                    InterlockedExchange(&slot.connected, 0); s_disconnects++; }
         }
     }
@@ -288,6 +311,7 @@ static void HBDoSendRecv(ClientSlot& slot) {
 // ============================================================
 //  HB 线程（每线程管理 1 个客户端，对齐老工具 HB_CLIENTCOUNT_PER_THREAD=1）
 //  老工具 ThreadFunc_HeartbeatSend_New：每线程1个客户端
+//  v3.9.5.2: 使用 localSock 隔离心跳和日志线程的 socket 操作
 // ============================================================
 static DWORD WINAPI HBThreadProc(LPVOID param) {
     HBGroupArg* args = (HBGroupArg*)param;
@@ -300,16 +324,23 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
     // 对齐老工具：AfxBeginThread + Sleep(500) 的错峰效果，但不阻塞主线程
     if (startDelay > 0) Sleep(startDelay);
 
+    // v3.9.5.2: 为每个客户端创建线程局部socket变量
+    std::vector<SOCKET> localSocks(count, INVALID_SOCKET);
+
     // 1. 初始建连 + 首个 HB（顺序处理本组所有客户端）
     for (int i = startIdx; i < startIdx + count; i++) {
         if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
         ClientSlot& slot = g_clients[i];
-        slot.sock = CreateConnection(g_config.platformHost,
+        int localIdx = i - startIdx;
+        localSocks[localIdx] = CreateConnection(g_config.platformHost,
                                      slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-        if (slot.sock != INVALID_SOCKET) {
+        if (localSocks[localIdx] != INVALID_SOCKET) {
             InterlockedExchange(&slot.connected, 1);
+            // 对齐老工具：写入全局socket数组（第1371行），使用InterlockedIncrement
+            int idx = InterlockedIncrement(&g_nSocketCount) - 1;
+            g_sock[idx] = localSocks[localIdx];
             // 首次建连不算"重连"，s_reconnects 只在断线后重建时累加
-            HBDoSendRecv(slot);
+            HBDoSendRecv(slot, localSocks[localIdx]);
         } else {
             InterlockedExchange(&slot.connected, 0);
         }
@@ -323,30 +354,38 @@ static DWORD WINAPI HBThreadProc(LPVOID param) {
         for (int i = startIdx; i < startIdx + count; i++) {
             if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
             ClientSlot& slot = g_clients[i];
+            int localIdx = i - startIdx;
 
             // 断线重连
-            if (slot.sock == INVALID_SOCKET || !InterlockedCompareExchange(&slot.connected, 1, 1)) {
-                if (slot.sock != INVALID_SOCKET) { closesocket(slot.sock); slot.sock = INVALID_SOCKET; }
-                slot.sock = CreateConnection(g_config.platformHost,
+            if (localSocks[localIdx] == INVALID_SOCKET || !InterlockedCompareExchange(&slot.connected, 1, 1)) {
+                if (localSocks[localIdx] != INVALID_SOCKET) { 
+                    closesocket(localSocks[localIdx]); 
+                    localSocks[localIdx] = INVALID_SOCKET; 
+                }
+                localSocks[localIdx] = CreateConnection(g_config.platformHost,
                                              slot.tcpPort > 0 ? slot.tcpPort : g_config.platformPort);
-                if (slot.sock == INVALID_SOCKET) {
+                if (localSocks[localIdx] == INVALID_SOCKET) {
+                    // 对齐老工具：重连失败，不更新 g_sock[]
                     InterlockedExchange(&slot.connected, 0);
                     s_disconnects++;
                     continue;
                 }
                 InterlockedExchange(&slot.connected, 1);
+                // 对齐老工具：重连后不更新 g_sock[]（第1400行）
                 s_reconnects++;
             }
 
-            HBDoSendRecv(slot);
+            HBDoSendRecv(slot, localSocks[localIdx]);
         }
     }
 
     // 退出：关闭本组所有连接
     for (int i = startIdx; i < startIdx + count; i++) {
-        if (g_clients[i].sock != INVALID_SOCKET) {
-            closesocket(g_clients[i].sock);
-            g_clients[i].sock = INVALID_SOCKET;
+        int localIdx = i - startIdx;
+        if (localSocks[localIdx] != INVALID_SOCKET) {
+            closesocket(localSocks[localIdx]);
+            localSocks[localIdx] = INVALID_SOCKET;
+            // 对齐老工具：不清理 g_sock[]（老工具也没有清理）
         }
         InterlockedExchange(&g_clients[i].connected, 0);
     }
@@ -541,10 +580,14 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
     int idx = (int)(intptr_t)param;
     ClientSlot& slot = g_clients[idx];
 
+    // 对齐老工具：从全局数组读取socket（第2152行）
     // 等待 socket 就绪（启动时 HB 线程可能还未建连）
     SOCKET sock = INVALID_SOCKET;
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
-        sock = slot.sock;
+        // 对齐老工具：从全局数组读取（pHeapArgs->sock = g_sock[i]）
+        if (idx < g_nSocketCount) {
+            sock = g_sock[idx];
+        }
         if (sock != INVALID_SOCKET && InterlockedCompareExchange(&slot.lastReplyOk, 1, 1)) {
             // socket 存在且 HB 已完成首次认证
             break;
@@ -552,6 +595,14 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         Sleep(100);
     }
     if (InterlockedCompareExchange(&g_stopLog, 0, 0)) return 0;
+
+    // 对齐老工具：线程启动时复制客户端数据到栈变量，避免循环中重复访问共享内存
+    // 老工具：_tcscpy(szThisThread_Selected_ComputerID, g_vecAllClientObjects[...].Client_GetComputerID())
+    char localComputerID[64];
+    strncpy_s(localComputerID, sizeof(localComputerID),
+              slot.computerIdTemplate[0] ? slot.computerIdTemplate : slot.clientId,
+              _TRUNCATE);
+    uint32_t localDeviceId = slot.deviceId;
 
     int msgCount = 0;
     int totalMsg = g_logCfg.totalMessages;
@@ -576,15 +627,15 @@ static DWORD WINAPI LogThreadProc(LPVOID param) {
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
-            // 1. 构建 JSON
+            // 1. 构建 JSON（使用线程局部变量，对齐老工具）
             int jsonLen = BuildThreatJson(t, isHit,
-                slot.computerIdTemplate[0] ? slot.computerIdTemplate : slot.clientId,
+                localComputerID,
                 jsonBuf, kJsonBufSize);
             if (jsonLen <= 0) { s_logSendFail++; break; }
 
-            // 2. PT 打包（zlib compress + 48 byte header）
+            // 2. PT 打包（zlib compress + 48 byte header，使用线程局部变量）
             int ptLen = PackPT(jsonBuf, jsonLen, THREAT_CMDID,
-                               (uint32_t)slot.deviceId,
+                               localDeviceId,
                                ptBuf.data(), kPtBufSize);
             if (ptLen <= 0) { s_logSendFail++; break; }
 
@@ -645,11 +696,17 @@ NE_API int32_t NE_Init(
         s.deviceId = clients[i].deviceId;
         strncpy(s.ip, clients[i].ip, sizeof(s.ip) - 1);
         s.tcpPort = clients[i].tcpPort;
-        s.sock = INVALID_SOCKET;
+        // s.sock 已移除，改用全局数组 g_sock[]
         s.hbThread = NULL;
         s.logThread = NULL;
         s.connected = 0;
         s.lastReplyOk = 0;
+    }
+
+    // 重置全局socket数组
+    g_nSocketCount = 0;
+    for (int i = 0; i < 1000; i++) {
+        g_sock[i] = INVALID_SOCKET;
     }
 
     // 重置统计

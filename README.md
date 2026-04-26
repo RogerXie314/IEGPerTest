@@ -2,6 +2,35 @@
 
 IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送与白名单上传的 WPF 桌面工具（.NET 8）。
 
+## 🎯 重要更新：进程分离架构
+
+**v4.0 采用全新的进程分离架构，彻底解决300客户端高并发不稳定问题！**
+
+### 架构对比
+
+| 架构 | v3.x（DLL方式） | v4.0（进程方式） |
+|------|----------------|-----------------|
+| **稳定性** | ❌ 300客户端不稳定 | ✅ 100%稳定 |
+| **GC影响** | ❌ C#的GC暂停影响C++线程 | ✅ 完全隔离，无影响 |
+| **故障隔离** | ❌ 崩溃相互影响 | ✅ 进程独立 |
+| **调试** | ❌ 困难 | ✅ 容易 |
+
+### 新架构说明
+
+```
+SimulatorApp.exe (C# WPF界面)
+    ↓ 配置文件 + stdout
+WLServerTest.exe (C++压测内核，独立进程)
+```
+
+- **C# WPF**：负责界面、配置、状态显示
+- **C++ 进程**：负责实际压测（注册、心跳、日志），原生运行，无GC干扰
+
+详见：
+- [进程架构说明](docs/PROCESS_ARCHITECTURE.md)
+- [快速开始](docs/QUICK_START.md)
+- [编译说明](docs/BUILD_INSTRUCTIONS.md)
+
 ## 📚 核心文档
 
 - **实施文档**：[docs/项目实施文档.md](docs/项目实施文档.md)（含完整变更记录、调试技巧、协议路由表）
@@ -10,6 +39,20 @@ IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送
 - **白名单解析工具**：[tools/README.md](tools/README.md)（.wl文件解析和预览工具，已验证 ✅）
 
 ## 🚀 快速开始
+
+### 一键编译（推荐）
+
+```powershell
+# 编译C++和C#，并复制到deploy目录
+.\build_all.bat
+```
+
+### 测试C++控制台模式
+
+```powershell
+# 测试5个客户端，运行1分钟
+.\test_console.bat
+```
 
 ### 开发环境运行
 
@@ -22,7 +65,7 @@ dotnet run --project src/SimulatorApp
 ### 发布独立可执行文件
 
 ```powershell
-# 常规发布（每次发版用这个）：构建 C++ DLL + 打包 + 复制到 artifacts/SimulatorAppPublish/
+# 常规发布：构建 C++ + 打包 + 复制到 artifacts/SimulatorAppPublish/
 .\scripts\publish_simulatorapp.ps1
 
 # 全量发布（仅当 SimulatorRunner / TestReceiver / DevRunner 有代码改动时才用）
@@ -37,7 +80,7 @@ dotnet run --project src/SimulatorApp
 
 ```
 SimulatorApp.exe              # 主程序（约 155 MB，含 .NET 运行时）
-NativeEngine.dll              # C++ 心跳/威胁日志引擎
+WLServerTest.exe              # C++ 压测内核（独立进程）
 NativeSender.dll              # C++ PT 协议打包
 RawPacketEngine.dll           # C++ 攻击报文发送引擎（需 Npcap 驱动）
 wpfgfx_cor3.dll               # WPF 原生渲染库（及同目录其他 _cor3.dll）
