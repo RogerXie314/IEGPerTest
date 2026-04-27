@@ -839,7 +839,7 @@ namespace SimulatorApp.ViewModels
                         clientStartNum: startNum,
                         clientCount: clients.Count,
                         hbInterval: HbInterval,
-                        hbTotalMinutes: 60,  // 默认运行60分钟
+                        hbTotalMinutes: 0,   // 0 = 无限运行，由用户手动停止
                         logClientCount: 0,
                         logEachClientTotalItems: 0,
                         logEachClientPerSecondItems: 1,
