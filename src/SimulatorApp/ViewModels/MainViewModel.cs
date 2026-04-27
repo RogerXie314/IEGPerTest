@@ -13,6 +13,7 @@ using SimulatorLib.Models;
 using SimulatorLib.Network;
 using SimulatorLib.Workers;
 using SimulatorLib.Persistence;
+using SimulatorApp.Workers;
 
 namespace SimulatorApp.ViewModels
 {
@@ -104,7 +105,6 @@ namespace SimulatorApp.ViewModels
         // 策略下发接收统计
         private int _policyReceived;
         private int _policyReplied;
-        private PolicyReceiveWorker? _policyWorker;
         private bool _enablePolicyReceive = true;
 
         // 任务面板
@@ -126,8 +126,10 @@ namespace SimulatorApp.ViewModels
         private CancellationTokenSource? _httpsCts;
         private CancellationTokenSource? _logCts;
         private CancellationTokenSource? _uploadCts;
-        private NativeEngineInterop? _nativeEngine;          // C++ 非阻塞引擎（可选）
-        private CancellationTokenSource? _neStatsCts;        // NativeEngine 统计轮询
+        private ProcessEngine? _processEngine;               // 进程引擎（子进程方式）
+        private TaskRecord? _hbTaskRec;                      // ProcessEngine 路径的心跳任务面板记录
+        private readonly SemaphoreSlim _reregLock = new SemaphoreSlim(1, 1);  // 防止并发重注册竞争 Clients.log
+        private readonly HashSet<string> _reregInFlight = new HashSet<string>(StringComparer.OrdinalIgnoreCase);  // 正在重注册的客户端集合
 
         private readonly SynchronizationContext? _uiContext;
 
@@ -403,6 +405,26 @@ namespace SimulatorApp.ViewModels
                 AppendStatus($"配置已加载，已注册客户端：{registeredCount} 台");
                 ApplyProjectTypeSelection(); // 按当前项目类型（默认IEG）恢复日志分类勾选
             });
+        }
+
+        public async Task ResetRegistrationAsync()
+        {
+            // 清空 Clients.log
+            await ClientsPersistence.WriteAllAsync(new System.Collections.Generic.List<SimulatorLib.Persistence.ClientRecord>()).ConfigureAwait(false);
+
+            RunOnUi(() =>
+            {
+                // 重置计数
+                RegisteredClientCount = 0;
+                // 恢复注册表单默认值（对齐老工具 Reset 行为）
+                RegPrefix  = "Client-";
+                RegStart   = 1;
+                RegStartIp = "192.168.0.1";
+                RegCount   = 5;
+                AppendStatus("已重置：客户端列表已清空，注册设置已恢复默认值");
+            });
+
+            await SaveConfigAsync().ConfigureAwait(false);
         }
 
         private async Task SaveConfigAsync()
@@ -701,113 +723,138 @@ namespace SimulatorApp.ViewModels
                 }
                 else
                 {
-                    // ── Windows 路径：TCP 长连接心跳 ───────────────
-                    // 单文件 EXE 模式下 DLL 被解压到 %TEMP%\.net\[hash]\，
-                    // AppContext.BaseDirectory 里不再有文件，须用 NativeLibrary.TryLoad 探测。
-                    // 强制使用 NativeEngine C++ DLL（心跳和长连接日志）
-                    if (!System.Runtime.InteropServices.NativeLibrary.TryLoad(
-                        "NativeEngine.dll", typeof(MainViewModel).Assembly, null, out _))
-                    {
-                        RunOnUi(() => AppendStatus("⚠ 未找到 NativeEngine.dll，无法启动心跳。请确保 DLL 与 EXE 位于同一目录。"));
-                        return;
-                    }
-
-                    // ── NativeEngine C++ DLL 路径（非阻塞 socket + OS 线程，对齐老工具）──
+                    // ── Windows 路径：使用 ProcessEngine 子进程方式 ───────────────
                     var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
                     if (clients.Count == 0) { RunOnUi(() => AppendStatus("⚠ 未找到已注册客户端")); return; }
 
-                        var clientLookup = clients.ToDictionary(c => c.ClientId);
+                    // 检查 NativeRunner.exe 是否存在
+                    var wlTestPath = Path.Combine(AppContext.BaseDirectory, "NativeRunner.exe");
+                    if (!File.Exists(wlTestPath))
+                    {
+                        RunOnUi(() => AppendStatus($"⚠ 未找到 NativeRunner.exe，无法启动心跳。路径: {wlTestPath}"));
+                        return;
+                    }
 
-                        _nativeEngine?.Dispose();
-                        _nativeEngine = new NativeEngineInterop();
-                        _nativeEngine.OnBuildHBPayload = (clientId, deviceId) =>
+                    _processEngine?.Dispose();
+                    _processEngine = new ProcessEngine(wlTestPath, "config.ini");
+                    
+                    // 订阅事件
+                    _processEngine.OnStatsUpdated += () =>
+                    {
+                        RunOnUi(() =>
                         {
-                            if (!clientLookup.TryGetValue(clientId, out var c)) return null;
-                            var mac = SimulatorLib.Protocol.HeartbeatJsonBuilder.GetDeterministicMacFromIpv4(c.IP);
-                            var json = SimulatorLib.Protocol.HeartbeatJsonBuilder.BuildV3R7C02(
-                                clientId, GetDomainNameSafe(), c.IP, mac);
-                            var jsonBytes = TrimTrailingNewline(Encoding.UTF8.GetBytes(json));
-                            return SimulatorLib.Protocol.PtProtocol.Pack(jsonBytes, cmdId: 1, deviceId: c.DeviceId);
-                        };
-                        _nativeEngine.OnNeedReregister = (clientId) =>
+                            HbTotal = _processEngine.RegisteredTotal;
+                            HbConnected = _processEngine.HBServerAck;   // 服务器确认上线（非18回包）
+                            HbTcpOk = _processEngine.HBSending;         // TCP连接数（含未被服务器确认的）
+                            HbTcpFail = _processEngine.HBNotSending;
+                            
+                            if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
+                                hbTaskRec.Detail = $"在线:{_processEngine.HBServerAck}/{_processEngine.RegisteredTotal}";
+                        });
+                    };
+                    
+                    _processEngine.OnInfoMessage += (msg) =>
+                    {
+                        RunOnUi(() => AppendStatus(msg));
+                    };
+                    
+                    _processEngine.OnErrorMessage += (msg) =>
+                    {
+                        RunOnUi(() => AppendStatus($"⚠ {msg}"));
+                    };
+
+                    // NOREGISTER 重注册：NativeRunner 收到 cmdId=18 时通知 C#，
+                    // C# 用 HTTPS 重注册并将新 DeviceId 写回 NativeRunner（对齐 NativeEngine.dll 的 g_onNeedReregister 回调）
+                    var capturedEngine = _processEngine;
+                    _processEngine.OnReregisterRequest += async (reregIdx, clientId) =>
+                    {
+                        // 防止同一客户端重复重注册
+                        await _reregLock.WaitAsync().ConfigureAwait(false);
+                        bool skip;
+                        try { skip = !_reregInFlight.Add(clientId); }
+                        finally { _reregLock.Release(); }
+                        if (skip) return;
+
+                        try
                         {
-                            // 对齐老工具：CloseConnection → RegisterClientToServer(HTTPS) → CreateConnection
-                            // 回调由 C++ OS 线程同步调用；.GetAwaiter().GetResult() 阻塞该线程直到重注册完成，
-                            // 使 C++ 在拿到新 DeviceId 后再重连（与老工具同线程串行行为一致）
-                            if (!clientLookup.TryGetValue(clientId, out var cRereg)) return;
-                            System.Diagnostics.Debug.WriteLine($"[NativeEngine] NOREGISTER {clientId}, re-registering...");
+                            var allClients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                            var rec = allClients.FirstOrDefault(c => c.ClientId == clientId);
+                            if (rec == null) return;
+
+                            var newRec = await SimulatorLib.Workers.HeartbeatWorker.ReregisterClientAsync(
+                                rec, PlatformHost, PlatformPort, RegClientVersion,
+                                _hbCts?.Token ?? CancellationToken.None).ConfigureAwait(false);
+                            if (newRec == null) return;
+
+                            // 更新 Clients.log
+                            await _reregLock.WaitAsync().ConfigureAwait(false);
                             try
                             {
-                                var newc = HeartbeatWorker.ReregisterClientAsync(
-                                    cRereg, PlatformHost, PlatformPort, null, CancellationToken.None)
-                                    .GetAwaiter().GetResult();
-                                if (newc != null)
-                                {
-                                    clientLookup[clientId] = newc;
-                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg OK {clientId} deviceId={newc.DeviceId}");
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] re-reg FAIL {clientId}");
-                                }
+                                var latest  = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
+                                var updated = latest.Select(c => c.ClientId == clientId ? newRec : c).ToList();
+                                await ClientsPersistence.WriteAllAsync(updated).ConfigureAwait(false);
                             }
-                            catch { }
-                        };
+                            finally { _reregLock.Release(); }
 
-                        if (!_nativeEngine.Init(PlatformHost, PlatformPort, HbInterval, 500, clients))
-                        {
-                            RunOnUi(() => AppendStatus("⚠ NativeEngine 初始化失败"));
-                            return;
+                            // 通知 NativeRunner 更新内存 DeviceId
+                            capturedEngine?.SendDeviceIdUpdate(reregIdx, newRec.DeviceId);
                         }
-
-                        RunOnUi(() => AppendStatus($"开始心跳任务（NativeEngine C++ 模式，{clients.Count} 客户端，间隔 {HbInterval}ms）"));
-
-                        // 统计轮询先启动，StartHeartbeat 内部 Sleep(gateMs)×N 期间持续轮询
-                        _neStatsCts?.Cancel();
-                        _neStatsCts = new CancellationTokenSource();
-                        var neCt = _neStatsCts.Token;
-                        _ = Task.Run(async () =>
+                        finally
                         {
-                            while (!neCt.IsCancellationRequested)
+                            await _reregLock.WaitAsync().ConfigureAwait(false);
+                            try { _reregInFlight.Remove(clientId); }
+                            finally { _reregLock.Release(); }
+                        }
+                    };
+
+                    // 策略下发接收：NativeRunner 收到 cmdId=17 时通知 C#，C# 通过 HTTPS 拉取策略并回包
+                    var policyWorker = new SimulatorLib.Workers.PolicyReceiveWorker(PlatformHost, PlatformPort);
+                    _processEngine.OnPolicyRequest += (policyIdx, clientId) =>
+                    {
+                        RunOnUi(() => PolicyReceived++);
+                        _ = policyWorker.HandleTcpPolicyCmdAsync(17, clientId,
+                                _hbCts?.Token ?? CancellationToken.None)
+                            .ContinueWith(t =>
                             {
-                                try { await Task.Delay(2000, neCt).ConfigureAwait(false); } catch { break; }
-                                if (_nativeEngine == null) break;
-                                var stats = _nativeEngine.GetStats();
-                                RunOnUi(() =>
-                                {
-                                    HbTotal         = stats.hbTotal;
-                                    HbConnected     = stats.hbConnected;
-                                    HbTcpOk         = stats.hbSendOk;
-                                    HbTcpFail       = stats.hbSendFail;
-                                    HbServerReplied = stats.hbReplied;
-                                    LogSuccess      = stats.logSendOk;
-                                    LogFailed       = stats.logSendFail;
+                                if (t.IsCompletedSuccessfully)
+                                    RunOnUi(() => PolicyReplied = policyWorker.RepliedCount);
+                            }, TaskScheduler.Default);
+                    };
 
-                                    // 移除频繁的断线重连日志，仅在 Debug 输出详细统计
-                                    System.Diagnostics.Debug.WriteLine($"[NativeEngine] 在线:{stats.hbConnected}/{stats.hbTotal} 断线:{stats.disconnects} 重连:{stats.reconnects} HB发送OK:{stats.hbSendOk} FAIL:{stats.hbSendFail} 回包:{stats.hbReplied}");
+                    // 启动进程（使用已注册客户端的配置）
+                    var firstClient = clients.First();
+                    var startNum = int.Parse(firstClient.ClientId.Replace(RegPrefix, ""));
+                    
+                    // TcpPort 由注册时服务器返回（如 4575），与注册端口（如 8441）不同
+                    int hbTcpPort = clients.FirstOrDefault(c => c.TcpPort > 0)?.TcpPort ?? PlatformPort;
+                    // 计算威胁日志类型数（NativeRunner 按 0..typeCount-1 顺序发送：0=进程启动 1=注册表访问 2=文件访问）
+                    // 日志线程由用户点击"添加任务"时通过 SendStartLog 按需启动，心跳启动时不启动日志
 
-                                    if (hbTaskRec.Status == SimulatorLib.Models.TaskStatus.Running)
-                                        hbTaskRec.Detail = $"连接:{stats.hbConnected}/{stats.hbTotal}";
+                    bool success = _processEngine.Start(
+                        serverIP: PlatformHost,
+                        serverPort: PlatformPort,
+                        serverHBPort: hbTcpPort,
+                        clientIDPrefix: RegPrefix,
+                        clientStartIP: firstClient.IP,
+                        clientStartNum: startNum,
+                        clientCount: clients.Count,
+                        hbInterval: HbInterval,
+                        hbTotalMinutes: 60,  // 默认运行60分钟
+                        logClientCount: 0,
+                        logEachClientTotalItems: 0,
+                        logEachClientPerSecondItems: 1,
+                        logSelectedTypes: 0,   // 心跳启动时不启动日志线程
+                        logHitEvery: 71);
 
-                                    if (_policyWorker != null)
-                                    {
-                                        PolicyReceived = _policyWorker.ReceivedCount;
-                                        PolicyReplied  = _policyWorker.RepliedCount;
-                                    }
-                                });
-                            }
-                        });
+                    if (!success)
+                    {
+                        RunOnUi(() => AppendStatus("⚠ ProcessEngine 启动失败"));
+                        return;
+                    }
 
-                        // 策略接收支持（NativeEngine 模式，cmdId=17 通过回调转发至 C#）
-                        _policyWorker = EnablePolicyReceive ? new PolicyReceiveWorker(PlatformHost, PlatformPort) : null;
-                        if (_policyWorker != null)
-                        {
-                            _nativeEngine.OnPolicyNotify = (clientId) =>
-                                _ = _policyWorker.HandleTcpPolicyCmdAsync(17, clientId, _hbCts?.Token ?? CancellationToken.None);
-                            _nativeEngine.SetPolicyCallback();
-                        }
-
-                        _nativeEngine.StartHeartbeat();
+                    string logDesc = "";
+                    _hbTaskRec = hbTaskRec;  // 保存引用供 StopHeartbeat 调用 MarkStopped
+                    RunOnUi(() => AppendStatus($"开始心跳任务（ProcessEngine 子进程模式，{clients.Count} 客户端，间隔 {HbInterval}ms{logDesc}）"));
                 }
             }
             catch (Exception ex)
@@ -827,17 +874,41 @@ namespace SimulatorApp.ViewModels
             if (_httpsCts != null && !_httpsCts.IsCancellationRequested)
                 _httpsCts.Cancel();
 
-            // 停止 NativeEngine
-            _neStatsCts?.Cancel();
-            if (_nativeEngine != null)
+            // 停止 ProcessEngine
+            if (_processEngine != null)
             {
+                // 同步停止日志任务（子进程退出后日志监控也应随之结束）
+                StopLogSend();
+
+                var engineToStop = _processEngine;
+                var hbRec = _hbTaskRec;
+                _processEngine = null;
+                _hbTaskRec = null;
                 Task.Run(() =>
                 {
-                    try { _nativeEngine.StopAll(); } catch { }
-                    try { _nativeEngine.Dispose(); } catch { }
-                    _nativeEngine = null;
+                    try { engineToStop.Stop(); } catch { }
+                    try { engineToStop.Dispose(); } catch { }
                 });
-                RunOnUi(() => AppendStatus("NativeEngine 已停止"));
+                RunOnUi(() =>
+                {
+                    hbRec?.MarkStopped();
+                    AppendStatus("心跳子进程已停止");
+                });
+            }
+        }
+
+        /// <summary>关闭主窗口时调用，强制清理子进程</summary>
+        public void Cleanup()
+        {
+            try { _hbCts?.Cancel(); } catch { }
+            try { _httpsCts?.Cancel(); } catch { }
+            try { _logCts?.Cancel(); } catch { }
+            if (_processEngine != null)
+            {
+                try { _processEngine.Stop(); } catch { }
+                try { _processEngine.Dispose(); } catch { }
+                _processEngine = null;
+                _hbTaskRec = null;
             }
         }
 
@@ -1086,52 +1157,46 @@ namespace SimulatorApp.ViewModels
                     }
 
                     // ── 威胁检测 TCP 长连接通道（EPS 可达 6000）────────────────
-                    // 客户端数=0 表示禁用此通道
+                    // 通过 stdin 发送 STARTLOG 命令启动 NativeRunner 子进程中的日志线程，
+                    // 然后添加监控任务持续从 STATS 读取进度并更新 UI，直到用户点击【结束任务】。
                     if (threatCats.Length > 0 && LogThreatClientCount > 0)
                     {
-                        if (_nativeEngine == null)
+                        var capturedEngine = _processEngine;
+                        if (capturedEngine != null)
                         {
-                            RunOnUi(() => AppendStatus("⚠ NativeEngine 未初始化，无法发送威胁检测日志。请先启动心跳。"));
-                            return;
-                        }
-
-                        // 对齐老工具：客户端未就绪时硬拦截（等效 WLServerTestDlg 行 1934 的 AfxMessageBox + return）
-                        var neStats = _nativeEngine.GetStats();
-                        if (neStats.hbTotal > 0 && LogThreatClientCount > neStats.hbConnected)
-                        {
-                            RunOnUi(() => AppendStatus(
-                                $"[错误] 没有足够的客户端可以运行：仅 {neStats.hbConnected}/{neStats.hbTotal} 已上线，" +
-                                $"请等待足够客户端上线后再添加日志任务。"));
-                            return;
-                        }
-                        
-                        // ── NativeEngine 路径：C++ 发送日志（对齐老工具：每次循环回调动态构建 JSON）──
-                        var clients = await ClientsPersistence.ReadAllAsync().ConfigureAwait(false);
-                        int actualLogClients = Math.Min(LogThreatClientCount, clients.Count);
-                        if (actualLogClients > 0)
-                        {
-                            // 对齐老工具 ThreadFunc_MsgLogSend：每次循环实时构建 JSON（新时间戳、rand 字段）
-                            // 注册回调，DLL 线程每次发送前调用此回调获取新 payload
-                            var clientsArr = clients;
-                            var catsArr = threatCats;
-                            int hitEvery = LogThreatHitEvery > 1 ? LogThreatHitEvery : 71;
-
-                            int intervalMs = LogThreatEps > 0 ? 1000 / LogThreatEps : 0;
-                            _nativeEngine.StartLogSend(catsArr.Length, actualLogClients,
-                                intervalMs, LogMessagesPerClient,
-                                hitEvery: hitEvery, sleepBetweenTypesMs: 50);
-                            RunOnUi(() => AppendStatus($"[NativeEngine] 日志发送已启动（纯C++热路径）: {threatCats.Length}种类型, {actualLogClients}客户端"));
-
-                            // 等待 DLL 日志线程完成（轮询），使任务面板正确显示"执行中"
-                            var ne = _nativeEngine;
+                            int availClients = capturedEngine.RegisteredTotal > 0
+                                ? capturedEngine.RegisteredTotal : LogThreatClientCount;
+                            int logClients = Math.Min(LogThreatClientCount, availClients);
+                            capturedEngine.SendStartLog(
+                                logClients,
+                                LogThreatEps > 0 ? LogThreatEps : 1,
+                                LogMessagesPerClient,
+                                threatCats.Length,
+                                LogThreatHitEvery > 0 ? LogThreatHitEvery : 71);
+                            RunOnUi(() => AppendStatus("威胁检测日志正在子进程中运行，统计数据每2秒更新一次..."));
+                            var capturedCts = _logCts!;
                             workerTasks.Add(Task.Run(async () =>
                             {
-                                while (ne != null && ne.IsLogSendRunning())
+                                try
                                 {
-                                    try { await Task.Delay(2000, _logCts!.Token).ConfigureAwait(false); }
-                                    catch { break; }
+                                    while (!capturedCts.IsCancellationRequested)
+                                    {
+                                        threatOk   = capturedEngine.LogSendOk;
+                                        threatFail = capturedEngine.LogSendFail;
+                                        ReportCombined();
+                                        await Task.Delay(2000, capturedCts.Token).ConfigureAwait(false);
+                                    }
                                 }
+                                catch (OperationCanceledException) { }
+                                // 最终统计
+                                threatOk   = capturedEngine.LogSendOk;
+                                threatFail = capturedEngine.LogSendFail;
+                                ReportCombined();
                             }));
+                        }
+                        else
+                        {
+                            RunOnUi(() => AppendStatus("⚠ 子进程未运行，威胁日志无法统计（请先启动心跳）"));
                         }
                     }
 
@@ -1162,11 +1227,7 @@ namespace SimulatorApp.ViewModels
                 _logCts.Cancel();
                 RunOnUi(() => AppendStatus("已请求停止日志发送任务"));
             }
-            // 停止 NativeEngine 日志发送（保留心跳）
-            if (_nativeEngine != null)
-            {
-                Task.Run(() => { try { _nativeEngine.StopLogSendOnly(); } catch { } });
-            }
+            _processEngine?.SendStopLog();  // 停止子进程中的日志线程
         }
 
         private void BrowseWhitelistFile()

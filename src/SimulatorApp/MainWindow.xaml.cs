@@ -16,6 +16,14 @@ namespace SimulatorApp
                 : "IEG 模拟器";
         }
 
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            // 关闭主窗口时确保子进程被强制终止
+            if (DataContext is ViewModels.MainViewModel vm)
+                vm.Cleanup();
+            base.OnClosing(e);
+        }
+
         private void ShowTcpDiag_Click(object sender, RoutedEventArgs e)
         {
             var vm  = (ViewModels.MainViewModel)DataContext;
@@ -31,6 +39,18 @@ namespace SimulatorApp
         private void ShowRegAdvanced_Click(object sender, RoutedEventArgs e)
         {
             new RegAdvancedWindow { Owner = this, DataContext = DataContext }.ShowDialog();
+        }
+
+        private async void RegReset_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                "将清空已注册客户端列表（Clients.log），\n并将注册设置恢复为默认值。\n\n确认重置？",
+                "确认重置",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.OK) return;
+            if (DataContext is ViewModels.MainViewModel vm)
+                await vm.ResetRegistrationAsync();
         }
 
         private void BtnRawPacket_Click(object sender, RoutedEventArgs e)
