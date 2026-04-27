@@ -233,12 +233,22 @@ static uint32_t RecvHeartbeatReply(SOCKET s) {
 static void HBDoSendRecv(ClientSlot& slot, SOCKET& localSock) {
     InterlockedExchange(&slot.lastReplyOk, 0);
 
-    // v3.9.5.2: 移除心跳回调，C++端直接构建心跳JSON
-    // 对齐老工具心跳格式：[{"ComputerID":"xxx","CMDTYPE":100,"CMDID":1}]
-    char hbJson[512];
+    // 服务器要求完整 CMDContent，简化格式（不含CMDContent）会被静默丢弃
+    char hbJson[768];
     int hbJsonLen = snprintf(hbJson, sizeof(hbJson),
-        "[{\"ComputerID\":\"%s\",\"CMDTYPE\":100,\"CMDID\":1}]",
-        slot.clientId);
+        "[{\"ComputerID\":\"%s\",\"CMDTYPE\":100,\"CMDID\":1"
+        ",\"Domain\":\"test.com\""
+        ",\"CMDContent\":{"
+            "\"dwCPU\":%d,\"dwMem\":%d"
+            ",\"WindowsVersion\":\"Windows 10\""
+            ",\"ComputerName\":\"%s\""
+            ",\"ComputerIP\":\"%s\""
+        "}"
+        ",\"clientLanguage\":\"zh\"}]",
+        slot.clientId,
+        rand() % 100, rand() % 100,
+        slot.clientId,
+        slot.ip[0] ? slot.ip : "10.0.0.1");
     if (hbJsonLen <= 0 || hbJsonLen >= (int)sizeof(hbJson)) return;
 
     // PT打包：zlib压缩 + 48字节头
