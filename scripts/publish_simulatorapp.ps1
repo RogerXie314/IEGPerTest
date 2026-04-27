@@ -104,6 +104,25 @@ if (-not (Test-Path $rpeDll)) {
 }
 Write-Host "RawPacketEngine.dll ready: $([math]::Round((Get-Item $rpeDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
 
+# -- 1d. NativeRunner.exe -------------------------------------------------------
+$nrDir = "$PSScriptRoot\..\src\NativeRunner"
+if ($cmake -and (Test-Path $cmake)) {
+    Write-Host "Building NativeRunner.exe..." -ForegroundColor Cyan
+    if (-not (Test-Path "$nrDir\build")) { New-Item -ItemType Directory "$nrDir\build" | Out-Null }
+    Push-Location "$nrDir\build"
+    & $cmake -G "Visual Studio 16 2019" -A x64 .. | Out-Null
+    & $cmake --build . --config Release | Out-Null
+    Pop-Location
+} else {
+    Write-Warning "CMake not found; skipping NativeRunner rebuild (using existing exe if present)"
+}
+$nrExe = "$nrDir\build\Release\NativeRunner.exe"
+if (-not (Test-Path $nrExe)) {
+    Write-Error "NativeRunner.exe not found — publish aborted"
+    exit 1
+}
+Write-Host "NativeRunner.exe ready: $([math]::Round((Get-Item $nrExe).Length/1KB, 1)) KB" -ForegroundColor Cyan
+
 # -- 2. Publish（DLL 与 EXE 同目录部署）----------------------------------------
 # 清空输出目录，避免增量构建缓存导致 WPF 原生 DLL 丢失
 if (Test-Path $outputPath) {
@@ -141,7 +160,8 @@ if ($LASTEXITCODE -ne 0) {
 Copy-Item $neDll  "$outputPath\NativeEngine.dll"  -Force
 Copy-Item $nsDll  "$outputPath\NativeSender.dll"  -Force
 Copy-Item $rpeDll "$outputPath\RawPacketEngine.dll" -Force
-Write-Host "Copied C++ DLLs to $outputPath" -ForegroundColor Cyan
+Copy-Item $nrExe  "$outputPath\NativeRunner.exe"   -Force
+Write-Host "Copied C++ DLLs and NativeRunner.exe to $outputPath" -ForegroundColor Cyan
 
 # -- 4. 删除 PDB（不随发布包分发，减小体积）------------------------------------
 Remove-Item "$outputPath\SimulatorApp.pdb"  -ErrorAction SilentlyContinue
@@ -152,10 +172,10 @@ Write-Host "Removed PDB files" -ForegroundColor Cyan
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
 
-$requiredDlls = @("NativeEngine.dll", "NativeSender.dll", "RawPacketEngine.dll")
+$requiredDlls = @("NativeEngine.dll", "NativeSender.dll", "RawPacketEngine.dll", "NativeRunner.exe")
 $missingDlls = $requiredDlls | Where-Object { $publishedFiles -notcontains $_ }
 if ($missingDlls) {
-    Write-Error "Missing required DLLs: $($missingDlls -join ', ')"
+    Write-Error "Missing required files: $($missingDlls -join ', ')"
     exit 1
 }
 
