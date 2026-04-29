@@ -253,11 +253,10 @@ namespace SimulatorLib.Workers
             await SendScanStatusAsync(http, baseUrl, c.ClientId, SolidifyUploading, wlFileCount, ct)
                 .ConfigureAwait(false);
 
-            // ② 构造上传 URL（对齐 C++：只使用文件名，去掉 ':'，'\\' → '-'，再 Base64URL 编码）
-            var idB64       = Base64UrlEncode(c.ClientId);
-            var modPath     = BuildModifiedPath(fileName);  // 使用文件名而不是完整路径
-            var pathB64     = Base64UrlEncode(modPath);
-            var uploadUrl   = $"{baseUrl}/USM/upLoadSysWhiteFile.do?id={idB64}&filepath={pathB64}";
+            // ② 构造上传 URL：filepath 参数直接使用文件名（不含路径），与 v3.9.3 修复保持一致
+            var idB64     = Base64UrlEncode(c.ClientId);
+            var pathB64   = Base64UrlEncode(fileName);
+            var uploadUrl = $"{baseUrl}/USM/upLoadSysWhiteFile.do?id={idB64}&filepath={pathB64}";
 
             // ③ 原始 POST + application/octet-stream（对齐老工具 WLCurl::UploadFile）
             //   老工具：CURLOPT_POST=1, Content-Type: application/octet-stream, 文件二进制直接作为请求体，无 multipart 包装

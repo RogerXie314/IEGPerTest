@@ -114,6 +114,11 @@ static std::atomic<int32_t> s_reconnects{0};
 static std::atomic<int64_t> s_logSendOk{0};
 static std::atomic<int64_t> s_logSendFail{0};
 
+// 对齐老工具：全局原子计数器，OutputStats O(1) 直读，不遍历 g_clients[]
+static volatile long g_nHBSending   = 0;  // 当前 connected 客户端数
+static volatile long g_nHBServerAck = 0;  // 当前首次 ack 过的客户端数（bAckCounted 语义）
+static volatile long g_nLogActive   = 0;  // 当前活跃日志线程数
+
 // ============================================================
 //  stdout 互斥锁（防止多线程并发输出时字节级交错）
 // ============================================================
@@ -404,6 +409,31 @@ static int PackPT(const char* json, int jsonLen,
 }
 
 // ============================================================
+//  全局计数器辅助函数（对齐老工具 InterlockedIncrement/Decrement 模式）
+//  单写者原则：每个 slot 的 connected/lastReplyOk 只由其对应 HB 线程写
+// ============================================================
+
+// 设置 slot.connected 并同步更新 g_nHBSending
+static inline void SlotSetConnected(ClientSlot& slot, int val)
+{
+    long old = InterlockedExchange(&slot.connected, (long)val);
+    if (old != (long)val) {
+        if (val) InterlockedIncrement(&g_nHBSending);
+        else     InterlockedDecrement(&g_nHBSending);
+    }
+}
+
+// 设置 slot.lastReplyOk 并同步更新 g_nHBServerAck
+static inline void SlotSetLastReplyOk(ClientSlot& slot, int val)
+{
+    long old = InterlockedExchange(&slot.lastReplyOk, (long)val);
+    if (old != (long)val) {
+        if (val) InterlockedIncrement(&g_nHBServerAck);
+        else     InterlockedDecrement(&g_nHBServerAck);
+    }
+}
+
+// ============================================================
 //  心跳 — 单客户端发送+接收（对齐 NativeEngine.cpp HBDoSendRecv）
 // ============================================================
 
@@ -433,48 +463,27 @@ static void HBDoSendRecv(int idx, ClientSlot& slot, SOCKET& localSock)
     int32_t hbLen = PackPT(hbJson, hbJsonLen, 1, (uint32_t)slot.deviceId, hbBuf, sizeof(hbBuf));
     if (hbLen <= 0) return;
 
-    bool sendOk = SendAll(localSock, hbBuf, hbLen);
-    if (!sendOk) {
-        s_hbSendFail++;
-        closesocket(localSock);
-        localSock = CreateConnection(g_cfg.platformHost.c_str(),
-                                     slot.tcpPort > 0 ? slot.tcpPort : g_cfg.platformPort);
-        if (localSock != INVALID_SOCKET) {
-            InterlockedExchange(&slot.connected, 1);
-            s_reconnects++;
-            if (SendAll(localSock, hbBuf, hbLen)) {
-                s_hbSendOk++;
-            } else {
-                s_hbSendFail++;
-                closesocket(localSock);
-                localSock = INVALID_SOCKET;
-                InterlockedExchange(&slot.connected, 0);
-                s_disconnects++;
-                return;
-            }
-        } else {
-            InterlockedExchange(&slot.connected, 0);
-            s_disconnects++;
-            return;
-        }
-    } else {
+    // 完全对齐老工具：send 失败不重连、不 closesocket，直接进入 recv
+    if (SendAll(localSock, hbBuf, hbLen)) {
         s_hbSendOk++;
+    } else {
+        s_hbSendFail++;
     }
 
     uint32_t cmdId = RecvHeartbeatReply(localSock);
     if (cmdId == 1 || cmdId == 17) {
         s_hbRecvOk++;
-        InterlockedExchange(&slot.lastReplyOk, 1);
+        SlotSetLastReplyOk(slot, 1);
         if (cmdId == 17) {
             // 策略下发通知：通知 C# 发起 HTTPS 策略拉取（对齐 NativeEngine DLL 的 g_onPolicyNotify 回调）
             PrintLine("POLICY|" + std::to_string(idx) + "|" + std::string(slot.clientId));
         }
     } else if (cmdId == 18) {
         s_hbRecvNoReg++;
-        InterlockedExchange(&slot.lastReplyOk, 0);  // NOREGISTER：标记为离线
+        SlotSetLastReplyOk(slot, 0);  // NOREGISTER：标记为离线
         closesocket(localSock);
         localSock = INVALID_SOCKET;
-        InterlockedExchange(&slot.connected, 0);
+        SlotSetConnected(slot, 0);
         s_disconnects++;
         // NOREGISTER：通知 C# 重注册（对齐 NativeEngine DLL 的 g_onNeedReregister 回调）
         // C# 重注册完成后通过 stdin 发回 DEVICEID|idx|newDeviceId，更新内存 DeviceId 后下轮生效
@@ -489,25 +498,20 @@ static void HBDoSendRecv(int idx, ClientSlot& slot, SOCKET& localSock)
         localSock = CreateConnection(g_cfg.platformHost.c_str(),
                                      slot.tcpPort > 0 ? slot.tcpPort : g_cfg.platformPort);
         if (localSock != INVALID_SOCKET) {
-            InterlockedExchange(&slot.connected, 1);
+            SlotSetConnected(slot, 1);
             s_reconnects++;
             if (SendAll(localSock, hbBuf, hbLen)) s_hbSendOk++;
             else {
                 s_hbSendFail++;
                 closesocket(localSock);
                 localSock = INVALID_SOCKET;
-                InterlockedExchange(&slot.connected, 0);
+                SlotSetConnected(slot, 0);
                 s_disconnects++;
             }
         }
     } else {
-        // RecvHeartbeatReply 失败（cmdId==0）：关闭 socket，下轮重连
-        // 同时清零 lastReplyOk，避免长期显示已离线客户端仍"在线"
-        InterlockedExchange(&slot.lastReplyOk, 0);
-        closesocket(localSock);
-        localSock = INVALID_SOCKET;
-        InterlockedExchange(&slot.connected, 0);
-        s_disconnects++;
+        // cmdId==0：recv 超时/失败，对齐老工具 ConsoleHeartbeatThread——无 else 分支
+        // socket 保持打开，lastReplyOk 不变，下轮继续发送，避免日志线程因 INVALID_SOCKET 大量失败
     }
 }
 
@@ -529,7 +533,7 @@ static DWORD WINAPI HBThreadProc(LPVOID param)
         localSock = CreateConnection(g_cfg.platformHost.c_str(),
                                      slot.tcpPort > 0 ? slot.tcpPort : g_cfg.platformPort);
         if (localSock != INVALID_SOCKET) {
-            InterlockedExchange(&slot.connected, 1);
+            SlotSetConnected(slot, 1);
             // 写入全局 socket 数组（日志线程会读取）
             int si = InterlockedIncrement(&g_nSocketCount) - 1;
             if (si < 2000) g_sock[si] = localSock;
@@ -547,11 +551,11 @@ static DWORD WINAPI HBThreadProc(LPVOID param)
             localSock = CreateConnection(g_cfg.platformHost.c_str(),
                                          slot.tcpPort > 0 ? slot.tcpPort : g_cfg.platformPort);
             if (localSock == INVALID_SOCKET) {
-                InterlockedExchange(&slot.connected, 0);
+                SlotSetConnected(slot, 0);
                 s_disconnects++;
                 continue;
             }
-            InterlockedExchange(&slot.connected, 1);
+            SlotSetConnected(slot, 1);
             s_reconnects++;
         }
 
@@ -559,7 +563,8 @@ static DWORD WINAPI HBThreadProc(LPVOID param)
     }
 
     if (localSock != INVALID_SOCKET) closesocket(localSock);
-    InterlockedExchange(&slot.connected, 0);
+    SlotSetConnected(slot, 0);
+    SlotSetLastReplyOk(slot, 0);
     return 0;
 }
 
@@ -685,14 +690,9 @@ static DWORD WINAPI LogThreadProc(LPVOID param)
                                localDeviceId, ptBuf.data(), (int)ptBuf.size());
             if (ptLen <= 0) { s_logSendFail++; break; }
 
-            if (SendAll(sock, ptBuf.data(), ptLen)) {
-                s_logSendOk++;
-            } else {
-                s_logSendFail++;
-                // 对齐老工具：send 失败后直接 break，不关闭 socket，不重连
-                // socket 生命周期 100% 由 HB 线程管理，Log 线程只负责发送
-                break;
-            }
+            // 完全对齐老工具：不检查 send 返回值，直接计为已发送（老工具 sentCount++ 无条件）
+            SendAll(sock, ptBuf.data(), ptLen);
+            s_logSendOk++;
 
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
@@ -702,6 +702,7 @@ static DWORD WINAPI LogThreadProc(LPVOID param)
         if (totalMsg > 0 && msgCount >= totalMsg) break;
         if (g_logCfg.intervalMs > 0) Sleep(g_logCfg.intervalMs);
     }
+    InterlockedDecrement(&g_nLogActive);  // 对齐老工具：线程退出时 Decrement
     return 0;
 }
 
@@ -711,31 +712,19 @@ static DWORD WINAPI LogThreadProc(LPVOID param)
 
 static void OutputStats()
 {
-    int connected = 0, replied = 0;
-    for (int i = 0; i < g_clientCount; i++) {
-        if (g_clients[i].connected)  connected++;
-        if (g_clients[i].lastReplyOk) replied++;
-    }
-    int notConnected = g_clientCount - connected;
-
-    // 计算 LogNotSending（还没完成的日志线程数）
+    // 对齐老工具：O(1) 直读全局原子计数器，不遍历 g_clients[]，不调用 GetExitCodeThread()
+    long sending   = g_nHBSending;
+    long serverAck = g_nHBServerAck;
+    long logActive = g_nLogActive;
     int logCount = (g_logCfg.logClientCount > g_clientCount)
                    ? g_clientCount : g_logCfg.logClientCount;
-    int logActive = 0;
-    for (int i = 0; i < logCount; i++) {
-        if (g_clients[i].logThread) {
-            DWORD ec;
-            if (GetExitCodeThread(g_clients[i].logThread, &ec) && ec == STILL_ACTIVE)
-                logActive++;
-        }
-    }
 
     std::ostringstream statsOss;
     statsOss << "STATS"
              << "|RegisteredTotal=" << g_clientCount
-             << "|HBSending="       << connected
-             << "|HBNotSending="    << notConnected
-             << "|HBServerAck="     << replied
+             << "|HBSending="       << sending
+             << "|HBNotSending="    << (g_clientCount - sending)
+             << "|HBServerAck="     << serverAck
              << "|LogNotSending="   << (logCount - logActive)
              << "|LogSendOk="       << s_logSendOk.load()
              << "|LogSendFail="     << s_logSendFail.load()
@@ -786,17 +775,8 @@ static DWORD WINAPI StdinThreadProc(LPVOID /*param*/)
             PrintLine("INFO|Log threads stopping");
         // STARTLOG|clientCount|eps|totalItems|types|hitEvery — C# 点击"添加任务"时发送
         } else if (line.size() > 9 && line.compare(0, 9, "STARTLOG|") == 0) {
-            // 检查是否已有日志线程在运行（防止重复启动）
-            bool logRunning = false;
-            for (int i = 0; i < g_clientCount; i++) {
-                if (g_clients[i].logThread) {
-                    DWORD ec;
-                    if (GetExitCodeThread(g_clients[i].logThread, &ec) && ec == STILL_ACTIVE) {
-                        logRunning = true; break;
-                    }
-                }
-            }
-            if (logRunning) {
+            // 检查是否已有日志线程在运行（防止重复启动）：O(1) 直读原子计数器
+            if (InterlockedCompareExchange(&g_nLogActive, 0, 0) > 0) {
                 PrintLine("WARN|Log threads already running, STARTLOG ignored");
             } else {
                 try {
@@ -825,6 +805,7 @@ static DWORD WINAPI StdinThreadProc(LPVOID /*param*/)
                         g_logCfg.totalMessages       = lTotal;
                         g_logCfg.sleepBetweenTypesMs = 50;  // 对齐老工具：类型间隔50ms
                         int logCount = (lClientCount > g_clientCount) ? g_clientCount : lClientCount;
+                        InterlockedExchange(&g_nLogActive, 0);  // 重置计数（新任务开始）
                         for (int i = 0; i < logCount; i++) {
                             // 清理旧句柄（线程已退出）
                             if (g_clients[i].logThread) {
@@ -832,7 +813,10 @@ static DWORD WINAPI StdinThreadProc(LPVOID /*param*/)
                                 g_clients[i].logThread = NULL;
                             }
                             HANDLE h = CreateThread(NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
-                            if (h) SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+                            if (h) {
+                                SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+                                InterlockedIncrement(&g_nLogActive);
+                            }
                             g_clients[i].logThread = h;
                         }
                         PrintLine("INFO|Log threads started (" + std::to_string(logCount) + " clients)");
@@ -952,9 +936,13 @@ int main(int argc, char* argv[])
 
         int logCount = (g_cfg.logClientCount > g_clientCount)
                        ? g_clientCount : g_cfg.logClientCount;
+        InterlockedExchange(&g_nLogActive, 0);
         for (int i = 0; i < logCount; i++) {
             HANDLE h = CreateThread(NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
-            if (h) SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+            if (h) {
+                SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+                InterlockedIncrement(&g_nLogActive);
+            }
             g_clients[i].logThread = h;
         }
         PrintLine("INFO|Log threads started (" + std::to_string(logCount) + " clients)");
