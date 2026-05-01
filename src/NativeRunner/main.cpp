@@ -671,6 +671,9 @@ static DWORD WINAPI LogThreadProc(LPVOID param)
     int msgCount   = 0;
     int totalMsg   = g_logCfg.totalMessages;
     int hitEvery   = (g_logCfg.hitEvery > 1) ? g_logCfg.hitEvery : 1;
+    // 对齐老工具：nSendCount 从 0 开始，到第 hitEvery 次（即 msgCount == hitEvery-1）才第一次 hit
+    // 老工具：if (70 <= nSendCount++) { bHit=TRUE; nSendCount=0; } —— 第71条消息才第一次hit
+    int hitCounter = 0;
 
     char    jsonBuf[4096];
     std::vector<uint8_t> ptBuf(8192);
@@ -678,25 +681,38 @@ static DWORD WINAPI LogThreadProc(LPVOID param)
     while (!InterlockedCompareExchange(&g_stopLog, 0, 0)) {
         if (totalMsg > 0 && msgCount >= totalMsg) break;
 
-        bool isHit = (msgCount % hitEvery == 0);
+        // 对齐老工具 hit 逻辑：hitCounter 从 0 递增，到 hitEvery-1 时触发 hit 并归零
+        bool isHit = false;
+        if (hitCounter >= hitEvery - 1) {
+            isHit = true;
+            hitCounter = 0;
+        } else {
+            hitCounter++;
+        }
 
+        bool sendFailed = false;
         for (int t = 0; t < g_logCfg.typeCount; t++) {
             if (InterlockedCompareExchange(&g_stopLog, 0, 0)) break;
 
             int jsonLen = BuildThreatJson(t, isHit, localComputerID, jsonBuf, sizeof(jsonBuf));
-            if (jsonLen <= 0) { s_logSendFail++; break; }
+            if (jsonLen <= 0) { s_logSendFail++; sendFailed = true; break; }
 
             int ptLen = PackPT(jsonBuf, jsonLen, THREAT_CMDID,
                                localDeviceId, ptBuf.data(), (int)ptBuf.size());
-            if (ptLen <= 0) { s_logSendFail++; break; }
+            if (ptLen <= 0) { s_logSendFail++; sendFailed = true; break; }
 
-            // 完全对齐老工具：不检查 send 返回值，直接计为已发送（老工具 sentCount++ 无条件）
-            SendAll(sock, ptBuf.data(), ptLen);
+            // 对齐老工具：send 失败则终止本轮（goto END），下轮重新开始
+            if (!SendAll(sock, ptBuf.data(), ptLen)) {
+                s_logSendFail++;
+                sendFailed = true;
+                break;
+            }
             s_logSendOk++;
 
             if (t < g_logCfg.typeCount - 1 && g_logCfg.sleepBetweenTypesMs > 0)
                 Sleep(g_logCfg.sleepBetweenTypesMs);
         }
+        (void)sendFailed;  // 本轮失败不影响下轮继续，与老工具行为一致
 
         msgCount++;
         if (totalMsg > 0 && msgCount >= totalMsg) break;
@@ -814,7 +830,8 @@ static DWORD WINAPI StdinThreadProc(LPVOID /*param*/)
                             }
                             HANDLE h = CreateThread(NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
                             if (h) {
-                                SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+                                // ABOVE_NORMAL：与心跳线程同级，公平竞争，避免抢占心跳
+                                SetThreadPriority(h, THREAD_PRIORITY_ABOVE_NORMAL);
                                 InterlockedIncrement(&g_nLogActive);
                             }
                             g_clients[i].logThread = h;
@@ -917,6 +934,8 @@ int main(int argc, char* argv[])
         if (InterlockedCompareExchange(&g_stopHB, 0, 0)) break;
         HBGroupArg* args = new HBGroupArg{i, 1};
         HANDLE h = CreateThread(NULL, 0, HBThreadProc, (LPVOID)args, 0, NULL);
+        // 提升至 ABOVE_NORMAL：与日志线程同级，防止 TIME_CRITICAL 日志线程长期抢占
+        if (h) SetThreadPriority(h, THREAD_PRIORITY_ABOVE_NORMAL);
         g_clients[i].hbThread = h;
         if (g_cfg.connectGateMs > 0) Sleep(g_cfg.connectGateMs);
     }
@@ -940,7 +959,8 @@ int main(int argc, char* argv[])
         for (int i = 0; i < logCount; i++) {
             HANDLE h = CreateThread(NULL, 0, LogThreadProc, (LPVOID)(intptr_t)i, 0, NULL);
             if (h) {
-                SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+                // ABOVE_NORMAL：与心跳线程同级，公平竞争，避免抢占心跳
+                SetThreadPriority(h, THREAD_PRIORITY_ABOVE_NORMAL);
                 InterlockedIncrement(&g_nLogActive);
             }
             g_clients[i].logThread = h;
