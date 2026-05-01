@@ -1,5 +1,5 @@
 ﻿# Publish SimulatorApp as a self-contained exe with DLLs in same directory
-# NativeEngine.dll + NativeSender.dll + RawPacketEngine.dll 与 EXE 同目录部署。
+# RawPacketEngine.dll 与 EXE 同目录部署。
 # 版本号需手动修改 SimulatorApp.csproj，脚本不再自动递增。
 $projectPath = "$PSScriptRoot\..\src\SimulatorApp\SimulatorApp.csproj"
 $outputPath  = "$PSScriptRoot\..\artifacts\SimulatorAppPublish"
@@ -47,45 +47,7 @@ if (-not $cmake) {
     Write-Warning "未找到 CMake，将跳过 C++ DLL 编译（使用已存在的 DLL）"
 }
 
-# -- 1a. NativeEngine.dll -------------------------------------------------------
-$neDir = "$PSScriptRoot\..\src\NativeEngine"
-if ($cmake -and (Test-Path $cmake)) {
-    Write-Host "Building NativeEngine.dll..." -ForegroundColor Cyan
-    Push-Location "$neDir\build"
-    & $cmake --build . --config Release | Out-Null
-    Pop-Location
-} else {
-    Write-Warning "CMake not found; skipping NativeEngine rebuild (using existing dll if present)"
-}
-$neDll = "$neDir\build\Release\NativeEngine.dll"
-if (-not (Test-Path $neDll)) {
-    Write-Error "NativeEngine.dll not found — publish aborted"
-    exit 1
-}
-Write-Host "NativeEngine.dll ready: $([math]::Round((Get-Item $neDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
-
-# -- 1b. NativeSender.dll -------------------------------------------------------
-# CMakeLists.txt 输出到 build/Release；CMakeCache.txt 存在时强制重新配置以确保路径正确。
-$nsDir = "$PSScriptRoot\..\src\NativeSender"
-if ($cmake -and (Test-Path $cmake)) {
-    Write-Host "Building NativeSender.dll..." -ForegroundColor Cyan
-    if (-not (Test-Path "$nsDir\build")) { New-Item -ItemType Directory "$nsDir\build" | Out-Null }
-    # 每次重新配置确保 CMakeCache 中的输出路径与 CMakeLists.txt 一致
-    Push-Location "$nsDir\build"
-    & $cmake -G "Visual Studio 16 2019" -A x64 .. | Out-Null
-    & $cmake --build . --config Release | Out-Null
-    Pop-Location
-} else {
-    Write-Warning "CMake not found; skipping NativeSender rebuild (using existing dll if present)"
-}
-$nsDll = "$nsDir\build\Release\NativeSender.dll"
-if (-not (Test-Path $nsDll)) {
-    Write-Error "NativeSender.dll not found — publish aborted"
-    exit 1
-}
-Write-Host "NativeSender.dll ready: $([math]::Round((Get-Item $nsDll).Length/1KB, 1)) KB" -ForegroundColor Cyan
-
-# -- 1c. RawPacketEngine.dll -------------------------------------------------------
+# -- 1a. RawPacketEngine.dll -------------------------------------------------------
 $rpeDir = "$PSScriptRoot\..\src\RawPacketEngine"
 if ($cmake -and (Test-Path $cmake)) {
     Write-Host "Building RawPacketEngine.dll..." -ForegroundColor Cyan
@@ -157,8 +119,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # -- 3. 手动复制 C++ DLL（PublishSingleFile 不会自动打包 None 项）--------------
-Copy-Item $neDll  "$outputPath\NativeEngine.dll"  -Force
-Copy-Item $nsDll  "$outputPath\NativeSender.dll"  -Force
 Copy-Item $rpeDll "$outputPath\RawPacketEngine.dll" -Force
 Copy-Item $nrExe  "$outputPath\NativeRunner.exe"   -Force
 Write-Host "Copied C++ DLLs and NativeRunner.exe to $outputPath" -ForegroundColor Cyan
@@ -172,7 +132,7 @@ Write-Host "Removed PDB files" -ForegroundColor Cyan
 $publishedFiles = Get-ChildItem $outputPath | Select-Object -ExpandProperty Name
 Write-Host "Published files: $($publishedFiles -join ', ')" -ForegroundColor Cyan
 
-$requiredDlls = @("NativeEngine.dll", "NativeSender.dll", "RawPacketEngine.dll", "NativeRunner.exe")
+$requiredDlls = @("RawPacketEngine.dll", "NativeRunner.exe")
 $missingDlls = $requiredDlls | Where-Object { $publishedFiles -notcontains $_ }
 if ($missingDlls) {
     Write-Error "Missing required files: $($missingDlls -join ', ')"

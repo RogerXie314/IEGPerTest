@@ -4,9 +4,9 @@
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
-    <Version>3.9.7</Version>
-    <AssemblyVersion>3.9.7</AssemblyVersion>
-    <FileVersion>3.9.7</FileVersion>
+    <Version>3.9.8</Version>
+    <AssemblyVersion>3.9.8</AssemblyVersion>
+    <FileVersion>3.9.8</FileVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
@@ -14,16 +14,6 @@
   </ItemGroup>
   <!-- C++ DLL 闂侇喓鍔庣拋鏌ユ晬濮樺磭缈婚柛鎴濇惈閸╁矂宕ュ畝鈧ú鎷屻亹閺囶亞绀夐弶鈺傚姌椤㈡垿寮捄铏圭畱濡炪倛顕ч悺銊╁捶?-->
   <ItemGroup>
-    <None Include="..\..\src\NativeEngine\build\Release\NativeEngine.dll" Condition="Exists('..\..\src\NativeEngine\build\Release\NativeEngine.dll')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <Link>NativeEngine.dll</Link>
-    </None>
-    <None Include="..\..\src\NativeSender\build\Release\NativeSender.dll" Condition="Exists('..\..\src\NativeSender\build\Release\NativeSender.dll')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <Link>NativeSender.dll</Link>
-    </None>
     <None Include="..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll" Condition="Exists('..\..\src\RawPacketEngine\build\Release\RawPacketEngine.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
