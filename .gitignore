@@ -13,3 +13,26 @@ temp/
 .venv/
 src/NativeEngine/build/
 src/NativeSender/build/
+src/RawPacketEngine/build/
+
+# Whitelist: WLServerTest source code (老工具 V5.0 改造分支 wlservertest-v5)
+!external/
+external/*
+!external/IEG_Code/
+external/IEG_Code/*
+!external/IEG_Code/code/
+external/IEG_Code/code/*
+!external/IEG_Code/code/WLServerTest/
+external/IEG_Code/code/WLServerTest/*
+!external/IEG_Code/code/WLServerTest/*.cpp
+!external/IEG_Code/code/WLServerTest/*.h
+!external/IEG_Code/code/WLServerTest/*.rc
+!external/IEG_Code/code/WLServerTest/*.vcxproj
+!external/IEG_Code/code/WLServerTest/*.vcxproj.filters
+!external/IEG_Code/code/WLServerTest/*.sln
+!external/IEG_Code/code/WLServerTest/*.ini
+!external/IEG_Code/code/WLServerTest/res/
+external/IEG_Code/code/WLServerTest/res/*
+!external/IEG_Code/code/WLServerTest/res/*.ico
+!external/IEG_Code/code/WLServerTest/res/*.rc2
+!external/IEG_Code/code/WLServerTest/res/*.manifest
