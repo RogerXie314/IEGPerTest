@@ -559,6 +559,13 @@ BOOL CSendInfoToServer::CloseConnection(SOCKET sockClose)
 
 BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szClientID,CString szComputerIP, CString szVersion, CString szOS)
 {
+	// v5.2: WLNetComm.dll 加载失败防当
+	CWLNetCommApi* pNetApi = CWLNetCommApi::instance();
+	if (!pNetApi || !pNetApi->pEnableTLSv1 || !pNetApi->pdoPost)
+	{
+		WriteError(_T("WLNetComm.dll 未加载（缺失或位数不匹配），请把对应 WLNetComm.dll 拷至 exe 同目录"));
+		return FALSE;
+	}
 	BOOL bResult = FALSE;
 
 	CString str_URL;

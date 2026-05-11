@@ -198,6 +198,7 @@
 #define IDC_STATIC_REG_NOTE            1152
 #define IDC_STATIC_TASK_LABEL_HB       1153
 #define IDC_STATIC_TASK_LABEL_LOG      1154
+#define IDC_EDIT_HB_DURATION         1208
 #define IDC_GRP_PLUG                    1155
 #define IDC_GRP_EXT                     1156
 #define IDC_GRP_THREAT                  1157
@@ -224,7 +225,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        129
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1145
+#define _APS_NEXT_CONTROL_VALUE         1209
 #define _APS_NEXT_DIALOG_VALUE          204
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

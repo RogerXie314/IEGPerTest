@@ -97,7 +97,7 @@ END
 IDD_WLSERVERTEST_DIALOG DIALOGEX 0, 0, 820, 510
 STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_GROUP | DS_SETFONT | DS_MODALFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "WLServerTest V5.0 - 注册/心跳/日志/白名单 压测工具"
+CAPTION "WLServerTest V5.2 - 注册/心跳/日志/白名单 压测工具"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "WLServerTest  注册 / 心跳 / 日志(HTTPS+TCP) / 白名单",IDC_STATIC,"Static",0x50020000,5,5,560,10
@@ -182,6 +182,8 @@ BEGIN
     CONTROL         "开始心跳",IDC_BUTTON_HB_START,"Button",0x50010000,313,108,60,14
     CONTROL         "停  止",IDC_BUTTON_HB_STOP,"Button",0x50010000,2000,2000,52,14
     CONTROL         "TCP (Windows)",IDC_STATIC_HB_BADGE,"Static",0x50020000,313,126,155,8
+    CONTROL         "心跳时长(分钟):",IDC_STATIC,"Static",0x50020000,313,142,60,8
+    CONTROL         "",IDC_EDIT_HB_DURATION,"Edit",0x50810080,376,141,52,12
     CONTROL         "程序白名单上传设置",IDC_STATIC,"Button",0x50000007,305,182,178,88
     CONTROL         "",IDC_WL_FILE_PATH_EDIT,"Edit",0x50810880,313,196,126,12
     CONTROL         "选择文件",IDC_WL_FILE_CHOOSE_BUTTON,"Button",0x50010000,441,194,42,14
@@ -288,8 +290,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,0,0,0
- PRODUCTVERSION 5,0,0,0
+ FILEVERSION 5,2,0,0
+ PRODUCTVERSION 5,2,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -305,12 +307,12 @@ BEGIN
         BLOCK "080403a8"
         BEGIN
             VALUE "CompanyName", "深圳市腾讯计算机系统有限公司"
-            VALUE "FileVersion", "5, 0, 0, 0"
+            VALUE "FileVersion", "5, 2, 0, 0"
             VALUE "InternalName", "WLServerTest.exe"
             VALUE "LegalCopyright", "版权所有 (C) 2015-2026"
             VALUE "OriginalFilename", "WLServerTest.exe"
             VALUE "ProductName", "终端安全管理"
-            VALUE "ProductVersion", "5, 0, 0, 0"
+            VALUE "ProductVersion", "5, 2, 0, 0"
         END
     END
     BLOCK "VarFileInfo"

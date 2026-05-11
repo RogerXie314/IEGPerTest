@@ -36,3 +36,5 @@ external/IEG_Code/code/WLServerTest/res/*
 !external/IEG_Code/code/WLServerTest/res/*.ico
 !external/IEG_Code/code/WLServerTest/res/*.rc2
 !external/IEG_Code/code/WLServerTest/res/*.manifest
+
+dump/

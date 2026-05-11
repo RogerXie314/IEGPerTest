@@ -807,6 +807,7 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
     DDX_Control(pDX, IDC_COMBO_HEARTBEAT_TotalMimutes, m_comHB_TotalMinutes);
+    DDX_Control(pDX, IDC_EDIT_HB_DURATION, m_editHbDuration);
 
 
 
@@ -2443,7 +2444,15 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	m_comHB_TotalMinutes.SetCurSel(0);
+	m_comHB_TotalMinutes.AddString(_T("14400")); // r8: 10 天，作为新UI默认
+
+
+
+
+	m_comHB_TotalMinutes.SetCurSel(m_comHB_TotalMinutes.GetCount() - 1); // r8: 默认选 14400 分钟 (10 天)
+
+	// v5.2: 心跳时长输入框默认 7200 分钟
+	if (m_editHbDuration.GetSafeHwnd()) m_editHbDuration.SetWindowText(_T("7200"));
 
 
 
@@ -14031,7 +14040,13 @@ void CWLServerTestDlg::OnBnClickedHbStart()
 			m_comHB_ClientCount.AddString(strCC);
 			m_comHB_ClientCount.SetCurSel(0);
 			m_comHB_TotalMinutes.ResetContent();
-			m_comHB_TotalMinutes.AddString(_T("9999"));
+			CString strHbDur;
+			m_editHbDuration.GetWindowText(strHbDur);
+			int nHbDur = _ttoi(strHbDur);
+			if (nHbDur <= 0) nHbDur = 7200;
+			CString strHbDurOut;
+			strHbDurOut.Format(_T("%d"), nHbDur);
+			m_comHB_TotalMinutes.AddString(strHbDurOut);
 			m_comHB_TotalMinutes.SetCurSel(0);
 		}
 		GetDlgItem(IDC_BUTTON_HEARTBEAT_AddTask)->SendMessage(BM_CLICK);

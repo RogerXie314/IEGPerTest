@@ -32,7 +32,7 @@ extern CWLServerTestDlg* g_WLServerTestDlg;
 // ������־�̲߳����ṹ��
 typedef struct _LOG_SENDER_THREAD_ARG
 {
-	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
+	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
 	int				iThisClient_VectorIndex;       //ȫ��g_vecClinet�е�index 
 	int				iThisTask_SelectedLogType;
 	int				iMsgLog_ClientCount_X_EachClientTotalCount; // Ҫ���͵���־����
@@ -50,7 +50,7 @@ typedef struct _LOG_SENDER_THREAD_ARG
 #define HB_CLIENTCOUNT_PER_THREAD 1
 typedef struct _HB_SENDER_THREAD_ARG
 {
-	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
+	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
 	int				iHBIntervalMilSec;       //ȫ��g_vecClinet�е�index 
 
 	int				iHBTotalMinutes;
@@ -95,6 +95,7 @@ private:
 	CComboBox m_comHB_ClientCount;
 	CComboBox m_comHB_Interval;
 	CComboBox m_comHB_TotalMinutes;
+	CEdit     m_editHbDuration; // v5.2: 心跳时长(分钟) 输入框
 	CComboBox m_comAppLog_Task_ClientCount;
 	CComboBox m_comAppLog_Task_EachClientTotalItems;
 	CComboBox m_comAppLog_Task_EachClientPerSecondItems;
@@ -245,10 +246,10 @@ public:
     CButton     m_catNonWhitelist;
     CButton     m_catWlTamper;
     CButton     m_catSysGuard;
-    // ���? & ���� (2��)
+    // ���? & ���� (2��)
     CButton     m_catUDiskPlug;
     CButton     m_catNetAdapter;
-    // �������? (9��)
+    // �������? (9��)
     CButton     m_catExtUsbPort;
     CButton     m_catExtWpd;
     CButton     m_catExtCdrom;
@@ -258,7 +259,7 @@ public:
     CButton     m_catExtBt;
     CButton     m_catExtSerial;
     CButton     m_catExtParallel;
-    // ��в���? TCP (5��)
+    // ��в���? TCP (5��)
     CButton     m_catThreatProc;
     CButton     m_catThreatReg;
     CButton     m_catThreatFile;
@@ -298,7 +299,7 @@ public:
     CStatic     m_stRegRound;
     CStatic     m_stHbResp;
 
-    // --- ��־�����? ---
+    // --- ��־�����? ---
     CEdit       m_editLogOutput;
 
     // --- OS��Ϣ/�汾 ��̬�ı� ---
@@ -325,7 +326,7 @@ public:
     // Phase 3: New methods
     // ===================================================
 
-    // ����־�����ĩβ׷���ı����̰߳��?��ͨ�� PostMessage��
+    // ����־�����ĩβ׷���ı����̰߳��?��ͨ�� PostMessage��
     void AppendLogOutput(LPCTSTR szMsg);
 
     // ����ͳ�� Static ��ʾ
