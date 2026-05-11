@@ -4712,7 +4712,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-            g_nTotalRegistered_ClientCount++;
+            ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: 并发原子递增，修复多线程注册时计数丢更新
 
 
 
@@ -5692,7 +5692,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?ᰴ�?
 
 
 
-                g_nTotalRegistered_ClientCount++; //?ᰴťǿ�?10 100 ...
+                ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: 并发原子递增
 
 
 
