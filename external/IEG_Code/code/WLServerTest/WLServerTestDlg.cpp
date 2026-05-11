@@ -9267,10 +9267,8 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 7, _T(""));
 
-
-
-
-
+		// r8: 日志任务自然/被动结束时，把"状态"列置为"已停止"
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("已停止"));
 
 
 
@@ -13975,7 +13973,7 @@ void CWLServerTestDlg::UpdateOsInfoText()
 		m_comboClientVersion.GetLBText(nSel, strVer);
 	CString strOS = bLinux ? _T("Linux centos7") : _T("Windows 10");
 	CString strInfo;
-	strInfo.Format(_T("OS: %s   Ver: %s"), (LPCTSTR)strOS, (LPCTSTR)strVer);
+	strInfo.Format(_T("OS: %s\r\nVer: %s"), (LPCTSTR)strOS, (LPCTSTR)strVer); // r8: 2-line in narrow box
 	m_staticOsInfo.SetWindowText(strInfo);
 }
 
@@ -13993,7 +13991,7 @@ void CWLServerTestDlg::LoadClientVersionCombo()
 	{
 		strList = CProfileConfig::GetProfileConfigInstance()->ReadWindowsVersionList_FromIni();
 		if (strList.IsEmpty())
-			strList = _T("V300R011C01B090|V300R011C01B030|V300R006C05B270|V300R006C02B090");
+			strList = _T("V300R011C01B090|V300R006C05B270|V300R006C02B090"); // r8: remove B030
 	}
 	else
 	{
@@ -14138,36 +14136,96 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 	m_editTcpHit.GetWindowText(strTcpHit);
 
 	int nTotal    = _ttoi(strTotal);
+	int nHttpsC   = _ttoi(strHttpsC);
 	int nHttpsEps = _ttoi(strHttpsEps);
+	int nTcpC     = _ttoi(strTcpC);
 	int nTcpEps   = _ttoi(strTcpEps);
 
-	m_iThisTask_SelectedOperationType = (int)dwTypes;
+	// r7: 分离双通道——HTTPS 短连接（低 26 位）与 TCP 长连接威胁检测（高 5 位 0x7C000000）
+	BOOL bHttpsLog = (dwTypes & 0x03FFFFFF) != 0;
+	BOOL bTcpLog   = (dwTypes & 0x7C000000) != 0;
+	BOOL bHttpsRun = bHttpsLog && (nHttpsC > 0);
+	BOOL bTcpRun   = bTcpLog   && (nTcpC   > 0);
+
+	if (!bHttpsRun && !bTcpRun)
+	{
+		if (bHttpsLog && !bTcpLog)
+			AfxMessageBox(_T("请填写 HTTPS 客户端数（短连接日志）"));
+		else if (!bHttpsLog && bTcpLog)
+			AfxMessageBox(_T("请填写 TCP 客户端数（威胁检测长连接日志）"));
+		else
+			AfxMessageBox(_T("请填写至少一个通道的客户端数"));
+		return;
+	}
 
 	CString sTmp;
-	sTmp.Format(_T("%d"), max(_ttoi(strHttpsC), _ttoi(strTcpC)));
-	m_comAppLog_Task_ClientCount.ResetContent();
-	m_comAppLog_Task_ClientCount.AddString(sTmp);
-	m_comAppLog_Task_ClientCount.SetCurSel(0);
-
 	sTmp.Format(_T("%d"), nTotal);
 	m_comAppLog_Task_EachClientTotalItems.ResetContent();
 	m_comAppLog_Task_EachClientTotalItems.AddString(sTmp);
 	m_comAppLog_Task_EachClientTotalItems.SetCurSel(0);
 
-	sTmp.Format(_T("%d"), max(1, max(nHttpsEps, nTcpEps)));
-	m_comAppLog_Task_EachClientPerSecondItems.ResetContent();
-	m_comAppLog_Task_EachClientPerSecondItems.AddString(sTmp);
-	m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
+	// ── Channel 1: HTTPS 短连接 ──
+	if (bHttpsRun)
+	{
+		sTmp.Format(_T("%d"), nHttpsC);
+		m_comAppLog_Task_ClientCount.ResetContent();
+		m_comAppLog_Task_ClientCount.AddString(sTmp);
+		m_comAppLog_Task_ClientCount.SetCurSel(0);
 
-	// Map new category bits to legacy checkboxes
-	BOOL bHttpsLog = (dwTypes & 0x03FFFFFF) != 0;
-	BOOL bTcpLog   = (dwTypes & 0x7C000000) != 0;
-	((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(bHttpsLog ? 1 : 0);
-	((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(bTcpLog ? 1 : 0);
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
-	((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
-	((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
-	AppendLogOutput(_T("[LOG] Task added"));
+		sTmp.Format(_T("%d"), max(1, nHttpsEps));
+		m_comAppLog_Task_EachClientPerSecondItems.ResetContent();
+		m_comAppLog_Task_EachClientPerSecondItems.AddString(sTmp);
+		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
+
+		// r8: 把新位图(dwTypes)映射到老 hidden checkbox，AddTask 据此再 OR 回 CLIENT_MSGLOG_*
+		BOOL bOPT  = (dwTypes & 0x00000001) ? TRUE : FALSE; // ClientOps
+		BOOL bNWL  = (dwTypes & 0x00001000) ? TRUE : FALSE; // NonWhitelist
+		BOOL bDP   = (dwTypes & 0x00000008) ? TRUE : FALSE; // FileProtect → DATAPROTECT
+		BOOL bSP   = (dwTypes & 0x00000010) ? TRUE : FALSE; // RegProtect  → SYSPROTECT
+		BOOL bVIR  = (dwTypes & 0x00000040) ? TRUE : FALSE; // VirusAlert
+		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(bOPT ? 1 : 0);
+		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(bNWL ? 1 : 0);
+		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(bDP  ? 1 : 0);
+		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(bSP  ? 1 : 0);
+		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(bVIR ? 1 : 0);
+		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
+		// 未实现的位（OS/Outbound/Mandatory/Usb/UsbWarning/Firewall/Vuln/ProcAudit/WlTamper/SysGuard/UDiskPlug/NetAdapter/Ext*）提示
+		DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000001 | 0x00001000 | 0x00000008 | 0x00000010 | 0x00000040);
+		if (dwUnsupported != 0)
+		{
+			CString sWarn; sWarn.Format(_T("[LOG][WARN] 以下分类暂未实现 HTTPS 上报 (bits=0x%08X)"), dwUnsupported);
+			AppendLogOutput(sWarn);
+		}
+		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+		// 还原 hidden checkbox 防止下次复选
+		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
+		AppendLogOutput(_T("[LOG] HTTPS 通道任务已添加"));
+	}
+
+	// ── Channel 2: TCP 威胁检测长连接 ──
+	if (bTcpRun)
+	{
+		sTmp.Format(_T("%d"), nTcpC);
+		m_comAppLog_Task_ClientCount.ResetContent();
+		m_comAppLog_Task_ClientCount.AddString(sTmp);
+		m_comAppLog_Task_ClientCount.SetCurSel(0);
+
+		sTmp.Format(_T("%d"), max(1, nTcpEps));
+		m_comAppLog_Task_EachClientPerSecondItems.ResetContent();
+		m_comAppLog_Task_EachClientPerSecondItems.AddString(sTmp);
+		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
+
+		m_iThisTask_SelectedOperationType = (int)((dwTypes & 0x7C000000) | CLIENT_MSGLOG_THREAT);
+		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(1);
+		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
+		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
+	}
 }
 
 void CWLServerTestDlg::OnBnClickedLogStop()
@@ -14220,8 +14278,9 @@ void CWLServerTestDlg::OnBnClickedWlPreview()
 
 void CWLServerTestDlg::OnBnClickedVerMgmt()
 {
-	// v19: ʼ结束Windowsģʽ�򿪰汾结束���Ի结束ڿ�ͨ��Radio结束�л�
-	CVersionManagementDlg dlg(FALSE, this);
+	// r7: 根据当前主界面 OS 选择打开对应的版本管理弹窗
+	BOOL bLinux = (m_radioOsLinux.GetCheck() == BST_CHECKED);
+	CVersionManagementDlg dlg(bLinux, this);
 	dlg.DoModal();
 	LoadClientVersionCombo();
 }

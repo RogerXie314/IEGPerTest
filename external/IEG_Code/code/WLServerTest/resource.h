@@ -202,6 +202,16 @@
 #define IDC_GRP_EXT                     1156
 #define IDC_GRP_THREAT                  1157
 
+// --- VersionManagementDlg (r7: 专属 ID，避免 IDC_STATIC+N hack) ---
+#define IDC_VER_RADIO_WIN               1200
+#define IDC_VER_RADIO_LINUX             1201
+#define IDC_VER_LIST                    1202
+#define IDC_VER_EDIT_NEW                1203
+#define IDC_VER_BTN_ADD                 1204
+#define IDC_VER_BTN_DELETE              1205
+#define IDC_VER_BTN_RESET               1206
+#define IDC_VER_BTN_SAVE                1207
+
 // --- Sub-dialogs ---
 #define IDD_LOG_HELP                    200
 #define IDD_WL_PREVIEW                  201

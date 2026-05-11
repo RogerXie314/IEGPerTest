@@ -174,13 +174,13 @@ BEGIN
     CONTROL         "客户端操作系统",IDC_STATIC,"Button",0x50000007,305,20,178,50
     CONTROL         "Windows",IDC_RADIO_OS_WINDOWS,"Button",0x50030009,313,36,62,10
     CONTROL         "Linux (CentOS 7)",IDC_RADIO_OS_LINUX,"Button",0x50010009,380,36,100,10
-    CONTROL         "",IDC_STATIC_OSINFO_TEXT,"Static",0x50020000,313,50,162,8
+    CONTROL         "",IDC_STATIC_OSINFO_TEXT,"Static",0x50020000,313,50,170,20
     CONTROL         "心跳设置",IDC_STATIC,"Button",0x50000007,305,74,178,104
     CONTROL         "心跳间隔(ms):",IDC_STATIC,"Static",0x50020000,313,90,50,8
     CONTROL         "",IDC_EDIT_HB_INTERVAL,"Edit",0x50810080,366,89,52,10
     CONTROL         "策略接收",IDC_CHECK_POLICY_RECV,"Button",0x50010003,427,90,48,10
     CONTROL         "开始心跳",IDC_BUTTON_HB_START,"Button",0x50010000,313,108,60,14
-    CONTROL         "停  止",IDC_BUTTON_HB_STOP,"Button",0x50010000,379,108,52,14
+    CONTROL         "停  止",IDC_BUTTON_HB_STOP,"Button",0x50010000,2000,2000,52,14
     CONTROL         "TCP (Windows)",IDC_STATIC_HB_BADGE,"Static",0x50020000,313,126,155,8
     CONTROL         "程序白名单上传设置",IDC_STATIC,"Button",0x50000007,305,182,178,88
     CONTROL         "",IDC_WL_FILE_PATH_EDIT,"Edit",0x50810880,313,196,126,12
@@ -480,15 +480,15 @@ CAPTION "客户端版本管理"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "操作系统类型",IDC_STATIC,"Button",0x50000007,7,7,306,30
-    CONTROL         "Windows",19,"Button",0x50030009,20,20,70,10
-    CONTROL         "Linux (CentOS 7)",20,"Button",0x50010009,110,20,100,10
+    CONTROL         "Windows",IDC_VER_RADIO_WIN,"Button",0x50030009,20,20,70,10
+    CONTROL         "Linux (CentOS 7)",IDC_VER_RADIO_LINUX,"Button",0x50010009,110,20,100,10
     CONTROL         "版本列表",IDC_STATIC,"Button",0x50000007,7,42,306,240
-    CONTROL         "",21,"ListBox",0x50A10001,15,56,290,212
+    CONTROL         "",IDC_VER_LIST,"ListBox",0x50A10041,15,56,290,212
     CONTROL         "添加版本",IDC_STATIC,"Button",0x50000007,7,288,306,40
-    CONTROL         "",22,"Edit",0x50810080,15,300,230,14
-    CONTROL         "添加",23,"Button",0x50010000,252,299,54,14
-    CONTROL         "删除选中",24,"Button",0x50010000,7,334,70,14
-    CONTROL         "恢复默认",25,"Button",0x50010000,85,334,70,14
-    CONTROL         "保  存",26,"Button",0x50010001,163,334,70,14
+    CONTROL         "",IDC_VER_EDIT_NEW,"Edit",0x50810080,15,300,230,14
+    CONTROL         "添加",IDC_VER_BTN_ADD,"Button",0x50010000,252,299,54,14
+    CONTROL         "删除选中",IDC_VER_BTN_DELETE,"Button",0x50010000,7,334,70,14
+    CONTROL         "恢复默认",IDC_VER_BTN_RESET,"Button",0x50010000,85,334,70,14
+    CONTROL         "保  存",IDC_VER_BTN_SAVE,"Button",0x50010001,163,334,70,14
     CONTROL         "关  闭",IDOK,"Button",0x50010000,241,334,70,14
 END

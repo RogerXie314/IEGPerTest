@@ -3,11 +3,12 @@
 #include "WLServerTest.h"
 #include "VersionManagementDlg.h"
 #include "ProfileConfig.h"
+#include "resource.h"
 
 IMPLEMENT_DYNAMIC(CVersionManagementDlg, CDialog)
 
 const LPCTSTR CVersionManagementDlg::s_szDefaultWin =
-    _T("V300R011C01B090|V300R011C01B030|V300R006C05B270|V300R006C02B090");
+    _T("V300R011C01B090|V300R006C05B270|V300R006C02B090");
 const LPCTSTR CVersionManagementDlg::s_szDefaultLinux =
     _T("V300R011C11B060-Redhat7.x-x64");
 
@@ -24,19 +25,19 @@ CVersionManagementDlg::~CVersionManagementDlg()
 void CVersionManagementDlg::DoDataExchange(CDataExchange* pDX)
 {
     CDialog::DoDataExchange(pDX);
-    DDX_Control(pDX, IDC_STATIC + 20, m_radioWin);
-    DDX_Control(pDX, IDC_STATIC + 21, m_radioLinux);
-    DDX_Control(pDX, IDC_STATIC + 22, m_listVersions);
-    DDX_Control(pDX, IDC_STATIC + 23, m_editNew);
+    DDX_Control(pDX, IDC_VER_RADIO_WIN,   m_radioWin);
+    DDX_Control(pDX, IDC_VER_RADIO_LINUX, m_radioLinux);
+    DDX_Control(pDX, IDC_VER_LIST,        m_listVersions);
+    DDX_Control(pDX, IDC_VER_EDIT_NEW,    m_editNew);
 }
 
 BEGIN_MESSAGE_MAP(CVersionManagementDlg, CDialog)
-    ON_BN_CLICKED(IDC_STATIC + 20, &CVersionManagementDlg::OnBnClickedOsWin)
-    ON_BN_CLICKED(IDC_STATIC + 21, &CVersionManagementDlg::OnBnClickedOsLinux)
-    ON_BN_CLICKED(IDC_STATIC + 24, &CVersionManagementDlg::OnBnClickedAdd)
-    ON_BN_CLICKED(IDC_STATIC + 25, &CVersionManagementDlg::OnBnClickedDelete)
-    ON_BN_CLICKED(IDC_STATIC + 26, &CVersionManagementDlg::OnBnClickedReset)
-    ON_BN_CLICKED(IDC_STATIC + 27, &CVersionManagementDlg::OnBnClickedSave)
+    ON_BN_CLICKED(IDC_VER_RADIO_WIN,   &CVersionManagementDlg::OnBnClickedOsWin)
+    ON_BN_CLICKED(IDC_VER_RADIO_LINUX, &CVersionManagementDlg::OnBnClickedOsLinux)
+    ON_BN_CLICKED(IDC_VER_BTN_ADD,     &CVersionManagementDlg::OnBnClickedAdd)
+    ON_BN_CLICKED(IDC_VER_BTN_DELETE,  &CVersionManagementDlg::OnBnClickedDelete)
+    ON_BN_CLICKED(IDC_VER_BTN_RESET,   &CVersionManagementDlg::OnBnClickedReset)
+    ON_BN_CLICKED(IDC_VER_BTN_SAVE,    &CVersionManagementDlg::OnBnClickedSave)
 END_MESSAGE_MAP()
 
 BOOL CVersionManagementDlg::OnInitDialog()
