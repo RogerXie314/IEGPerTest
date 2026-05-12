@@ -142,41 +142,69 @@ config.json                   # 配置文件
 
 ---
 
-## 📁 仓库结构
+## 🌿 仓库分支结构（重要）
+
+`main` 上的代码 ≠ 全部架构。三套压测/模拟实现分别活在不同分支：
+
+| 分支 | 主推工具 | 架构 | 最新版本 |
+|---|---|---|---|
+| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V5.5** |
+| [`simulator-subprocess`](../../tree/simulator-subprocess) | SimulatorApp | WPF + NativeRunner.exe 子进程（stdio 管道 IPC） | v3.9.7 |
+| [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) | SimulatorApp | WPF + NativeSender.dll 同进程（P/Invoke） | v3.7.31 |
+
+> `main` 上根目录虽然还能看到 `src/`（SimulatorApp 代码），但这些代码**仅作为对照参考**，不再随 `main` 演进。要编译/修改 SimulatorApp，请切到对应架构分支。SimulatorApp 相关的构建脚本（sln / build_all.bat / publish 脚本等）已搬到 [`archive/simulator-app/`](archive/simulator-app/)。
+
+---
+
+## 📁 仓库结构（main 分支）
 
 ```
-external/IEG_Code/code/    # 老 IEG 代码树（含 WLServerTest 工程）
-  └── WLServerTest/        # MFC 压测工具源码
-src/
-  ├── SimulatorApp/        # C# WPF 主应用
-  ├── SimulatorLib/        # 业务逻辑（Workers/Protocol/Network/...）
-  ├── NativeEngine/        # C++ DLL：心跳引擎
-  ├── NativeRunner/        # C++ 独立进程：管道 IPC 心跳/日志
-  ├── NativeSender/        # C++ DLL：PT 协议打包
-  ├── RawPacketEngine/     # C++ DLL：Npcap 原始报文发送
-  ├── SimulatorRunner/     # CLI 运行器
-  └── TestReceiver/        # 测试接收服务器
-tools/                     # Python 白名单解析工具
-scripts/                   # 构建与发布脚本
-docs/                      # 项目文档（含 聊天记录.md、项目实施文档.md）
+README.md                       # 本文件
+CHANGELOG_v5.5.md               # WLServerTest V5.5 变更日志
+CHANGELOG_v5.2.md               # WLServerTest V5.2 变更日志
+config.ini.example              # WLServerTest 配置样例
+
+external/                       # WLServerTest 源码 + 老 IEG 代码参考库
+  ├── IEG_Code/code/
+  │     ├── WLServerTest/       # ★ 主推工具：MFC 压测工具源码
+  │     └── （其余 IEG 模块作为依赖参考）
+  ├── 攻击报文/                  # 抓包样本
+  └── xiaobing/                  # 第三方参考
+
 artifacts/
-  ├── WLServerTestPublish/ # WLServerTest 发布目录
-  └── SimulatorAppPublish/ # SimulatorApp 发布目录
+  └── WLServerTestPublish/      # WLServerTest V5.5 发布产物（exe + dll + ini）
+
+docs/                           # 文档（聊天记录 / 项目实施文档 / 项目看板 等）
+tools/                          # 通用：Python 白名单解析工具（CLI + GUI）
+scripts/
+  └── estimate_client_limit.ps1 # 单机客户端上限评估
+
+src/                            # ⚠ SimulatorApp 代码，main 上不再维护
+                                # 编译请切到 simulator-subprocess 或 simulator-inproc-dll 分支
+                                # 见 src/README.md
+
+archive/
+  └── simulator-app/            # SimulatorApp 历史构建脚本归档
+        ├── IEGPerTest.sln
+        ├── build_all.bat
+        ├── export_dependencies.ps1
+        ├── publish_simulatorapp.ps1
+        ├── dependencies_export/
+        └── RELEASE_NOTES_v3.9.7.md
 ```
 
 ---
 
 ## 📝 重要说明
 
-- **唯一分支**：`main`（开发常用 `wlservertest-v5` 分支，最终强推 main）
+- **分支策略**：`main` 长期主推 WLServerTest；SimulatorApp 两种架构活在专用分支上，互不合并
 - **Git 代理**（如需）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- **Clients.log / config.json** 首次运行时自动生成
-- **版本号需手动改**：`SimulatorApp.csproj` 或 `WLServerTest.rc`，脚本不自增
+- **版本号需手动改**：`WLServerTest.rc`（main）/ `SimulatorApp.csproj`（其它分支），脚本不自增
 
 ## 📋 历史版本
 
 - **WLServerTest**：V5.5（卡片化+布局重排）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
 - **SimulatorApp**：v3.9.6（NativeRunner 进程架构 + stdout 互斥）/ v3.9.5（版本管理+Server 识别）/ v3.9.3（白名单预览）/ v3.9.2（Npcap 友好提示）
 
-详见各 `CHANGELOG_*.md`、[RELEASE_NOTES_v3.9.7.md](RELEASE_NOTES_v3.9.7.md)、[BUILD_v3.9.6_SUMMARY.md](BUILD_v3.9.6_SUMMARY.md)。
+详见各 `CHANGELOG_*.md` 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。
 
