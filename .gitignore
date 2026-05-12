@@ -11,6 +11,8 @@ GUI.png
 external/
 temp/
 .venv/
+.kiro/
+**/__pycache__/
 src/NativeEngine/build/
 src/NativeSender/build/
 src/RawPacketEngine/build/
