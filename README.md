@@ -1,4 +1,19 @@
-﻿# IEGPerTest Simulator
+﻿> # 🌿 分支：`simulator-inproc-dll`（SimulatorApp 同进程 DLL 旧架构）
+>
+> 本分支保留 **SimulatorApp v3.7.31** —— WPF 主进程**直接加载 NativeSender.dll**（同进程内嵌 C++），通过 P/Invoke 调用心跳/日志/PT 协议。
+>
+> - **架构关键词**：同进程 / P/Invoke / DLL 内嵌 / 共享 CLR 进程空间
+> - **已知限制**：C# GC 暂停会冲击 C++ 线程；300+ 客户端高并发下不稳定。后续被 `simulator-subprocess` 架构取代。
+> - **配套分支**：
+>   - [`main`](../../tree/main) — WLServerTest MFC 纯原生 C++ 工具（V5.5，主推）
+>   - [`simulator-subprocess`](../../tree/simulator-subprocess) — SimulatorApp 子进程新架构（v3.9.7）
+> - **里程碑 tag**：`v3.7.30`、`v3.7.31`（含本分支 tip 修复）
+>
+> 仓库说明请看 [`main` 分支 README](../../blob/main/README.md)。下方内容为本架构发布版自带的工程文档。
+>
+> ---
+
+# IEGPerTest Simulator
 
 IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送与白名单上传的 WPF 桌面工具（.NET 8）。
 
