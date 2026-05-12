@@ -1,4 +1,18 @@
-﻿# IEGPerTest Simulator
+﻿> # 🌿 分支：`simulator-subprocess`（SimulatorApp 子进程架构）
+>
+> 本分支保留 **SimulatorApp v3.9.7** —— WPF 主界面 + **NativeRunner.exe 子进程**通过 stdio 管道做心跳/日志，C++ 与 C# 进程隔离，无 GC 互扰，500+ 客户端稳定。
+>
+> - **架构关键词**：进程分离 / stdio IPC / GC 解耦 / 故障隔离
+> - **配套分支**：
+>   - [`main`](../../tree/main) — WLServerTest MFC 纯原生 C++ 工具（V5.5，主推）
+>   - [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) — SimulatorApp 同进程 DLL 旧架构（v3.7.31）
+> - **里程碑 tag**：`v3.9.7`（latest, 本分支 tip）、`v3.9.6`、`v3.9.5`、`v3.9.2`
+>
+> 仓库说明请看 [`main` 分支 README](../../blob/main/README.md)。下方内容为本架构发布版自带的工程文档。
+>
+> ---
+
+# IEGPerTest Simulator
 
 IEG/EDR 客户端模拟器：用于模拟客户端注册、心跳、日志发送与白名单上传的 WPF 桌面工具（.NET 8）。
 
