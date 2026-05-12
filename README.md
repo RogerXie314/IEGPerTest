@@ -26,6 +26,18 @@
 
 ### 编译 WLServerTest
 
+**推荐：一键脚本**（自动探测 VS、自动拷贝产物到 `artifacts/WLServerTestPublish/`）
+
+```powershell
+pwsh -File scripts\build_wlservertest.ps1
+# 选项：-Configuration Debug | -SkipPublish | -Clean
+# 环境变量：$env:MSBUILD_EXE / $env:WLNETCOMM_DLL 可覆盖默认探测
+```
+
+脚本会自动按以下优先级查找 MSBuild：`$env:MSBUILD_EXE` → PATH → `vswhere` (VS Installer 标准位置，覆盖 2017/2019/2022 + Community/Pro/Enterprise/BuildTools) → 8 个常见绝对路径兜底。仓库路径基于脚本自身位置解析，与 cwd 无关。
+
+**手动 MSBuild**（备用）：
+
 ```powershell
 & 'C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe' `
   external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj `

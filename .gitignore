@@ -40,3 +40,4 @@ external/IEG_Code/code/WLServerTest/res/*
 !external/IEG_Code/code/WLServerTest/res/*.manifest
 
 dump/
+build_wlservertest.log
