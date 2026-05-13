@@ -102,5 +102,8 @@ public:
 	BOOL SendClientSysProtectLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientBackupLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientVirusLogToServer(LPTSTR lpComputerID);
+	BOOL SendClientNetAdapterLogToServer(LPTSTR lpComputerID);
+	BOOL SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask);
 };
+
 

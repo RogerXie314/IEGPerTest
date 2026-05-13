@@ -21,8 +21,10 @@ extern CWLServerTestDlg* g_WLServerTestDlg;
 #define CLIENT_MSGLOG_SYSPROTECT    0x00000080
 #define CLIENT_MSGLOG_BACKUP        0x00000100
 #define CLIENT_MSGLOG_Virus         0x00000200
+#define CLIENT_MSGLOG_NETADAPTER   0x00000400
+#define CLIENT_MSGLOG_EXTDEV       0x00000800
 
-#define MSG_LOG_TYPE		(CLIENT_MSGLOG_OPT | CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKEY|CLIENT_MSGLOG_THREAT|CLIENT_MSGLOG_NWL | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP | CLIENT_MSGLOG_Virus)
+#define MSG_LOG_TYPE		(CLIENT_MSGLOG_OPT | CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKEY|CLIENT_MSGLOG_THREAT|CLIENT_MSGLOG_NWL | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP | CLIENT_MSGLOG_Virus | CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV)
 
 #define CLIENT_FILELOG_WLFILE		0x02
 
@@ -43,6 +45,7 @@ typedef struct _LOG_SENDER_THREAD_ARG
 	CString			csWhiteListFilePath;
 	SOCKET          sock;
 
+	DWORD           dwExtDevSubTypeMask; // bitmask for ExtDev sub-types (same encoding as dwTypes)
 }LOG_SENDER_THREAD_ARG,*PLOG_SENDER_THREAD_ARG;  
 
 
@@ -86,7 +89,8 @@ protected:
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
-	DECLARE_MESSAGE_MAP()
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+DECLARE_MESSAGE_MAP()
 
 private:
 	CEdit     m_comRegButton_ToRegisterClient_ClientCount;
@@ -130,6 +134,7 @@ public:
 	
 
 	int m_iThisTask_SelectedOperationType;
+	DWORD       m_dwExtDevSubTypeMask;  // ExtDev sub-type bitmask for log sender thread
 
 	LONGLONG m_lMsgLogSuccessCount;
 	LONGLONG m_lFileLog_WL_SuccessCount;
@@ -318,7 +323,6 @@ public:
     HBRUSH          m_hBrushThreat;
     CFont           m_fontBold;
     CFont           m_fontNormal;
-    afx_msg HBRUSH  OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
     afx_msg BOOL    OnEraseBkgnd(CDC* pDC);
     afx_msg void    OnDestroy();
 

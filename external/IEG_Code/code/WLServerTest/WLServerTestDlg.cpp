@@ -489,7 +489,6 @@ ON_WM_TIMER()
 
 
 
-ON_WM_CTLCOLOR()
 
 
 
@@ -3209,6 +3208,29 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 	ApplyProjectTypeSelection(); // Ĭ�� IEG Ԥѡ
+
+	// Disable Visual Styles on buttons for custom coloring via OnCtlColor
+	HMODULE hUxTheme = ::LoadLibrary(_T("uxtheme.dll"));
+	if (hUxTheme)
+	{
+		typedef HRESULT (WINAPI *pfnSetWindowTheme)(HWND, LPCWSTR, LPCWSTR);
+		pfnSetWindowTheme fnSetWindowTheme = (pfnSetWindowTheme)::GetProcAddress(hUxTheme, "SetWindowTheme");
+		if (fnSetWindowTheme)
+		{
+			UINT themeBtns[] = { IDC_BUTTON_REG_REG, IDC_BUTTON_REG_RESET,
+				IDC_BUTTON_HB_START, IDC_BUTTON_HB_STOP,
+				IDC_BUTTON_LOG_ADD, IDC_BUTTON_LOG_STOP,
+				IDC_BUTTON_STOP_TASK, IDC_BUTTON_WL_UPLOAD, IDC_BUTTON_WL_STOP2, IDC_BUTTON_WL_PREVIEW };
+			for (int i = 0; i < _countof(themeBtns); ++i)
+			{
+				fnSetWindowTheme(::GetDlgItem(m_hWnd, themeBtns[i]), L"", L"");
+				GetDlgItem(themeBtns[i])->InvalidateRect(NULL, TRUE);
+			}
+		}
+		::FreeLibrary(hUxTheme);
+	}
+
+
 
 
 
@@ -8856,6 +8878,17 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
+			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER)
+			{
+				SendInfoToServer_LogPort.SendClientNetAdapterLogToServer(szThisThread_Selected_ComputerID);
+			}
+
+			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV)
+			{
+				SendInfoToServer_LogPort.SendClientExtDevLogToServer(szThisThread_Selected_ComputerID, pHeapArgs->dwExtDevSubTypeMask);
+			}
 			}
 
 
@@ -8892,11 +8925,9 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 				( pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_BACKUP) ||
-
-
-
-
-				( pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_Virus))
+				( pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_Virus) ||
+				( pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER) ||
+				( pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV))
 
 
 
@@ -10200,7 +10231,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	m_iThisTask_SelectedOperationType = 0;
+	m_iThisTask_SelectedOperationType &= (CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV); // preserve extension bits set by caller
 
 
 
@@ -10940,7 +10971,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-			if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_OPT| CLIENT_MSGLOG_NWL  | CLIENT_MSGLOG_THREAT | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP))    //added by lzq: |CLIENT_THREAT_LOG
+			if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_OPT| CLIENT_MSGLOG_NWL  | CLIENT_MSGLOG_THREAT | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP | CLIENT_MSGLOG_Virus | CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV))    //added by lzq: |CLIENT_THREAT_LOG
 
 
 
@@ -11216,6 +11247,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 					pHeapArgsForAllThread_MsgLog->iThisTask_SelectedLogType = m_iThisTask_SelectedOperationType;
+					pHeapArgsForAllThread_MsgLog->dwExtDevSubTypeMask = m_dwExtDevSubTypeMask;
 
 
 
@@ -13888,72 +13920,102 @@ void CWLServerTestDlg::OnBnClickedOptRegisterSametime()
 
 void CWLServerTestDlg::ApplyProjectTypeSelection()
 {
-    // 结束��Ŀ结束ʧ�ܣ结束���ѡ��־���ࣨ结束C# SimulatorApp�߼���
-    int sel = m_comboProjectType.GetCurSel();
-    CString strType;
-    m_comboProjectType.GetLBText(sel, strType);
+	// Auto-select log categories based on project type (IEG/EDR) - aligned with C# SimulatorApp
+	int sel = m_comboProjectType.GetCurSel();
+	CString strType;
+	m_comboProjectType.GetLBText(sel, strType);
 
-    bool bIEG = (strType == _T("IEG"));
-    bool bEDR = (strType == _T("EDR"));
+	bool bIEG = (strType == _T("IEG"));
+	bool bEDR = (strType == _T("EDR"));
 
-    if (bIEG)
-    {
-        // IEG ר结束��ѡ
-        m_catVulnProtect.SetCheck(BST_CHECKED);
-        m_catProcAudit.SetCheck(BST_CHECKED);
-        m_catNonWhitelist.SetCheck(BST_CHECKED);
-        m_catWlTamper.SetCheck(BST_CHECKED);
-        m_catRegProtect.SetCheck(BST_CHECKED);
-        m_catUsb.SetCheck(BST_CHECKED);
-        m_catUsbWarning.SetCheck(BST_CHECKED);
-        m_catUDiskPlug.SetCheck(BST_CHECKED);
-        // ͨ��
-        m_catClientOps.SetCheck(BST_CHECKED);
-        m_catOs.SetCheck(BST_CHECKED);
-        m_catOutbound.SetCheck(BST_CHECKED);
-        m_catFileProtect.SetCheck(BST_CHECKED);
-        m_catMandatoryAccess.SetCheck(BST_CHECKED);
-        m_catVirusAlert.SetCheck(BST_CHECKED);
-        // ��в��⣺�?3��
-        m_catThreatProc.SetCheck(BST_CHECKED);
-        m_catThreatReg.SetCheck(BST_CHECKED);
-        m_catThreatFile.SetCheck(BST_CHECKED);
-        m_catThreatDll.SetCheck(BST_UNCHECKED);
-        m_catThreatOs.SetCheck(BST_UNCHECKED);
-        // EDR ר结束ȡ��
-        m_catFirewall.SetCheck(BST_UNCHECKED);
-        m_catSysGuard.SetCheck(BST_UNCHECKED);
-    }
-    else if (bEDR)
-    {
-        // EDR ר结束��ѡ
-        m_catFirewall.SetCheck(BST_CHECKED);
-        m_catSysGuard.SetCheck(BST_CHECKED);
-        // ͨ��
-        m_catClientOps.SetCheck(BST_CHECKED);
-        m_catOs.SetCheck(BST_CHECKED);
-        m_catOutbound.SetCheck(BST_CHECKED);
-        m_catFileProtect.SetCheck(BST_CHECKED);
-        m_catMandatoryAccess.SetCheck(BST_CHECKED);
-        m_catVirusAlert.SetCheck(BST_CHECKED);
-        // ��в��⣺EDRȫ4��
-        m_catThreatProc.SetCheck(BST_CHECKED);
-        m_catThreatReg.SetCheck(BST_CHECKED);
-        m_catThreatFile.SetCheck(BST_CHECKED);
-        m_catThreatDll.SetCheck(BST_CHECKED);
-        m_catThreatOs.SetCheck(BST_UNCHECKED);
-        // IEG ר结束ȡ��
-        m_catVulnProtect.SetCheck(BST_UNCHECKED);
-        m_catProcAudit.SetCheck(BST_UNCHECKED);
-        m_catNonWhitelist.SetCheck(BST_UNCHECKED);
-        m_catWlTamper.SetCheck(BST_UNCHECKED);
-        m_catRegProtect.SetCheck(BST_UNCHECKED);
-        m_catUsb.SetCheck(BST_UNCHECKED);
-        m_catUsbWarning.SetCheck(BST_UNCHECKED);
-        m_catUDiskPlug.SetCheck(BST_UNCHECKED);
-    }
+	if (bIEG)
+	{
+		// IEG exclusive
+		m_catNonWhitelist.SetCheck(BST_CHECKED);
+		m_catRegProtect.SetCheck(BST_CHECKED);
+		m_catUsb.SetCheck(BST_CHECKED);
+		m_catUsbWarning.SetCheck(BST_CHECKED);
+		m_catWlTamper.SetCheck(BST_CHECKED);
+		m_catVulnProtect.SetCheck(BST_CHECKED);
+		m_catProcAudit.SetCheck(BST_CHECKED);
+		m_catUDiskPlug.SetCheck(BST_CHECKED);
+		m_catNetAdapter.SetCheck(BST_CHECKED);
+		// External device control (9 types, IEG fine-grained alerts)
+		m_catExtUsbPort.SetCheck(BST_CHECKED);
+		m_catExtWpd.SetCheck(BST_CHECKED);
+		m_catExtCdrom.SetCheck(BST_CHECKED);
+		m_catExtWlan.SetCheck(BST_CHECKED);
+		m_catExtUsbEth.SetCheck(BST_CHECKED);
+		m_catExtFloppy.SetCheck(BST_CHECKED);
+		m_catExtBt.SetCheck(BST_CHECKED);
+		m_catExtSerial.SetCheck(BST_CHECKED);
+		m_catExtParallel.SetCheck(BST_CHECKED);
+
+		// Shared (both IEG & EDR)
+		m_catClientOps.SetCheck(BST_CHECKED);
+		m_catOs.SetCheck(BST_CHECKED);
+		m_catOutbound.SetCheck(BST_CHECKED);
+		m_catFileProtect.SetCheck(BST_CHECKED);
+		m_catMandatoryAccess.SetCheck(BST_CHECKED);
+		m_catVirusAlert.SetCheck(BST_CHECKED);
+
+		// Threat detection: IEG has 3 types
+		m_catThreatProc.SetCheck(BST_CHECKED);
+		m_catThreatReg.SetCheck(BST_CHECKED);
+		m_catThreatFile.SetCheck(BST_CHECKED);
+
+		// EDR exclusive - unchecked
+		m_catFirewall.SetCheck(BST_UNCHECKED);
+		m_catSysGuard.SetCheck(BST_UNCHECKED);
+		m_catThreatDll.SetCheck(BST_UNCHECKED);
+
+		// Disabled for both
+		m_catThreatOs.SetCheck(BST_UNCHECKED);
+	}
+	else if (bEDR)
+	{
+		// EDR exclusive
+		m_catFirewall.SetCheck(BST_CHECKED);
+		m_catSysGuard.SetCheck(BST_CHECKED);
+
+		// Shared (both IEG & EDR)
+		m_catClientOps.SetCheck(BST_CHECKED);
+		m_catOs.SetCheck(BST_CHECKED);
+		m_catOutbound.SetCheck(BST_CHECKED);
+		m_catFileProtect.SetCheck(BST_CHECKED);
+		m_catMandatoryAccess.SetCheck(BST_CHECKED);
+		m_catVirusAlert.SetCheck(BST_CHECKED);
+
+		// Threat detection: EDR has all 4 types
+		m_catThreatProc.SetCheck(BST_CHECKED);
+		m_catThreatReg.SetCheck(BST_CHECKED);
+		m_catThreatFile.SetCheck(BST_CHECKED);
+		m_catThreatDll.SetCheck(BST_CHECKED);
+
+		// IEG exclusive - unchecked
+		m_catNonWhitelist.SetCheck(BST_UNCHECKED);
+		m_catRegProtect.SetCheck(BST_UNCHECKED);
+		m_catUsb.SetCheck(BST_UNCHECKED);
+		m_catUsbWarning.SetCheck(BST_UNCHECKED);
+		m_catWlTamper.SetCheck(BST_UNCHECKED);
+		m_catVulnProtect.SetCheck(BST_UNCHECKED);
+		m_catProcAudit.SetCheck(BST_UNCHECKED);
+		m_catUDiskPlug.SetCheck(BST_UNCHECKED);
+		m_catNetAdapter.SetCheck(BST_UNCHECKED);
+		m_catExtUsbPort.SetCheck(BST_UNCHECKED);
+		m_catExtWpd.SetCheck(BST_UNCHECKED);
+		m_catExtCdrom.SetCheck(BST_UNCHECKED);
+		m_catExtWlan.SetCheck(BST_UNCHECKED);
+		m_catExtUsbEth.SetCheck(BST_UNCHECKED);
+		m_catExtFloppy.SetCheck(BST_UNCHECKED);
+		m_catExtBt.SetCheck(BST_UNCHECKED);
+		m_catExtSerial.SetCheck(BST_UNCHECKED);
+		m_catExtParallel.SetCheck(BST_UNCHECKED);
+
+		// Disabled for both
+		m_catThreatOs.SetCheck(BST_UNCHECKED);
+	}
 }
-
 void CWLServerTestDlg::OnProjectTypeSelChange()
 {
     ApplyProjectTypeSelection();
@@ -14198,12 +14260,23 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 		BOOL bDP   = (dwTypes & 0x00000008) ? TRUE : FALSE; // FileProtect → DATAPROTECT
 		BOOL bSP   = (dwTypes & 0x00000010) ? TRUE : FALSE; // RegProtect  → SYSPROTECT
 		BOOL bVIR  = (dwTypes & 0x00000040) ? TRUE : FALSE; // VirusAlert
-		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(bOPT ? 1 : 0);
-		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(bNWL ? 1 : 0);
-		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(bDP  ? 1 : 0);
-		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(bSP  ? 1 : 0);
-		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(bVIR ? 1 : 0);
+		// Clear all hidden checkboxes first to prevent stale state from previous operations
+		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_Backup_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_CHECK_BASE_LINE))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_CHECK_UKEY))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_WHITE_LIST))->SetCheck(0);
+
+		if (bOPT) ((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(1);
+		if (bNWL) ((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(1);
+		if (bDP)  ((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(1);
+		if (bSP)  ((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(1);
+		if (bVIR) ((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(1);
 		// 未实现的位（OS/Outbound/Mandatory/Usb/UsbWarning/Firewall/Vuln/ProcAudit/WlTamper/SysGuard/UDiskPlug/NetAdapter/Ext*）提示
 		DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000001 | 0x00001000 | 0x00000008 | 0x00000010 | 0x00000040);
 		if (dwUnsupported != 0)
@@ -14211,7 +14284,11 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 			CString sWarn; sWarn.Format(_T("[LOG][WARN] 以下分类暂未实现 HTTPS 上报 (bits=0x%08X)"), dwUnsupported);
 			AppendLogOutput(sWarn);
 		}
-		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+				// Set extension bits for NetAdapter and ExtDev (no hidden checkbox for these)
+		if (dwTypes & 0x00010000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NETADAPTER;
+		m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;  // pass ExtDev sub-type mask to thread
+		if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
+GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
 		// 还原 hidden checkbox 防止下次复选
 		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
@@ -14234,9 +14311,17 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 		m_comAppLog_Task_EachClientPerSecondItems.AddString(sTmp);
 		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
 
-		m_iThisTask_SelectedOperationType = (int)((dwTypes & 0x7C000000) | CLIENT_MSGLOG_THREAT);
+		// Clear all hidden checkboxes, then set threat type only
 		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(1);
+		((CButton*)GetDlgItem(IDC_Backup_LOG))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_CHECK_BASE_LINE))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_CHECK_UKEY))->SetCheck(0);
+		((CButton*)GetDlgItem(IDC_WHITE_LIST))->SetCheck(0);
 		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
 		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
 		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
@@ -14345,7 +14430,11 @@ LRESULT CWLServerTestDlg::OnAppendLogOutput(WPARAM wParam, LPARAM /*lParam*/)
 	if (!pStr) return 0;
 	int nLen = m_editLogOutput.GetWindowTextLength();
 	m_editLogOutput.SetSel(nLen, nLen);
-	m_editLogOutput.ReplaceSel(*pStr + _T("\r\n"));
+		CString strTime;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	strTime.Format(_T("[%02d:%02d:%02d.%03d] "), st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	m_editLogOutput.ReplaceSel(strTime + *pStr + _T("\r\n"));
 	// v9: 从顶部显示，不自动滚到底�?
 	m_editLogOutput.SetSel(0, 0);
 	m_editLogOutput.PostMessage(EM_SCROLL, SB_TOP, 0);
@@ -14430,100 +14519,6 @@ cleanup:
 	return bOK;
 }
 
-HBRUSH CWLServerTestDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
-{
-	switch (nCtlColor)
-	{
-	case CTLCOLOR_DLG:
-		pDC->SetBkColor(RGB(242, 245, 250));
-		return m_hBrushDlg;
-
-	case CTLCOLOR_STATIC:
-	{
-		int nID = pWnd->GetDlgCtrlID();
-		// Category section headers: colored by group
-		// Zone group titles: colored text + return matching brush
-		if (nID == IDC_STATIC_CAT_PLUG)
-		{
-			pDC->SetTextColor(RGB(26, 80, 112));
-			pDC->SetBkMode(TRANSPARENT);
-			return m_hBrushPlug;
-		}
-		else if (nID == IDC_STATIC_CAT_EXT)
-		{
-			pDC->SetTextColor(RGB(74, 96, 128));
-			pDC->SetBkMode(TRANSPARENT);
-			return m_hBrushExt;
-		}
-		else if (nID == IDC_STATIC_CAT_THREAT)
-		{
-			pDC->SetTextColor(RGB(122, 88, 0));
-			pDC->SetBkMode(TRANSPARENT);
-			return m_hBrushThreat;
-		}
-		else if (nID == IDC_STATIC_CAT_HTTPS)
-			pDC->SetTextColor(RGB(40, 80, 150));
-		// Fail counts: red
-		else if (nID == IDC_STATIC_REG_FAIL || nID == IDC_STATIC_LOG_FAIL || nID == IDC_STATIC_WL_FAIL2)
-			pDC->SetTextColor(RGB(200, 30, 30));
-		// Success counts: green
-		else if (nID == IDC_STATIC_REG_SUCC || nID == IDC_STATIC_LOG_SUCC2 || nID == IDC_STATIC_WL_SUCC2)
-			pDC->SetTextColor(RGB(0, 130, 30));
-		// HB online: blue
-		else if (nID == IDC_STATIC_HB_ONLINE)
-			pDC->SetTextColor(RGB(0, 100, 200));
-		// HB badge: blue
-		else if (nID == IDC_STATIC_HB_BADGE)
-			pDC->SetTextColor(RGB(21, 101, 192));
-		else
-			pDC->SetTextColor(RGB(30, 50, 80));
-		pDC->SetBkMode(TRANSPARENT);
-		return m_hBrushDlg;
-	}
-
-	case CTLCOLOR_EDIT:
-		pDC->SetTextColor(RGB(30, 50, 80));
-		pDC->SetBkColor(RGB(255, 255, 255));
-		return m_hBrushWhite;
-
-	case CTLCOLOR_LISTBOX:
-		pDC->SetBkColor(RGB(255, 255, 255));
-		return m_hBrushWhite;
-
-	case CTLCOLOR_BTN:
-	{
-                int nID = pWnd->GetDlgCtrlID();
-                pDC->SetBkMode(TRANSPARENT);
-                // 结束���ѡ��?? (IDC_CAT_UDISK_PLUG, IDC_CAT_NET_ADAPTER)
-                if (nID == IDC_CAT_UDISK_PLUG || nID == IDC_CAT_NET_ADAPTER)
-                {
-                        pDC->SetTextColor(RGB(30, 50, 80));
-                        return m_hBrushPlug;
-                }
-                // 结束结束ѡ�� (IDC 1087-1095)
-                else if (nID >= IDC_CAT_EXT_USB_PORT && nID <= IDC_CAT_EXT_PARALLEL)
-                {
-                        pDC->SetTextColor(RGB(30, 50, 80));
-                        return m_hBrushExt;
-                }
-                // ��в结束ѡ�� (IDC 1096-1100)
-                else if (nID >= IDC_CAT_THREAT_PROC && nID <= IDC_CAT_THREAT_OS)
-                {
-                        pDC->SetTextColor(RGB(80, 50, 0));
-                        return m_hBrushThreat;
-                }
-                else
-                {
-                        pDC->SetTextColor(RGB(30, 50, 80));
-                        return m_hBrushDlg;
-                }
-        }
-
-	default:
-		break;
-	}
-	return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
-}
 
 BOOL CWLServerTestDlg::OnEraseBkgnd(CDC* pDC)
 {
@@ -14554,4 +14549,45 @@ void CWLServerTestDlg::OnDestroy()
 	if (m_hBrushPlug)   { ::DeleteObject(m_hBrushPlug);   m_hBrushPlug   = NULL; }
 	if (m_hBrushExt)    { ::DeleteObject(m_hBrushExt);    m_hBrushExt    = NULL; }
 	if (m_hBrushThreat) { ::DeleteObject(m_hBrushThreat); m_hBrushThreat = NULL; }
+}
+
+
+HBRUSH CWLServerTestDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	if (nCtlColor == CTLCOLOR_BTN && pWnd)
+	{
+		UINT nID = pWnd->GetDlgCtrlID();
+		static CBrush brBlue(RGB(70,130,180)), brGreen(RGB(60,179,113)),
+		             brOrange(RGB(255,140,0)), brRed(RGB(220,80,80)),
+		             brPurple(RGB(147,112,219));
+		switch (nID)
+		{
+		case IDC_BUTTON_REG_REG:
+		case IDC_BUTTON_REG_RESET:
+			pDC->SetTextColor(RGB(255,255,255));
+			pDC->SetBkColor(RGB(70,130,180));
+			return (HBRUSH)brBlue;
+		case IDC_BUTTON_HB_START:
+			pDC->SetTextColor(RGB(255,255,255));
+			pDC->SetBkColor(RGB(60,179,113));
+			return (HBRUSH)brGreen;
+		case IDC_BUTTON_LOG_ADD:
+			pDC->SetTextColor(RGB(255,255,255));
+			pDC->SetBkColor(RGB(255,140,0));
+			return (HBRUSH)brOrange;
+		case IDC_BUTTON_STOP_TASK:
+		case IDC_BUTTON_HB_STOP:
+		case IDC_BUTTON_LOG_STOP:
+		case IDC_BUTTON_WL_STOP2:
+			pDC->SetTextColor(RGB(255,255,255));
+			pDC->SetBkColor(RGB(220,80,80));
+			return (HBRUSH)brRed;
+		case IDC_BUTTON_WL_UPLOAD:
+		case IDC_BUTTON_WL_PREVIEW:
+			pDC->SetTextColor(RGB(255,255,255));
+			pDC->SetBkColor(RGB(147,112,219));
+			return (HBRUSH)brPurple;
+		}
+	}
+	return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
 }

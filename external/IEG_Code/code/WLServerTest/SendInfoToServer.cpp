@@ -1798,53 +1798,6 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_FiveType(LPTSTR lpComputerID)
 
 		vecLog.push_back(pMData_Modify);
 	}
-	//5.OPTYPE_PWL_AUTO_APPROVE
-	{
-		pLogBuf_Auto = new BYTE[iLogHeadBodyLen];
-		memset(pLogBuf_Auto, 0, iLogHeadBodyLen);
-
-		IPC_LOG_COMMON* ipclogcomm = (IPC_LOG_COMMON*)pLogBuf_Auto;
-		ipclogcomm->dwLogType = WL_IPC_LOG_TYPE_ALARM;
-		ipclogcomm->dwDetailLogTypeLevel1 = WL_IPC_LOG_TYPE_LEVE_1_PROCESS_WHITELIST;
-		//	ipclogcomm->dwDetailLogTypeLevel2 = WL_IPC_LOG_TYPE_LEVE_2_PROCESS_UNWHITELIST_ALLOW;
-		ipclogcomm->dwSize = sizeof(WARNING_LOG_STRUCT);
-
-		PWARNING_LOG_STRUCT pLog        = (PWARNING_LOG_STRUCT)ipclogcomm->data;
-		pLog->bHoldback                 = 0;
-		//pLog->nSubType                  = OPTYPE_PWL_SYSFILE_CHECK;
-		WLUtils::WarningLog_Type_2_DB(OPTYPE_PWL_AUTO_APPROVE, 0, pLog->nSubType);
-		pLog->bCertCheckFailed          = 1;
-		pLog->bIntegrityCheckFailed     = 1;  
-
-		pLog->llTime = _time32(NULL);  
-
-		std::wstring wsPath = _T("c:\\Tmp\\OPTYPE_PWL_AUTO_APPROVE");
-		if (!g_bSamePath)
-		{
-			wsPath += _T("_");
-			wsPath += wsThreadId;
-			wsPath += _T("_");
-			wsPath += wsTime;
-		}
-		wsPath += _T(".exe");
-
-		_tcscpy(pLog->szFullPath, wsPath.c_str());
-		_tcslwr(pLog->szFullPath);
-		_tcscpy(pLog->szVersion,_T("7893"));
-		_tcscpy(pLog->szCompany,_T("Some Company"));
-		_tcscpy(pLog->szProduct,_T("SomeProduct"));
-		_tcscpy(pLog->szDefIntegrity,_T("Some defintegrity"));
-
-		pLog->nSubType = OPTYPE_PWL_AUTO_APPROVE;
-		pLog->processId = 0x7893;
-
-
-
-		pMData_Auto = new CWLMetaData(iLogHeadBodyLen,pLogBuf_Auto);
-
-
-		vecLog.push_back(pMData_Auto);
-	}
 
 
 	CWLJsonParse json;
@@ -2653,4 +2606,73 @@ BOOL CSendInfoToServer::SendClientVirusLogToServer(LPTSTR lpComputerID)
 	}
 
 	return bRet; 
+}
+// NetAdapter: network interface Up/Down event (hotplugDevLog.do, CMDID=204, CMDVER=4, OtherDevType=7)
+BOOL CSendInfoToServer::SendClientNetAdapterLogToServer(LPTSTR lpComputerID)
+{
+	BOOL bRet = FALSE;
+	WCHAR URL_NetAdapterLog[100] = {0};
+	_snwprintf_s(URL_NetAdapterLog, sizeof(URL_NetAdapterLog)/sizeof(URL_NetAdapterLog[0]), _TRUNCATE, URL_PLUG_UDISK_INFO, m_strServerIP, _ttoi(m_strServerPort));
+
+	// Build JSON for hotplugDevLog.do (CMDID=204, CMDVER=4, OtherDevType=7)
+	CStringA sComputerID(lpComputerID);
+	CStringA sClientIP(m_strClientIP);
+	std::string sJson = "[{\"ComputerID\":\"" + std::string(sComputerID) + "\","
+		"\"CMDTYPE\":3,\"CMDID\":204,\"CMDVER\":4,"
+		"\"CMDContentOtherDev\":[{\"OtherDevType\":7,\"PlugEvent\":2,\"ComputerIP\":\"" + std::string(sClientIP) + "\"}]}]";
+
+	char *pResult = NULL;
+	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
+	if (objTmp->pdoPost == NULL)
+	{
+		return FALSE;
+	}
+	bRet = objTmp->pdoPost(URL_NetAdapterLog, (LPSTR)sJson.c_str(), &pResult);
+	if (bRet && pResult)
+		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+	return bRet;
+}
+
+// ExtDev: external device control (clientULog.do, various UsbType values)
+// dwSubTypeMask: bitmask of selected ExtDev sub-types (same encoding as dwTypes)
+BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask)
+{
+	BOOL bRet = FALSE;
+	WCHAR URL_ExtDevLog[100] = {0};
+	_snwprintf_s(URL_ExtDevLog, sizeof(URL_ExtDevLog)/sizeof(URL_ExtDevLog[0]), _TRUNCATE, URL_LOG_USB, m_strServerIP, _ttoi(m_strServerPort));
+
+	// Map ExtDev dwTypes bits to UsbType values
+	struct ExtDevEntry { DWORD mask; int usbType; const wchar_t* name; };
+	static const ExtDevEntry entries[] = {
+		{ 0x00020000, 1, L"USB接口使用被禁止" },
+		{ 0x00040000, 2, L"移动设备使用被禁止" },
+		{ 0x00080000, 4, L"CDROM使用被禁止" },
+		{ 0x00100000, 7, L"wifi使用被禁止" },
+		{ 0x00200000, 3, L"USB网卡使用被禁止" },
+		{ 0x00400000, 5, L"软盘使用被禁止" },
+		{ 0x00800000, 6, L"蓝牙使用被禁止" },
+		{ 0x01000000, 8, L"串口使用被禁止" },
+		{ 0x02000000, 9, L"并口使用被禁止" },
+	};
+
+	char *pResult = NULL;
+	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
+	if (objTmp->pdoPost == NULL) return FALSE;
+
+	for (int i = 0; i < _countof(entries); ++i)
+	{
+		if (!(dwSubTypeMask & entries[i].mask)) continue;
+		// Build JSON for clientULog.do
+		CStringA sComputerID2(lpComputerID);
+		CStringA sClientIP2(m_strClientIP);
+		char szJson[1024];
+		sprintf_s(szJson, "[{\"ComputerID\":\"%s\",\"CMDTYPE\":3,\"CMDID\":203,\"CMDVER\":1,"
+			"\"CMDContent\":[{\"UsbType\":%d,\"LogContent\":\"%S\",\"ComputerIP\":\"%s\"}]}]",
+			(LPCSTR)sComputerID2, entries[i].usbType, entries[i].name, (LPCSTR)sClientIP2);
+		std::string sJson = szJson;
+		bRet = objTmp->pdoPost(URL_ExtDevLog, (LPSTR)sJson.c_str(), &pResult);
+		if (bRet && pResult)
+			CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+	}
+	return bRet;
 }

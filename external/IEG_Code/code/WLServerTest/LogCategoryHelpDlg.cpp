@@ -32,7 +32,11 @@ BOOL CLogCategoryHelpDlg::OnInitDialog()
     m_listHelp.InsertColumn(2, _T("EPS规格"),     LVCFMT_LEFT,   60);
     m_listHelp.InsertColumn(3, _T("说明"),         LVCFMT_LEFT,  600);
 
-    PopulateList();
+    	// Extended styles for better appearance
+	m_listHelp.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_INFOTIP);
+	// Set alternating row colors via owner data or custom draw is not done here (keep layout)
+	
+PopulateList();
     return TRUE;
 }
 
