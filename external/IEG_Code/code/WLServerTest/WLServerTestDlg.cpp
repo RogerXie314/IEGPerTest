@@ -480,7 +480,6 @@ ON_BN_CLICKED(IDC_BUTTON_LOG_HELP, &CWLServerTestDlg::OnBnClickedLogHelp)
 
 
 
-ON_CBN_SELCHANGE(IDC_COMBO_PROJECT_TYPE, &CWLServerTestDlg::OnProjectTypeSelChange)
 ON_CBN_SELCHANGE(IDC_COMBO_CLIENT_VERSION, &CWLServerTestDlg::OnClientVersionSelChange)
 
 
@@ -1417,6 +1416,8 @@ ON_MESSAGE(WM_APP+100, &CWLServerTestDlg::OnAppendLogOutput)
 
 
 
+
+ON_CBN_SELCHANGE(IDC_COMBO_PROJECT_TYPE, &CWLServerTestDlg::OnProjectTypeSelChange)
 END_MESSAGE_MAP()
 
 
@@ -3298,7 +3299,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	m_editTcpEps.SetWindowText(_T("100"));
+	m_editTcpEps.SetWindowText(_T("1"));
 
 
 
@@ -8561,6 +8562,21 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
+	// Diagnostic: log what types are selected
+	{
+		CString strDiag;
+		strDiag.Format(_T("[LOG-DIAG] Thread started, SelectedLogType=0x%08X, ClientIndex=%d"),
+			pHeapArgs->iThisTask_SelectedLogType, pHeapArgs->iThisClient_VectorIndex);
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER) strDiag += _T(" NET");
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV) strDiag += _T(" EXT");
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UDISKPLUG) strDiag += _T(" UDISK");
+		CString strExtMask;
+		strExtMask.Format(_T(" ExtMask=0x%08X"), pHeapArgs->dwExtDevSubTypeMask);
+		strDiag += strExtMask;
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_OPT) strDiag += _T(" OPT");
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_THREAT) strDiag += _T(" THT");
+		g_WLServerTestDlg->AppendLogOutput(strDiag);
+	}
 	do //̷߳һ Sleepһ
 
 
@@ -8881,19 +8897,22 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			if (g_bStopTask || g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER)
 			{
-				SendInfoToServer_LogPort.SendClientNetAdapterLogToServer(szThisThread_Selected_ComputerID);
+				BOOL bNetRet = SendInfoToServer_LogPort.SendClientNetAdapterLogToServer(szThisThread_Selected_ComputerID);
+				if (!bNetRet) g_WLServerTestDlg->AppendLogOutput(_T("[NET] Send FAILED"));
 			}
 
 			if (g_bStopTask || g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV)
 			{
-				SendInfoToServer_LogPort.SendClientExtDevLogToServer(szThisThread_Selected_ComputerID, pHeapArgs->dwExtDevSubTypeMask);
+				BOOL bExtRet = SendInfoToServer_LogPort.SendClientExtDevLogToServer(szThisThread_Selected_ComputerID, pHeapArgs->dwExtDevSubTypeMask);
+				if (!bExtRet) g_WLServerTestDlg->AppendLogOutput(_T("[EXT] Send FAILED"));
 			}
 
 			if (g_bStopTask || g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UDISKPLUG)
 			{
-				SendInfoToServer_LogPort.SendClientUDiskPlugLogToServer(szThisThread_Selected_ComputerID);
+				BOOL bUdiskRet = SendInfoToServer_LogPort.SendClientUDiskPlugLogToServer(szThisThread_Selected_ComputerID);
+				if (!bUdiskRet) g_WLServerTestDlg->AppendLogOutput(_T("[UDISK] Send FAILED"));
 			}
 			}
 
@@ -13926,6 +13945,7 @@ void CWLServerTestDlg::OnBnClickedOptRegisterSametime()
 
 void CWLServerTestDlg::ApplyProjectTypeSelection()
 {
+	AppendLogOutput(_T("[IEG/EDR] ApplyProjectTypeSelection called"));
 	// Auto-select log categories based on project type (IEG/EDR) - aligned with C# SimulatorApp
 	int sel = m_comboProjectType.GetCurSel();
 	CString strType;

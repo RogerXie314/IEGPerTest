@@ -2618,8 +2618,9 @@ BOOL CSendInfoToServer::SendClientNetAdapterLogToServer(LPTSTR lpComputerID)
 	CStringA sComputerID(lpComputerID);
 	CStringA sClientIP(m_strClientIP);
 	std::string sJson = "[{\"ComputerID\":\"" + std::string(sComputerID) + "\","
-		"\"CMDTYPE\":3,\"CMDID\":204,\"CMDVER\":4,"
-		"\"CMDContentOtherDev\":[{\"OtherDevType\":7,\"PlugEvent\":2,\"ComputerIP\":\"" + std::string(sClientIP) + "\"}]}]";
+		"\"CMDTYPE\":200,\"CMDID\":204,\"CMDVER\":4,"
+		"\"CMDVER\":4,\"CMDContent\":[],\"CMDUsbContent\":[],"
+		"\"CMDContentOtherDev\":[{\"Time\":\"2026-05-13 12:00:00\",\"Name\":\"Ethernet\",\"IP\":\"" + std::string(sClientIP) + "\",\"PlugEvent\":2,\"OtherDevType\":7}]}]";
 
 	char *pResult = NULL;
 	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
@@ -2628,11 +2629,14 @@ BOOL CSendInfoToServer::SendClientNetAdapterLogToServer(LPTSTR lpComputerID)
 		return FALSE;
 	}
 	bRet = objTmp->pdoPost(URL_NetAdapterLog, (LPSTR)sJson.c_str(), &pResult);
+	WriteInfo(_T("[NETADAPTER] pdoPost returned %d, json=%S"), bRet, sJson.c_str());
 	if (bRet && pResult)
 		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 	return bRet;
 }
 
+// ExtDev: external device control (clientULog.do, various UsbType values)
+// dwSubTypeMask: bitmask of selected ExtDev sub-types (same encoding as dwTypes)
 // ExtDev: external device control (clientULog.do, various UsbType values)
 // dwSubTypeMask: bitmask of selected ExtDev sub-types (same encoding as dwTypes)
 BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask)
@@ -2641,7 +2645,6 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	WCHAR URL_ExtDevLog[100] = {0};
 	_snwprintf_s(URL_ExtDevLog, sizeof(URL_ExtDevLog)/sizeof(URL_ExtDevLog[0]), _TRUNCATE, URL_LOG_USB, m_strServerIP, _ttoi(m_strServerPort));
 
-	// Map ExtDev dwTypes bits to UsbType values
 	struct ExtDevEntry { DWORD mask; int usbType; const wchar_t* name; };
 	static const ExtDevEntry entries[] = {
 		{ 0x00020000, 1, L"USB接口使用被禁止" },
@@ -2659,24 +2662,23 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
 	if (objTmp->pdoPost == NULL) return FALSE;
 
+	CStringA sCID(lpComputerID);
 	for (int i = 0; i < _countof(entries); ++i)
 	{
 		if (!(dwSubTypeMask & entries[i].mask)) continue;
-		// Build JSON for clientULog.do
-		CStringA sComputerID2(lpComputerID);
-		CStringA sClientIP2(m_strClientIP);
-		char szJson[1024];
-		sprintf_s(szJson, "[{\"ComputerID\":\"%s\",\"CMDTYPE\":3,\"CMDID\":203,\"CMDVER\":1,"
-			"\"CMDContent\":[{\"UsbType\":%d,\"LogContent\":\"%S\",\"ComputerIP\":\"%s\"}]}]",
-			(LPCSTR)sComputerID2, entries[i].usbType, entries[i].name, (LPCSTR)sClientIP2);
-		std::string sJson = szJson;
+		char szUsbType[16];
+		_itoa_s(entries[i].usbType, szUsbType, 10);
+		CW2A szName(entries[i].name, CP_UTF8);
+		std::string sJson = "[{\"ComputerID\":\"" + std::string(sCID) + "\","
+			"\"CMDTYPE\":200,\"CMDID\":204,"
+			"\"CMDContent\":[{\"Time\":\"2026-05-13 12:00:00\",\"UsbType\":" + std::string(szUsbType) + ",\"LogContent\":\"" + std::string(szName) + "\","
+			"\"UserName\":\"-\",\"FullPath\":\"-\"}]}]";
 		bRet = objTmp->pdoPost(URL_ExtDevLog, (LPSTR)sJson.c_str(), &pResult);
 		if (bRet && pResult)
 			CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 	}
 	return bRet;
 }
-
 // UDiskPlug: USB device plug/unplug event (hotplugDevLog.do, CMDID=204, CMDVER=1)
 BOOL CSendInfoToServer::SendClientUDiskPlugLogToServer(LPTSTR lpComputerID)
 {
@@ -2686,12 +2688,13 @@ BOOL CSendInfoToServer::SendClientUDiskPlugLogToServer(LPTSTR lpComputerID)
 	CStringA sComputerID(lpComputerID);
 	CStringA sClientIP(m_strClientIP);
 	std::string sJson = "[{\"ComputerID\":\"" + std::string(sComputerID) + "\","
-		"\"CMDTYPE\":3,\"CMDID\":204,\"CMDVER\":1,"
-		"\"CMDContent\":[{\"DevType\":1,\"PlugEvent\":2,\"ComputerIP\":\"" + std::string(sClientIP) + "\"}]}]";
+		"\"CMDTYPE\":200,\"CMDID\":204,\"CMDVER\":1,"
+		"\"CMDContent\":[{\"Time\":\"2026-05-13 12:00:00\",\"UDiskType\":1,\"serialID\":\"SIM-001\",\"registerStatus\":0,\"DiskDriverLetter\":[\"E:\\\\\"],\"plugEvent\":1}]}]";
 	char *pResult = NULL;
 	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
 	if (objTmp->pdoPost == NULL) return FALSE;
 	bRet = objTmp->pdoPost(URL_UDiskLog, (LPSTR)sJson.c_str(), &pResult);
+	WriteInfo(_T("[UDISKPLUG] pdoPost returned %d, json=%S"), bRet, sJson.c_str());
 	if (bRet && pResult)
 		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 	return bRet;
