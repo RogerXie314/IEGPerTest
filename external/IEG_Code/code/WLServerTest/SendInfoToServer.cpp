@@ -2676,3 +2676,23 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	}
 	return bRet;
 }
+
+// UDiskPlug: USB device plug/unplug event (hotplugDevLog.do, CMDID=204, CMDVER=1)
+BOOL CSendInfoToServer::SendClientUDiskPlugLogToServer(LPTSTR lpComputerID)
+{
+	BOOL bRet = FALSE;
+	WCHAR URL_UDiskLog[100] = {0};
+	_snwprintf_s(URL_UDiskLog, sizeof(URL_UDiskLog)/sizeof(URL_UDiskLog[0]), _TRUNCATE, URL_PLUG_UDISK_INFO, m_strServerIP, _ttoi(m_strServerPort));
+	CStringA sComputerID(lpComputerID);
+	CStringA sClientIP(m_strClientIP);
+	std::string sJson = "[{\"ComputerID\":\"" + std::string(sComputerID) + "\","
+		"\"CMDTYPE\":3,\"CMDID\":204,\"CMDVER\":1,"
+		"\"CMDContent\":[{\"DevType\":1,\"PlugEvent\":2,\"ComputerIP\":\"" + std::string(sClientIP) + "\"}]}]";
+	char *pResult = NULL;
+	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
+	if (objTmp->pdoPost == NULL) return FALSE;
+	bRet = objTmp->pdoPost(URL_UDiskLog, (LPSTR)sJson.c_str(), &pResult);
+	if (bRet && pResult)
+		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+	return bRet;
+}

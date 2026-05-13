@@ -8889,6 +8889,12 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			{
 				SendInfoToServer_LogPort.SendClientExtDevLogToServer(szThisThread_Selected_ComputerID, pHeapArgs->dwExtDevSubTypeMask);
 			}
+
+			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UDISKPLUG)
+			{
+				SendInfoToServer_LogPort.SendClientUDiskPlugLogToServer(szThisThread_Selected_ComputerID);
+			}
 			}
 
 
@@ -10231,7 +10237,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	m_iThisTask_SelectedOperationType &= (CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV); // preserve extension bits set by caller
+	m_iThisTask_SelectedOperationType &= (CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV | CLIENT_MSGLOG_UDISKPLUG); // preserve extension bits set by caller
 
 
 
@@ -10971,7 +10977,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-			if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_OPT| CLIENT_MSGLOG_NWL  | CLIENT_MSGLOG_THREAT | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP | CLIENT_MSGLOG_Virus | CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV))    //added by lzq: |CLIENT_THREAT_LOG
+			if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_OPT| CLIENT_MSGLOG_NWL  | CLIENT_MSGLOG_THREAT | CLIENT_MSGLOG_DATAPROTECT | CLIENT_MSGLOG_SYSPROTECT | CLIENT_MSGLOG_BACKUP | CLIENT_MSGLOG_Virus | CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV | CLIENT_MSGLOG_UDISKPLUG))    //added by lzq: |CLIENT_THREAT_LOG
 
 
 
@@ -14278,7 +14284,7 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 		if (bSP)  ((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(1);
 		if (bVIR) ((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(1);
 		// 未实现的位（OS/Outbound/Mandatory/Usb/UsbWarning/Firewall/Vuln/ProcAudit/WlTamper/SysGuard/UDiskPlug/NetAdapter/Ext*）提示
-		DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000001 | 0x00001000 | 0x00000008 | 0x00000010 | 0x00000040);
+		DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000001 | 0x00001000 | 0x00000008 | 0x00000010 | 0x00000040 | 0x00008000 | 0x00010000 | 0x03FE0000);
 		if (dwUnsupported != 0)
 		{
 			CString sWarn; sWarn.Format(_T("[LOG][WARN] 以下分类暂未实现 HTTPS 上报 (bits=0x%08X)"), dwUnsupported);

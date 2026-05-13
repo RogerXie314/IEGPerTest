@@ -103,6 +103,7 @@ public:
 	BOOL SendClientBackupLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientVirusLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientNetAdapterLogToServer(LPTSTR lpComputerID);
+	BOOL SendClientUDiskPlugLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask);
 };
 
