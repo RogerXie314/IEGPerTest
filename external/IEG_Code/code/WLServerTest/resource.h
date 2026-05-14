@@ -240,6 +240,8 @@
 #define IDC_ST_RP_FAIL                  1217
 #define IDC_ST_RP_STATUS                1218
 #define IDC_ST_NPCAP                    1219
+#define IDC_ST_RP_AVG_BPS               1220
+#define IDC_ST_RP_AVG_PPS               1221
 
 // Next default values for new objects
 // 

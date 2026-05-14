@@ -396,66 +396,76 @@ END
 // IDD_RAWPACKET — 攻击报文发送 (202)
 //
 
-IDD_RAWPACKET DIALOGEX 0, 0, 660, 520
-CAPTION "RawPacket Attack Sender"
+IDD_RAWPACKET DIALOGEX 0, 0, 960, 660
+CAPTION "RawPacket Sender"
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 9, "Microsoft Sans Serif", 0, 0, 0x0
 BEGIN
-    // Top bar - adapter selection
+    // === Top bar: adapter + Npcap status ===
     LTEXT           "NIC:",IDC_STATIC,12,10,20,10
-    LTEXT           "Npcap: ...",IDC_ST_NPCAP,348,10,300,10
-    COMBOBOX        IDC_CB_ADAPTER,36,8,305,120,CBS_DROPDOWNLIST | WS_VSCROLL
+    COMBOBOX        IDC_CB_ADAPTER,36,8,500,120,CBS_DROPDOWNLIST | WS_VSCROLL
+    LTEXT           "Npcap: --",IDC_ST_NPCAP,545,10,200,10
     
-    // Left column - builtin packets
-    GROUPBOX        "Built-in Attack Packets",IDC_STATIC,8,28,340,180
-    CONTROL         "",IDC_LIST_PACKETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,16,42,324,160,WS_EX_CLIENTEDGE
+    // === Left panel (300px) ===
+    GROUPBOX        "1. Attack Packets",IDC_STATIC,8,34,300,210
+    CONTROL         "",IDC_LIST_PACKETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,16,50,284,188,WS_EX_CLIENTEDGE
     
-    // Target config
-    GROUPBOX        "Target",IDC_STATIC,8,214,340,80
-    LTEXT           "Dest IP:",IDC_STATIC,16,232,35,10
-    EDITTEXT        IDC_EDIT_DEST_IP,56,230,140,14,ES_AUTOHSCROLL
-    LTEXT           "Dest MAC:",IDC_STATIC,16,254,38,10
-    EDITTEXT        IDC_EDIT_DEST_MAC,56,252,140,14,ES_AUTOHSCROLL
+    GROUPBOX        "2. Target",IDC_STATIC,8,250,300,80
+    LTEXT           "Dest IP:",IDC_STATIC,16,268,35,10
+    EDITTEXT        IDC_EDIT_DEST_IP,56,266,244,14,ES_AUTOHSCROLL
+    LTEXT           "Dest MAC:",IDC_STATIC,16,290,38,10
+    EDITTEXT        IDC_EDIT_DEST_MAC,56,288,244,14,ES_AUTOHSCROLL
     
-    // Src IP auto-increment
-    GROUPBOX        "Src IP Auto-Increment (optional)",IDC_STATIC,8,300,340,80
-    CONTROL         "Enable",IDC_CHK_SRCIP_RULE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,316,45,10
-    LTEXT           "Start:",IDC_STATIC,68,317,25,10
-    EDITTEXT        IDC_EDIT_SRCIP_START,96,315,80,12,ES_AUTOHSCROLL
-    LTEXT           "Max:",IDC_STATIC,184,317,22,10
-    EDITTEXT        IDC_EDIT_SRCIP_MAX,208,315,80,12,ES_AUTOHSCROLL
-    LTEXT           "Step:",IDC_STATIC,68,337,25,10
-    EDITTEXT        IDC_EDIT_SRCIP_STEP,96,335,40,12,ES_AUTOHSCROLL | ES_NUMBER
+    GROUPBOX        "3. Src IP (optional)",IDC_STATIC,8,336,300,80
+    CONTROL         "Enable",IDC_CHK_SRCIP_RULE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,352,45,10
+    LTEXT           "Start:",IDC_STATIC,68,353,25,10
+    EDITTEXT        IDC_EDIT_SRCIP_START,96,351,80,12,ES_AUTOHSCROLL
+    LTEXT           "Max:",IDC_STATIC,184,353,22,10
+    EDITTEXT        IDC_EDIT_SRCIP_MAX,208,351,80,12,ES_AUTOHSCROLL
+    LTEXT           "Step:",IDC_STATIC,68,373,25,10
+    EDITTEXT        IDC_EDIT_SRCIP_STEP,96,371,40,12,ES_AUTOHSCROLL | ES_NUMBER
     
-    // Send config
-    GROUPBOX        "Send Config",IDC_STATIC,8,386,340,70
-    LTEXT           "Speed:",IDC_STATIC,16,404,28,10
-    COMBOBOX        IDC_CB_SPEED_MODE,48,402,65,80,CBS_DROPDOWNLIST
-    EDITTEXT        IDC_EDIT_SPEED_VALUE,118,402,60,12,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Mode:",IDC_STATIC,186,404,25,10
-    COMBOBOX        IDC_CB_SEND_MODE,214,402,80,80,CBS_DROPDOWNLIST
-    LTEXT           "Burst:",IDC_STATIC,16,426,28,10
-    EDITTEXT        IDC_EDIT_BURST_COUNT,48,424,60,12,ES_AUTOHSCROLL | ES_NUMBER
-    PUSHBUTTON      "Start",IDC_BTN_RP_START,200,424,60,20
-    PUSHBUTTON      "Stop",IDC_BTN_RP_STOP,270,424,60,20
+    GROUPBOX        "4. Send Config",IDC_STATIC,8,422,300,85
+    LTEXT           "Speed:",IDC_STATIC,16,440,28,10
+    COMBOBOX        IDC_CB_SPEED_MODE,48,438,65,80,CBS_DROPDOWNLIST
+    EDITTEXT        IDC_EDIT_SPEED_VALUE,118,438,60,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Mode:",IDC_STATIC,186,440,25,10
+    COMBOBOX        IDC_CB_SEND_MODE,214,438,80,80,CBS_DROPDOWNLIST
+    LTEXT           "Burst:",IDC_STATIC,16,462,28,10
+    EDITTEXT        IDC_EDIT_BURST_COUNT,48,460,60,12,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "Start",IDC_BTN_RP_START,200,460,50,20
+    PUSHBUTTON      "Stop",IDC_BTN_RP_STOP,254,460,50,20
     
-    // Right stats panel
-    GROUPBOX        "Statistics",IDC_STATIC,356,8,296,150
-    LTEXT           "Real-time bps:",IDC_STATIC,366,28,65,10
-    LTEXT           "0",IDC_ST_RP_BPS,436,28,80,10
-    LTEXT           "Real-time pps:",IDC_STATIC,366,46,65,10
-    LTEXT           "0",IDC_ST_RP_PPS,436,46,80,10
-    LTEXT           "Total sent:",IDC_STATIC,366,66,65,10
-    LTEXT           "0",IDC_ST_RP_TOTAL,436,66,80,10
-    LTEXT           "Send fail:",IDC_STATIC,366,86,65,10
-    LTEXT           "0",IDC_ST_RP_FAIL,436,86,80,10
-    LTEXT           "Status:",IDC_STATIC,366,130,40,10
-    LTEXT           "Initializing...",IDC_ST_RP_STATUS,410,130,150,10
+    // === Right panel: stats (cards) ===
+    GROUPBOX        "Statistics",IDC_STATIC,316,34,636,150
+    // Row 1: Real-time bps / pps / Avg bps
+    GROUPBOX        "",IDC_STATIC,324,50,200,50
+    LTEXT           "Real-time bps",IDC_STATIC,332,56,60,10
+    LTEXT           "0",IDC_ST_RP_BPS,332,70,180,22,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,530,50,200,50
+    LTEXT           "Real-time pps",IDC_STATIC,538,56,60,10
+    LTEXT           "0",IDC_ST_RP_PPS,538,70,180,22,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,736,50,208,50
+    LTEXT           "Avg bps",IDC_STATIC,744,56,60,10
+    LTEXT           "0",IDC_ST_RP_AVG_BPS,744,70,192,22,SS_CENTERIMAGE
+    // Row 2: Avg pps / Total / Fail
+    GROUPBOX        "",IDC_STATIC,324,106,200,50
+    LTEXT           "Avg pps",IDC_STATIC,332,112,60,10
+    LTEXT           "0",IDC_ST_RP_AVG_PPS,332,126,180,22,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,530,106,200,50
+    LTEXT           "Total sent",IDC_STATIC,538,112,60,10
+    LTEXT           "0",IDC_ST_RP_TOTAL,538,126,180,22,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,736,106,208,50
+    LTEXT           "Send fail",IDC_STATIC,744,112,60,10
+    LTEXT           "0",IDC_ST_RP_FAIL,744,126,192,22,SS_CENTERIMAGE
     
-    // Import area placeholder
-    GROUPBOX        "Imported Streams",IDC_STATIC,356,168,296,340
+    // Status bar
+    LTEXT           "Status:",IDC_STATIC,316,192,30,10
+    LTEXT           "Initializing...",IDC_ST_RP_STATUS,350,192,600,10
+    
+    // Stream list placeholder
+    GROUPBOX        "Imported Streams",IDC_STATIC,316,210,636,440
 END
-
 /////////////////////////////////////////////////////////////////////////////
 //
 // IDD_VER_MGMT — 版本管理 (203)

@@ -73,6 +73,8 @@ private:
     CStatic m_stPps;
     CStatic m_stTotal;
     CStatic m_stFail;
+    CStatic m_stAvgBps;
+    CStatic m_stAvgPps;
     CStatic m_stStatus;
     CStatic m_stNpcap;
 

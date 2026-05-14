@@ -37,6 +37,8 @@ void CRawPacketDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_ST_RP_PPS, m_stPps);
     DDX_Control(pDX, IDC_ST_RP_TOTAL, m_stTotal);
     DDX_Control(pDX, IDC_ST_RP_FAIL, m_stFail);
+    DDX_Control(pDX, IDC_ST_RP_AVG_BPS, m_stAvgBps);
+    DDX_Control(pDX, IDC_ST_RP_AVG_PPS, m_stAvgPps);
     DDX_Control(pDX, IDC_ST_RP_STATUS, m_stStatus);
     DDX_Control(pDX, IDC_ST_NPCAP, m_stNpcap);
 }
@@ -298,4 +300,6 @@ void CRawPacketDlg::UpdateStats()
     s.Format(_T("%llu"), total); m_stPps.SetWindowText(s);
     s.Format(_T("%llu"), total); m_stTotal.SetWindowText(s);
     s.Format(_T("%llu"), fail); m_stFail.SetWindowText(s);
+    s.Format(_T("%llu"), total > 0 ? bytes * 8 / total : 0); m_stAvgBps.SetWindowText(s);
+    s.Format(_T("%llu"), total); m_stAvgPps.SetWindowText(s);
 }
