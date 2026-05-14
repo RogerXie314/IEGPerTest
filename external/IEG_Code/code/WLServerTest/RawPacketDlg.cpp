@@ -57,7 +57,9 @@ static CString GetFriendlyName(const char* pcapName)
     int ge = s.Find(_T('}'));
     if (gs >= 0 && ge > gs)
     {
-        CString guid = s.Mid(gs + 1, ge - gs - 1);
+        // ע��� Network\{4D36E972-...}\{NIC_GUID}\Connection �ڶ��� GUID ���뺬 {}��
+        // ֮ǰ Mid(gs+1, ge-gs-1) ȥ���˻����ŵ��� RegOpenKeyEx ��Զʧ�ܡ�
+        CString guid = s.Mid(gs, ge - gs + 1);
         guid.MakeUpper();
         HKEY hKey;
         CString regPath;
@@ -66,30 +68,40 @@ static CString GetFriendlyName(const char* pcapName)
         {
             TCHAR name[256] = {0};
             DWORD size = sizeof(name);
-            if (RegQueryValueEx(hKey, _T("Name"), NULL, NULL, (LPBYTE)name, &size) == ERROR_SUCCESS)
-            {
-                RegCloseKey(hKey);
-                CString friendly;
-                friendly.Format(_T("[%d] %s"), 0, name);
-                return friendly;
-            }
+            LONG rc = RegQueryValueEx(hKey, _T("Name"), NULL, NULL, (LPBYTE)name, &size);
             RegCloseKey(hKey);
+            if (rc == ERROR_SUCCESS && name[0] != 0)
+                return CString(name);
         }
     }
-    CString friendly;
-    friendly.Format(_T("[%d] %S"), 0, pcapName);
-    return friendly;
+    // ���ˣ�����ԭʼ pcap ����ANSI -> TCHAR��
+    return CString(pcapName);
 }
 
 BOOL CRawPacketDlg::OnInitDialog()
 {
     CDialog::OnInitDialog();
-    SetWindowText(_T("RawPacket Attack Sender"));
+    SetWindowText(_T("�������ķ���"));
 
-    // Packet list
-    m_listPackets.SetExtendedStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
-    m_listPackets.InsertColumn(0, _T("Packet"), LVCFMT_LEFT, 320);
+    // ������ñ��Ĺ�ѡ�б������С��ޱ�ͷ��
+    m_listPackets.SetExtendedStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
+    m_listPackets.InsertColumn(0, _T(""), LVCFMT_LEFT, 280);
     LoadBuiltinPackets();
+
+    // �Ҳ��Ѽ��ر����б�
+    CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
+    if (pListRight)
+    {
+        CListCtrl* pLC = (CListCtrl*)pListRight;
+        pLC->SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+        pLC->InsertColumn(0, _T("#"),        LVCFMT_LEFT, 28);
+        pLC->InsertColumn(1, _T("����"),     LVCFMT_LEFT, 110);
+        pLC->InsertColumn(2, _T("Դ��ַ"),   LVCFMT_LEFT, 90);
+        pLC->InsertColumn(3, _T("Ŀ�ĵ�ַ"), LVCFMT_LEFT, 90);
+        pLC->InsertColumn(4, _T("Э��"),     LVCFMT_LEFT, 50);
+        pLC->InsertColumn(5, _T("����(B)"),  LVCFMT_RIGHT, 50);
+        pLC->InsertColumn(6, _T("��Ϣ"),     LVCFMT_LEFT, 120);
+    }
 
     // Speed mode
     m_cbSpeedMode.AddString(_T("PPS"));
@@ -208,8 +220,11 @@ void CRawPacketDlg::RefreshAdapterList()
         char name[512] = {0}, ip[64] = {0};
         RPE_GetAdapterInfo(i, name, sizeof(name), ip, sizeof(ip));
         CString friendly = GetFriendlyName(name);
-        friendly.Replace(_T("[0]"), _T(""));
-        CString display; display.Format(_T("#%d %s  (%S)"), i, friendly, ip);
+        CString display;
+        if (ip[0])
+            display.Format(_T("#%d %s  (%S)"), i, friendly, ip);
+        else
+            display.Format(_T("#%d %s"), i, friendly);
         m_cbAdapter.AddString(display);
         m_adapterNames.Add(CString(name));
         m_adapterIps.Add(CString(ip));

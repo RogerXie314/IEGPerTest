@@ -97,7 +97,7 @@ END
 IDD_WLSERVERTEST_DIALOG DIALOGEX 0, 0, 820, 510
 STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_GROUP | DS_SETFONT | DS_MODALFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "WLServerTest V5.7 - 注册/心跳/日志/白名单 压测工具"
+CAPTION "WLServerTest V5.8 - 注册/心跳/日志/白名单 压测工具"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "WLServerTest  注册 / 心跳 / 日志(HTTPS+TCP) / 白名单",IDC_STATIC,"Static",0x50020000,5,5,560,10
@@ -291,8 +291,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,7,0,0
- PRODUCTVERSION 5,7,0,0
+ FILEVERSION 5,8,0,0
+ PRODUCTVERSION 5,8,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -308,12 +308,12 @@ BEGIN
         BLOCK "080403a8"
         BEGIN
             VALUE "CompanyName", "深圳市腾讯计算机系统有限公司"
-            VALUE "FileVersion", "5, 7, 0, 0"
+            VALUE "FileVersion", "5, 8, 0, 0"
             VALUE "InternalName", "WLServerTest.exe"
             VALUE "LegalCopyright", "版权所有 (C) 2015-2026"
             VALUE "OriginalFilename", "WLServerTest.exe"
             VALUE "ProductName", "终端安全管理"
-            VALUE "ProductVersion", "5, 7, 0, 0"
+            VALUE "ProductVersion", "5, 8, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -396,75 +396,89 @@ END
 // IDD_RAWPACKET — 攻击报文发送 (202)
 //
 
-IDD_RAWPACKET DIALOGEX 0, 0, 960, 660
-CAPTION "RawPacket Sender"
+IDD_RAWPACKET DIALOGEX 0, 0, 600, 360
+CAPTION "攻击报文发送"
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 9, "Microsoft Sans Serif", 0, 0, 0x0
+FONT 9, "Microsoft YaHei UI", 0, 0, 0x1
 BEGIN
-    // === Top bar: adapter + Npcap status ===
-    LTEXT           "NIC:",IDC_STATIC,12,10,20,10
-    COMBOBOX        IDC_CB_ADAPTER,36,8,500,120,CBS_DROPDOWNLIST | WS_VSCROLL
-    LTEXT           "Npcap: --",IDC_ST_NPCAP,545,10,200,10
-    
-    // === Left panel (300px) ===
-    GROUPBOX        "1. Attack Packets",IDC_STATIC,8,34,300,210
-    CONTROL         "",IDC_LIST_PACKETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,16,50,284,188,WS_EX_CLIENTEDGE
-    
-    GROUPBOX        "2. Target",IDC_STATIC,8,250,300,80
-    LTEXT           "Dest IP:",IDC_STATIC,16,268,35,10
-    EDITTEXT        IDC_EDIT_DEST_IP,56,266,244,14,ES_AUTOHSCROLL
-    LTEXT           "Dest MAC:",IDC_STATIC,16,290,38,10
-    EDITTEXT        IDC_EDIT_DEST_MAC,56,288,244,14,ES_AUTOHSCROLL
-    
-    GROUPBOX        "3. Src IP (optional)",IDC_STATIC,8,336,300,80
-    CONTROL         "Enable",IDC_CHK_SRCIP_RULE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,352,45,10
-    LTEXT           "Start:",IDC_STATIC,68,353,25,10
-    EDITTEXT        IDC_EDIT_SRCIP_START,96,351,80,12,ES_AUTOHSCROLL
-    LTEXT           "Max:",IDC_STATIC,184,353,22,10
-    EDITTEXT        IDC_EDIT_SRCIP_MAX,208,351,80,12,ES_AUTOHSCROLL
-    LTEXT           "Step:",IDC_STATIC,68,373,25,10
-    EDITTEXT        IDC_EDIT_SRCIP_STEP,96,371,40,12,ES_AUTOHSCROLL | ES_NUMBER
-    
-    GROUPBOX        "4. Send Config",IDC_STATIC,8,422,300,85
-    LTEXT           "Speed:",IDC_STATIC,16,440,28,10
-    COMBOBOX        IDC_CB_SPEED_MODE,48,438,65,80,CBS_DROPDOWNLIST
-    EDITTEXT        IDC_EDIT_SPEED_VALUE,118,438,60,12,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Mode:",IDC_STATIC,186,440,25,10
-    COMBOBOX        IDC_CB_SEND_MODE,214,438,80,80,CBS_DROPDOWNLIST
-    LTEXT           "Burst:",IDC_STATIC,16,462,28,10
-    EDITTEXT        IDC_EDIT_BURST_COUNT,48,460,60,12,ES_AUTOHSCROLL | ES_NUMBER
-    PUSHBUTTON      "Start",IDC_BTN_RP_START,200,460,50,20
-    PUSHBUTTON      "Stop",IDC_BTN_RP_STOP,254,460,50,20
-    
-    // === Right panel: stats (cards) ===
-    GROUPBOX        "Statistics",IDC_STATIC,316,34,636,150
-    // Row 1: Real-time bps / pps / Avg bps
-    GROUPBOX        "",IDC_STATIC,324,50,200,50
-    LTEXT           "Real-time bps",IDC_STATIC,332,56,60,10
-    LTEXT           "0",IDC_ST_RP_BPS,332,70,180,22,SS_CENTERIMAGE
-    GROUPBOX        "",IDC_STATIC,530,50,200,50
-    LTEXT           "Real-time pps",IDC_STATIC,538,56,60,10
-    LTEXT           "0",IDC_ST_RP_PPS,538,70,180,22,SS_CENTERIMAGE
-    GROUPBOX        "",IDC_STATIC,736,50,208,50
-    LTEXT           "Avg bps",IDC_STATIC,744,56,60,10
-    LTEXT           "0",IDC_ST_RP_AVG_BPS,744,70,192,22,SS_CENTERIMAGE
-    // Row 2: Avg pps / Total / Fail
-    GROUPBOX        "",IDC_STATIC,324,106,200,50
-    LTEXT           "Avg pps",IDC_STATIC,332,112,60,10
-    LTEXT           "0",IDC_ST_RP_AVG_PPS,332,126,180,22,SS_CENTERIMAGE
-    GROUPBOX        "",IDC_STATIC,530,106,200,50
-    LTEXT           "Total sent",IDC_STATIC,538,112,60,10
-    LTEXT           "0",IDC_ST_RP_TOTAL,538,126,180,22,SS_CENTERIMAGE
-    GROUPBOX        "",IDC_STATIC,736,106,208,50
-    LTEXT           "Send fail",IDC_STATIC,744,112,60,10
-    LTEXT           "0",IDC_ST_RP_FAIL,744,126,192,22,SS_CENTERIMAGE
-    
-    // Status bar
-    LTEXT           "Status:",IDC_STATIC,316,192,30,10
-    LTEXT           "Initializing...",IDC_ST_RP_STATUS,350,192,600,10
-    
-    // Stream list placeholder
-    GROUPBOX        "Imported Streams",IDC_STATIC,316,210,636,440
+    // ---- 顶部：网卡 / Npcap 状态 ----
+    LTEXT           "网卡:",IDC_STATIC,8,9,22,10
+    COMBOBOX        IDC_CB_ADAPTER,34,7,400,140,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Npcap: 未就绪",IDC_ST_NPCAP,442,9,152,10
+
+    // ---- 左列 ----
+    // ① 选择攻击报文
+    GROUPBOX        "1. 选择攻击报文",IDC_STATIC,6,22,202,96
+    CONTROL         "",IDC_LIST_PACKETS,"SysListView32",LVS_REPORT | LVS_NOCOLUMNHEADER | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,12,36,190,52,WS_EX_CLIENTEDGE
+    LTEXT           "或右侧「导入报文」加载自定义报文",IDC_STATIC,12,94,190,18
+
+    // ② 设置目标
+    GROUPBOX        "2. 设置目标",IDC_STATIC,6,120,202,64
+    LTEXT           "目的 IP",IDC_STATIC,12,134,40,10
+    EDITTEXT        IDC_EDIT_DEST_IP,12,144,190,13,ES_AUTOHSCROLL
+    LTEXT           "目的 MAC",IDC_STATIC,12,162,40,10
+    EDITTEXT        IDC_EDIT_DEST_MAC,12,172,190,13,ES_AUTOHSCROLL
+
+    // ③ 源IP自动递增（可选）
+    GROUPBOX        "3. 源IP自动递增（可选）",IDC_STATIC,6,186,202,84
+    CONTROL         "启用",IDC_CHK_SRCIP_RULE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,200,60,10
+    LTEXT           "起始值",IDC_STATIC,12,216,40,10
+    EDITTEXT        IDC_EDIT_SRCIP_START,56,214,146,12,ES_AUTOHSCROLL
+    LTEXT           "最大值",IDC_STATIC,12,232,40,10
+    EDITTEXT        IDC_EDIT_SRCIP_MAX,56,230,146,12,ES_AUTOHSCROLL
+    LTEXT           "步长",IDC_STATIC,12,248,40,10
+    EDITTEXT        IDC_EDIT_SRCIP_STEP,56,246,60,12,ES_AUTOHSCROLL | ES_NUMBER
+
+    // ④ 发包配置
+    GROUPBOX        "4. 发包配置",IDC_STATIC,6,272,202,52
+    COMBOBOX        IDC_CB_SPEED_MODE,12,286,76,80,CBS_DROPDOWNLIST | WS_TABSTOP
+    EDITTEXT        IDC_EDIT_SPEED_VALUE,92,287,82,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "pps",IDC_STATIC,178,289,20,10
+    COMBOBOX        IDC_CB_SEND_MODE,12,304,76,80,CBS_DROPDOWNLIST | WS_TABSTOP
+    LTEXT           "数量:",IDC_STATIC,96,306,22,10
+    EDITTEXT        IDC_EDIT_BURST_COUNT,120,305,54,12,ES_AUTOHSCROLL | ES_NUMBER
+
+    // ⑤ 执行
+    GROUPBOX        "5. 执行",IDC_STATIC,6,326,202,30
+    PUSHBUTTON      "开始",IDC_BTN_RP_START,12,338,90,16
+    PUSHBUTTON      "停止",IDC_BTN_RP_STOP,108,338,90,16
+
+    // ---- 右列 ----
+    CONTROL         "",IDC_LIST_RP_RIGHT,"SysListView32",LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,212,22,382,170,WS_EX_CLIENTEDGE
+
+    // 右列工具按钮
+    PUSHBUTTON      "导入报文",IDC_BTN_RP_IMPORT,212,196,60,16
+    PUSHBUTTON      "编辑字段",IDC_BTN_RP_EDIT,276,196,60,16
+    PUSHBUTTON      "删除",IDC_BTN_RP_DEL,340,196,40,16
+    PUSHBUTTON      "清空",IDC_BTN_RP_CLEAR,384,196,40,16
+
+    // 右列统计提示
+    LTEXT           "实时=最近1秒；平均=本次启动以来。 bps=每秒比特数；pps=每秒包数",IDC_STATIC,212,220,382,10
+
+    // 统计 2x3
+    GROUPBOX        "",IDC_STATIC,212,234,128,44
+    LTEXT           "实时 bps",IDC_STATIC,218,240,60,10
+    LTEXT           "0",IDC_ST_RP_BPS,218,252,120,20,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,342,234,128,44
+    LTEXT           "实时 pps",IDC_STATIC,348,240,60,10
+    LTEXT           "0",IDC_ST_RP_PPS,348,252,120,20,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,472,234,124,44
+    LTEXT           "平均 bps",IDC_STATIC,478,240,60,10
+    LTEXT           "0",IDC_ST_RP_AVG_BPS,478,252,116,20,SS_CENTERIMAGE
+
+    GROUPBOX        "",IDC_STATIC,212,282,128,44
+    LTEXT           "平均 pps",IDC_STATIC,218,288,60,10
+    LTEXT           "0",IDC_ST_RP_AVG_PPS,218,300,120,20,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,342,282,128,44
+    LTEXT           "报文总数",IDC_STATIC,348,288,60,10
+    LTEXT           "0",IDC_ST_RP_TOTAL,348,300,120,20,SS_CENTERIMAGE
+    GROUPBOX        "",IDC_STATIC,472,282,124,44
+    LTEXT           "发送失败",IDC_STATIC,478,288,60,10
+    LTEXT           "0",IDC_ST_RP_FAIL,478,300,116,20,SS_CENTERIMAGE
+
+    // 状态行
+    LTEXT           "状态:",IDC_STATIC,212,338,28,10
+    LTEXT           "Initializing...",IDC_ST_RP_STATUS,240,338,358,10
 END
 /////////////////////////////////////////////////////////////////////////////
 //

@@ -242,6 +242,11 @@
 #define IDC_ST_NPCAP                    1219
 #define IDC_ST_RP_AVG_BPS               1220
 #define IDC_ST_RP_AVG_PPS               1221
+#define IDC_LIST_RP_RIGHT               1222
+#define IDC_BTN_RP_IMPORT               1223
+#define IDC_BTN_RP_EDIT                 1224
+#define IDC_BTN_RP_DEL                  1225
+#define IDC_BTN_RP_CLEAR                1226
 
 // Next default values for new objects
 // 
