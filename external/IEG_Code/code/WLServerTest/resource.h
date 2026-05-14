@@ -219,6 +219,27 @@
 #define IDD_RAWPACKET                   202
 #define IDD_VER_MGMT                    203
 
+// --- RawPacket dialog controls ---
+#define IDC_CB_ADAPTER                  1200
+#define IDC_LIST_PACKETS                1201
+#define IDC_EDIT_DEST_IP                1202
+#define IDC_EDIT_DEST_MAC               1203
+#define IDC_CHK_SRCIP_RULE              1204
+#define IDC_EDIT_SRCIP_START            1205
+#define IDC_EDIT_SRCIP_MAX              1206
+#define IDC_EDIT_SRCIP_STEP             1207
+#define IDC_CB_SPEED_MODE               1208
+#define IDC_EDIT_SPEED_VALUE            1209
+#define IDC_CB_SEND_MODE                1210
+#define IDC_EDIT_BURST_COUNT            1211
+#define IDC_BTN_RP_START                1212
+#define IDC_BTN_RP_STOP                 1213
+#define IDC_ST_RP_BPS                   1214
+#define IDC_ST_RP_PPS                   1215
+#define IDC_ST_RP_TOTAL                 1216
+#define IDC_ST_RP_FAIL                  1217
+#define IDC_ST_RP_STATUS                1218
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

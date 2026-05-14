@@ -23,6 +23,7 @@
 #include "WhitelistPreviewDlg.h"
 #include "VersionManagementDlg.h"
 #include "LogCategoryHelpDlg.h"
+#include "RawPacketDlg.h"
 
 #include "ProfileConfig.h"
 
@@ -1418,6 +1419,8 @@ ON_MESSAGE(WM_APP+100, &CWLServerTestDlg::OnAppendLogOutput)
 
 
 ON_CBN_SELCHANGE(IDC_COMBO_PROJECT_TYPE, &CWLServerTestDlg::OnProjectTypeSelChange)
+
+ON_BN_CLICKED(IDC_BUTTON_RAWPACKET, &CWLServerTestDlg::OnBnClickedRawPacket)
 END_MESSAGE_MAP()
 
 
@@ -14590,4 +14593,10 @@ HBRUSH CWLServerTestDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 		}
 	}
 	return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
+}
+
+void CWLServerTestDlg::OnBnClickedRawPacket()
+{
+	CRawPacketDlg dlg(this);
+	dlg.DoModal();
 }

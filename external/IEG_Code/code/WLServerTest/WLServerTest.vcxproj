@@ -393,6 +393,7 @@
     <ClCompile Include="WLServerTest.cpp" />
     <ClCompile Include="WLServerTestDlg.cpp" />
     <ClCompile Include="LogCategoryHelpDlg.cpp" />
+    <ClCompile Include="RawPacketDlg.cpp" />
     <ClCompile Include="WhitelistPreviewDlg.cpp" />
     <ClCompile Include="VersionManagementDlg.cpp" />
   </ItemGroup>
