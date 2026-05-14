@@ -8562,21 +8562,6 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-	// Diagnostic: log what types are selected
-	{
-		CString strDiag;
-		strDiag.Format(_T("[LOG-DIAG] Thread started, SelectedLogType=0x%08X, ClientIndex=%d"),
-			pHeapArgs->iThisTask_SelectedLogType, pHeapArgs->iThisClient_VectorIndex);
-		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER) strDiag += _T(" NET");
-		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV) strDiag += _T(" EXT");
-		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UDISKPLUG) strDiag += _T(" UDISK");
-		CString strExtMask;
-		strExtMask.Format(_T(" ExtMask=0x%08X"), pHeapArgs->dwExtDevSubTypeMask);
-		strDiag += strExtMask;
-		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_OPT) strDiag += _T(" OPT");
-		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_THREAT) strDiag += _T(" THT");
-		g_WLServerTestDlg->AppendLogOutput(strDiag);
-	}
 	do //̷߳һ Sleepһ
 
 
@@ -8880,19 +8865,9 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 			if (g_bStopTask || g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_Virus)
-
-
-
-
 			{
-
-
-
-
 				SendInfoToServer_LogPort.SendClientVirusLogToServer(szThisThread_Selected_ComputerID);
-
-
-
+			}
 
 			if (g_bStopTask || g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER)
@@ -8913,7 +8888,6 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			{
 				BOOL bUdiskRet = SendInfoToServer_LogPort.SendClientUDiskPlugLogToServer(szThisThread_Selected_ComputerID);
 				if (!bUdiskRet) g_WLServerTestDlg->AppendLogOutput(_T("[UDISK] Send FAILED"));
-			}
 			}
 
 
@@ -13945,7 +13919,6 @@ void CWLServerTestDlg::OnBnClickedOptRegisterSametime()
 
 void CWLServerTestDlg::ApplyProjectTypeSelection()
 {
-	AppendLogOutput(_T("[IEG/EDR] ApplyProjectTypeSelection called"));
 	// Auto-select log categories based on project type (IEG/EDR) - aligned with C# SimulatorApp
 	int sel = m_comboProjectType.GetCurSel();
 	CString strType;
@@ -14459,7 +14432,8 @@ LRESULT CWLServerTestDlg::OnAppendLogOutput(WPARAM wParam, LPARAM /*lParam*/)
 		CString strTime;
 	SYSTEMTIME st;
 	GetLocalTime(&st);
-	strTime.Format(_T("[%02d:%02d:%02d.%03d] "), st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	strTime.Format(_T("[%04d-%02d-%02d %02d:%02d:%02d.%03d] "),
+		st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	m_editLogOutput.ReplaceSel(strTime + *pStr + _T("\r\n"));
 	// v9: 从顶部显示，不自动滚到底�?
 	m_editLogOutput.SetSel(0, 0);
