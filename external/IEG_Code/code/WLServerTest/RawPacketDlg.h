@@ -1,6 +1,16 @@
 #pragma once
 #include "afxwin.h"
 #include "afxcmn.h"
+#include <vector>
+
+#pragma pack(push, 1)
+struct RpeRule {
+    BYTE   Valid; DWORD  Flags; WORD   Offset; BYTE   Width;
+    CHAR   BitsFrom; CHAR   BitsLen; BYTE   Rsv[4];
+    BYTE   BaseValue[8]; BYTE   MaxValue[8]; DWORD  StepSize;
+};
+#pragma pack(pop)
+
 
 // RawPacketEngine.dll API declarations
 typedef int (__cdecl *pfnRPE_Init)();
@@ -20,7 +30,10 @@ struct BuiltinPacket {
     CString name;
     CString targetOs;
     CString resourceName;
-    bool selected;
+    bool selected;    std::vector<BYTE> packetData;
+    std::vector<RpeRule> rules;
+    unsigned int checksumFlags;
+
 };
 
 class CRawPacketDlg : public CDialog
@@ -86,7 +99,11 @@ private:
     bool m_isRunning;
 
     // Timer for stats
-    UINT_PTR m_nStatsTimer;
+    UINT_PTR m_nStatsTimer;    unsigned long long m_lastSendTotal;
+    unsigned long long m_lastSendBytes;
+    DWORD m_startTick;
+    CString m_iniPath;
+
 
     bool LoadRawPacketEngine();
     void UnloadRawPacketEngine();
