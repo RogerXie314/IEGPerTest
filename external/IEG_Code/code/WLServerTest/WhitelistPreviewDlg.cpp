@@ -116,6 +116,7 @@ void CWhitelistPreviewDlg::LoadWlFile()
         bV4 = true;
     }
 
+    m_listPreview.SetRedraw(FALSE);
     int nRow = 0;
     while (pos + 8 <= buf.size())
     {
@@ -167,6 +168,8 @@ void CWhitelistPreviewDlg::LoadWlFile()
         m_listPreview.SetItemText(idx, 5, strHash);
         ++nRow;
     }
+
+    m_listPreview.SetRedraw(TRUE);
 
     CString strCount;
     strCount.Format(_T("¹² %d Ìõ"), nRow);

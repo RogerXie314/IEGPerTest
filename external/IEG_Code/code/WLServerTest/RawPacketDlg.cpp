@@ -49,6 +49,10 @@ BEGIN_MESSAGE_MAP(CRawPacketDlg, CDialog)
     ON_BN_CLICKED(IDC_BTN_RP_STOP, &CRawPacketDlg::OnBnClickedStop)
     ON_WM_TIMER()
     ON_CBN_SELCHANGE(IDC_CB_ADAPTER, &CRawPacketDlg::OnCbnSelchangeAdapter)
+    ON_BN_CLICKED(IDC_BTN_RP_IMPORT, &CRawPacketDlg::OnBnClickedImport)
+    ON_BN_CLICKED(IDC_BTN_RP_EDIT, &CRawPacketDlg::OnBnClickedEdit)
+    ON_BN_CLICKED(IDC_BTN_RP_DEL, &CRawPacketDlg::OnBnClickedDelete)
+    ON_BN_CLICKED(IDC_BTN_RP_CLEAR, &CRawPacketDlg::OnBnClickedClear)
 END_MESSAGE_MAP()
 
 // Attack packet payloads + rules (aligned with SimulatorApp C# BuiltinPacketLoader)
@@ -189,15 +193,8 @@ BOOL CRawPacketDlg::OnInitDialog()
 {
     CDialog::OnInitDialog();
     SetWindowText(_T("¹¥»÷±¨ÎÄ·¢ËÍ"));
-    GetModuleFileName(NULL, m_iniPath.GetBuffer(MAX_PATH), MAX_PATH);
-    m_iniPath.ReleaseBuffer();
-    m_iniPath=m_iniPath.Left(m_iniPath.ReverseFind(_T('.')))+_T(".ini");
-    TCHAR buf[256];
-    GetPrivateProfileString(_T("RawPacket"),_T("DestIp"),_T("192.168.1.1"),buf,256,m_iniPath);
-    m_editDestIp.SetWindowText(buf);
-    GetPrivateProfileString(_T("RawPacket"),_T("DestMac"),_T("FF:FF:FF:FF:FF:FF"),buf,256,m_iniPath);
-    m_editDestMac.SetWindowText(buf);
-
+    TCHAR exePath[MAX_PATH];
+    
     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã±ï¿½ï¿½Ä¹ï¿½Ñ¡ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½Þ±ï¿½Í·ï¿½ï¿½
     m_listPackets.SetExtendedStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
     m_listPackets.InsertColumn(0, _T(""), LVCFMT_LEFT, 280);
@@ -233,6 +230,14 @@ BOOL CRawPacketDlg::OnInitDialog()
     m_editBurstCount.SetWindowText(_T("100"));
     m_editDestIp.SetWindowText(_T("192.168.1.1"));
     m_editDestMac.SetWindowText(_T("FF:FF:FF:FF:FF:FF"));
+GetModuleFileName(NULL, exePath, MAX_PATH);
+    m_iniPath = exePath;
+    m_iniPath=m_iniPath.Left(m_iniPath.ReverseFind(_T('.')))+_T(".ini");
+    TCHAR buf[256];
+    GetPrivateProfileString(_T("RawPacket"),_T("DestIp"),_T("192.168.1.1"),buf,256,m_iniPath);
+    m_editDestIp.SetWindowText(buf);
+    GetPrivateProfileString(_T("RawPacket"),_T("DestMac"),_T("FF:FF:FF:FF:FF:FF"),buf,256,m_iniPath);
+    m_editDestMac.SetWindowText(buf);
     m_editSrcIpStart.SetWindowText(_T("192.168.0.1"));
     m_editSrcIpMax.SetWindowText(_T("192.168.255.254"));
     m_editSrcIpStep.SetWindowText(_T("1"));
@@ -271,6 +276,110 @@ BOOL CRawPacketDlg::OnInitDialog()
     }
 
     return TRUE;
+}
+
+
+void CRawPacketDlg::OnBnClickedImport()
+{
+    CFileDialog dlg(TRUE, _T("etc"), NULL, OFN_HIDEREADONLY|OFN_FILEMUSTEXIST,
+        _T("Packet files (*.etc;*.pcap)|*.etc;*.pcap|All files (*.*)|*.*||"), this);
+    if (dlg.DoModal() != IDOK) return;
+    LoadEtcFile(dlg.GetPathName());
+}
+
+void CRawPacketDlg::LoadEtcFile(const CString& path)
+{
+    HANDLE hFile = CreateFile(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return;
+    DWORD size = GetFileSize(hFile, NULL);
+    if (size == 0 || size > 10*1024*1024) { CloseHandle(hFile); return; }
+    std::vector<BYTE> buf(size);
+    DWORD read; ReadFile(hFile, buf.data(), size, &read, NULL); CloseHandle(hFile);
+    if (read != size) return;
+    if (size < 124) return;
+
+    size_t pos = 120; int streamCount = *(int*)(buf.data() + pos); pos += 4;
+    m_importedPackets.clear();
+    CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
+    CListCtrl* pLC = pListRight ? (CListCtrl*)pListRight : NULL;
+    if (pLC) pLC->DeleteAllItems();
+
+    for (int i = 0; i < streamCount && pos + 439 <= size; i++)
+    {
+        pos += 4+1+7; // selected, snd_cnt, rsv
+        CStringA sName((const char*)(buf.data()+pos), 64); sName.TrimRight('\0');
+        pos += 64;
+        unsigned int sFlags = *(unsigned int*)(buf.data()+pos); pos += 4;
+        int sRuleNum = buf[pos]; pos += 1+10; // rule_num, rule_idx
+        std::vector<RpeRule> sRules;
+        for (int r=0; r<10; r++) { sRules.push_back(*(RpeRule*)(buf.data()+pos)); pos += 34; }
+        sRules.resize(sRuleNum);
+        int dataLen = *(int*)(buf.data()+pos); pos += 4;
+        if (dataLen <= 0 || pos + dataLen > size) break;
+
+        BuiltinPacket bp;
+        bp.id=i; bp.name=CString(sName); bp.targetOs=_T(""); bp.resourceName.Empty();
+        bp.selected=true; bp.checksumFlags=sFlags;
+        bp.packetData.assign(buf.data()+pos, buf.data()+pos+dataLen);
+        bp.rules = sRules;
+        m_importedPackets.push_back(bp);
+
+        if (pLC) {
+            DWORD sIP=0,dIP=0;
+            if (dataLen>=34) {
+                sIP=(buf[pos+26]<<24)|(buf[pos+27]<<16)|(buf[pos+28]<<8)|buf[pos+29];
+                dIP=(buf[pos+30]<<24)|(buf[pos+31]<<16)|(buf[pos+32]<<8)|buf[pos+33];
+            }
+            int row=pLC->InsertItem(i,_T(""));
+            CString s; s.Format(_T("%d"),i+1); pLC->SetItemText(row,0,s);
+            pLC->SetItemText(row,1,bp.name);
+            pLC->SetItemText(row,2,IpToStr(sIP));
+            pLC->SetItemText(row,3,IpToStr(dIP));
+            pLC->SetItemText(row,4,GetProtocolName(buf.data()+pos,dataLen));
+            s.Format(_T("%d"),dataLen); pLC->SetItemText(row,5,s);
+            pLC->SetItemText(row,6,_T("Imported"));
+        }
+        pos += dataLen;
+    }
+}
+
+
+void CRawPacketDlg::OnBnClickedEdit()
+{
+    CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
+    CListCtrl* pLC = pListRight ? (CListCtrl*)pListRight : NULL;
+    if (!pLC) return;
+    int sel = pLC->GetNextItem(-1, LVNI_SELECTED);
+    if (sel < 0) { AfxMessageBox(_T("Select a row first")); return; }
+    // Edit selected imported stream: load its dest IP/MAC back to input fields
+    if (sel < (int)m_importedPackets.size()) {
+        std::vector<BYTE>& pkt = m_importedPackets[sel].packetData;
+        if (pkt.size() >= 34) {
+            DWORD dst = (pkt[30]<<24)|(pkt[31]<<16)|(pkt[32]<<8)|pkt[33];
+            m_editDestIp.SetWindowText(IpToStr(dst));
+        }
+    }
+}
+
+void CRawPacketDlg::OnBnClickedDelete()
+{
+    CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
+    CListCtrl* pLC = pListRight ? (CListCtrl*)pListRight : NULL;
+    if (!pLC) return;
+    int sel = pLC->GetNextItem(-1, LVNI_SELECTED);
+    if (sel < 0) { AfxMessageBox(_T("Select a row first")); return; }
+    if (sel < (int)m_importedPackets.size()) {
+        m_importedPackets.erase(m_importedPackets.begin() + sel);
+    }
+    pLC->DeleteItem(sel);
+}
+
+void CRawPacketDlg::OnBnClickedClear()
+{
+    m_importedPackets.clear();
+    CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
+    CListCtrl* pLC = pListRight ? (CListCtrl*)pListRight : NULL;
+    if (pLC) pLC->DeleteAllItems();
 }
 
 void CRawPacketDlg::OnDestroy()
@@ -412,6 +521,22 @@ void CRawPacketDlg::OnStart()
             }
         }
     }
+    for (size_t i=0; i<m_importedPackets.size(); ++i)
+    {
+        std::vector<BYTE>& ipkt=m_importedPackets[i].packetData;
+        if (ipkt.empty()) continue;
+        SetDestMac(ipkt.data(),(int)ipkt.size(),dstMac);
+        SetDestIp(ipkt.data(),(int)ipkt.size(),dstIp);
+        unsigned int icksum=DetectChecksumFlags(ipkt.data(),(int)ipkt.size());
+        if (icksum==0) icksum=m_importedPackets[i].checksumFlags;
+        std::vector<RpeRule>& irules=m_importedPackets[i].rules;
+        const RpeRule* irp=irules.empty()?NULL:irules.data();
+        int irc=(int)irules.size();
+        CStringA iname(m_importedPackets[i].name);
+        RPE_AddStream(ipkt.data(),(int)ipkt.size(),iname,(void*)irp,irc,icksum);
+        streamCount++;
+    }
+
     if (streamCount==0) { AfxMessageBox(_T("Select at least one attack packet"),MB_ICONWARNING); return; }
 
     CString strSpeed; m_editSpeedValue.GetWindowText(strSpeed); long long speedVal=_ttoi64(strSpeed);
@@ -465,4 +590,7 @@ void CRawPacketDlg::UpdateStats()
     s.Format(_T("%.0f"),avgBps); m_stAvgBps.SetWindowText(s);
     s.Format(_T("%.0f"),avgPps); m_stAvgPps.SetWindowText(s);
 }
+
+    afx_msg void OnBnClickedImport();    std::vector<BuiltinPacket> m_importedPackets;
+    void LoadEtcFile(const CString& path);
 

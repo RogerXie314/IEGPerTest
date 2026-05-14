@@ -111,10 +111,16 @@ private:
     void OnStart();
     void OnStop();
     void UpdateStats();
-    void LoadBuiltinPackets();
+        std::vector<BuiltinPacket> m_importedPackets;
+    void LoadEtcFile(const CString& path);
+void LoadBuiltinPackets();
 
     afx_msg void OnBnClickedStart();
     afx_msg void OnBnClickedStop();
     afx_msg void OnTimer(UINT_PTR nIDEvent);
     afx_msg void OnCbnSelchangeAdapter();
+    afx_msg void OnBnClickedImport();
+    afx_msg void OnBnClickedEdit();
+    afx_msg void OnBnClickedDelete();
+    afx_msg void OnBnClickedClear();
 };
