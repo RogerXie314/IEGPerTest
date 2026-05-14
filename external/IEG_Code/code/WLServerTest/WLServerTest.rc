@@ -403,7 +403,8 @@ FONT 9, "Microsoft Sans Serif", 0, 0, 0x0
 BEGIN
     // Top bar - adapter selection
     LTEXT           "NIC:",IDC_STATIC,12,10,20,10
-    COMBOBOX        IDC_CB_ADAPTER,36,8,300,120,CBS_DROPDOWNLIST | WS_VSCROLL
+    LTEXT           "Npcap: ...",IDC_ST_NPCAP,348,10,300,10
+    COMBOBOX        IDC_CB_ADAPTER,36,8,305,120,CBS_DROPDOWNLIST | WS_VSCROLL
     
     // Left column - builtin packets
     GROUPBOX        "Built-in Attack Packets",IDC_STATIC,8,28,340,180

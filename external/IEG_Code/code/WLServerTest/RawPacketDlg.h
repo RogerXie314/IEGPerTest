@@ -74,6 +74,7 @@ private:
     CStatic m_stTotal;
     CStatic m_stFail;
     CStatic m_stStatus;
+    CStatic m_stNpcap;
 
     // Data
     std::vector<BuiltinPacket> m_builtinPackets;

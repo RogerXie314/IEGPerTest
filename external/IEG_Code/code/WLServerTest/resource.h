@@ -239,6 +239,7 @@
 #define IDC_ST_RP_TOTAL                 1216
 #define IDC_ST_RP_FAIL                  1217
 #define IDC_ST_RP_STATUS                1218
+#define IDC_ST_NPCAP                    1219
 
 // Next default values for new objects
 // 
