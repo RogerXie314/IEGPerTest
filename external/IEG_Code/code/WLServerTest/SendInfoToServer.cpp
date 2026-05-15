@@ -589,7 +589,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	sCupName+=sCount.GetBuffer();
 
 	// FALSE - ����64λϵͳ�� FALSE - ��������Ȩ�ڵ㣻 TRUE - ��IEGע�ᣨ����SRS��
-	std::string sData = m_json.SetUp_GetJson(wsComputerID, sUserName, 0x01, CMD_CLIENT_REGISTRY, sCupName, szComputerIP.GetBuffer(), _T("00-00-00-00-00-00"), (LPCTSTR)szOS, FALSE, FALSE, TRUE, TRUE, (LPCTSTR)szVersion);
+	std::string sData = m_json.SetUp_GetJson(wsComputerID, sUserName, 0x01, CMD_CLIENT_REGISTRY, sCupName, szComputerIP.GetBuffer(), _T("00-00-00-00-00-00"), (LPCTSTR)szOS, FALSE, FALSE, FALSE, TRUE, (LPCTSTR)szVersion);
 
 	CString stMsg;
 	stMsg.Format(_T("Register . IP=%s, data= %S"), m_strServerIP.GetBuffer(), (sData.c_str()));
@@ -604,7 +604,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	{
 		CString strMsg;
 		strMsg.Format(_T("doPost ERROR. URL=%s, sData= %S"), m_wsURL_CLIENT_INSTALL.c_str(), sData.c_str());
-		//AfxMessageBox(strMsg);
+		  AfxMessageBox(strMsg);
 		return FALSE;
 	}	
 
