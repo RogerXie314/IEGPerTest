@@ -2928,6 +2928,22 @@ BOOL CSendInfoToServer::SendClientUDiskPlugLogToServer(LPTSTR lpComputerID)
 		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 	return bRet;
 }
+BOOL CSendInfoToServer::SendClientVulDefenseLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_VUL, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":207,\"CMDContent\":[{\"Time\":\"%s\",\"VulType\":1,\"VulLevel\":1,\"ControlMode\":0,\"SrcPort\":445,\"DstPort\":445,\"Protocol\":\"TCP\",\"SrcIp\":\"192.168.1.100\",\"DstIp\":\"192.168.1.1\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientVulDefenseLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
 BOOL CSendInfoToServer::SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType)
 {
     BOOL bRet = FALSE;

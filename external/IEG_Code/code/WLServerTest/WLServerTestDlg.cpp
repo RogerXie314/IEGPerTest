@@ -8626,6 +8626,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			if (dwSub & 0x00000080) SendInfoToServer_LogPort.SendClientUsbLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000100) SendInfoToServer_LogPort.SendClientUsbWarningLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000200) SendInfoToServer_LogPort.SendClientFirewallLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000400) SendInfoToServer_LogPort.SendClientVulDefenseLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000002) SendInfoToServer_LogPort.SendClientOsResourceLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 2);
 			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 4);
@@ -12806,10 +12807,10 @@ if (dwTypes == 0)
     // Set CLIENT_MSGLOG_* bits for HTTPS categories (old-style log sender compatibility)
     if (bFileProtect)           m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_DATAPROTECT;
     if (bSysGuard)              m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_SYSPROTECT;
-    if (bVulnProtect)           m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_THREAT;
+    // bVulnProtect goes to OPT (not THREAT) - aligned with C# VulDefense HTTPS category
     if (bVirus)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_Virus;
     if (bNonWl)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NWL;
-    if (bOs || bOutbound || bMandatory || bUsb || bUsbWarn || bFirewall || bProcAudit || bWlTamper || bRegProtect)
+    if (bOs || bOutbound || bMandatory || bUsb || bUsbWarn || bFirewall || bProcAudit || bWlTamper || bRegProtect || bVulnProtect)
         m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_OPT;
     if (bUdiskPlug)             m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_UDISKPLUG;
 
