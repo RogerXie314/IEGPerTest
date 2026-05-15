@@ -14257,39 +14257,43 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
 
 		// r8: 把新位图(dwTypes)映射到老 hidden checkbox，AddTask 据此再 OR 回 CLIENT_MSGLOG_*
-		BOOL bOPT  = (dwTypes & 0x00000001) ? TRUE : FALSE; // ClientOps
-		BOOL bNWL  = (dwTypes & 0x00001000) ? TRUE : FALSE; // NonWhitelist
-		BOOL bDP   = (dwTypes & 0x00000008) ? TRUE : FALSE; // FileProtect → DATAPROTECT
-		BOOL bSP   = (dwTypes & 0x00000010) ? TRUE : FALSE; // RegProtect  → SYSPROTECT
-		BOOL bVIR  = (dwTypes & 0x00000040) ? TRUE : FALSE; // VirusAlert
-		// Clear all hidden checkboxes first to prevent stale state from previous operations
-		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_Backup_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_CHECK_BASE_LINE))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_CHECK_UKEY))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_WHITE_LIST))->SetCheck(0);
+		BOOL bFileProtect = (dwTypes & 0x00000008) ? TRUE : FALSE; // -> DATAPROTECT
+    BOOL bRegProtect  = (dwTypes & 0x00000010) ? TRUE : FALSE;
+    BOOL bVirus       = (dwTypes & 0x00000040) ? TRUE : FALSE; // -> CLIENT_MSGLOG_Virus
+    BOOL bSysGuard    = (dwTypes & 0x00004000) ? TRUE : FALSE; // -> SYSPROTECT
+    BOOL bVulnProtect = (dwTypes & 0x00000400) ? TRUE : FALSE; // -> THREAT
+    BOOL bNonWl       = (dwTypes & 0x00001000) ? TRUE : FALSE; // -> NWL
+    BOOL bOs          = (dwTypes & 0x00000002) ? TRUE : FALSE; // -> OPT (ClientOps)
+    BOOL bOutbound    = (dwTypes & 0x00000004) ? TRUE : FALSE; // -> OPT
+    BOOL bMandatory   = (dwTypes & 0x00000020) ? TRUE : FALSE; // -> OPT
+    BOOL bUsb         = (dwTypes & 0x00000080) ? TRUE : FALSE; // -> OPT
+    BOOL bUsbWarn     = (dwTypes & 0x00000100) ? TRUE : FALSE; // -> OPT
+    BOOL bFirewall    = (dwTypes & 0x00000200) ? TRUE : FALSE; // -> OPT
+    BOOL bProcAudit   = (dwTypes & 0x00000800) ? TRUE : FALSE; // -> OPT
+    BOOL bWlTamper    = (dwTypes & 0x00002000) ? TRUE : FALSE; // -> OPT
+    BOOL bUdiskPlug   = (dwTypes & 0x00008000) ? TRUE : FALSE; // -> UDISKPLUG
 
-		if (bOPT) ((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(1);
-		if (bNWL) ((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(1);
-		if (bDP)  ((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(1);
-		if (bSP)  ((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(1);
-		if (bVIR) ((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(1);
-		// 未实现的位（OS/Outbound/Mandatory/Usb/UsbWarning/Firewall/Vuln/ProcAudit/WlTamper/SysGuard/UDiskPlug/NetAdapter/Ext*）提示
-		DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000001 | 0x00001000 | 0x00000008 | 0x00000010 | 0x00000040 | 0x00008000 | 0x00010000 | 0x03FE0000);
-		if (dwUnsupported != 0)
-		{
-			CString sWarn; sWarn.Format(_T("[LOG][WARN] 以下分类暂未实现 HTTPS 上报 (bits=0x%08X)"), dwUnsupported);
-			AppendLogOutput(sWarn);
-		}
-				// Set extension bits for NetAdapter and ExtDev (no hidden checkbox for these)
-		if (dwTypes & 0x00010000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NETADAPTER;
-		m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;  // pass ExtDev sub-type mask to thread
-		if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
+    // Set CLIENT_MSGLOG_* bits for HTTPS categories (old-style log sender compatibility)
+    if (bFileProtect)           m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_DATAPROTECT;
+    if (bSysGuard)              m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_SYSPROTECT;
+    if (bVulnProtect)           m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_THREAT;
+    if (bVirus)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_Virus;
+    if (bNonWl)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NWL;
+    if (bOs || bOutbound || bMandatory || bUsb || bUsbWarn || bFirewall || bProcAudit || bWlTamper)
+        m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_OPT;
+    if (bUdiskPlug)             m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_UDISKPLUG;
+
+    // Warn about unimplemented categories
+    DWORD dwUnsupported = (dwTypes & 0x03FFFFFF) & ~(0x00000008 | 0x00000010 | 0x00000040 | 0x00004000 | 0x00000400 | 0x00001000 | 0x00000002 | 0x00000004 | 0x00000020 | 0x00000080 | 0x00000100 | 0x00000200 | 0x00000800 | 0x00002000 | 0x00008000 | 0x00000001); // ClientOps(0x01) not in enum
+    if (dwUnsupported) {
+        CString s; s.Format(_T("[LOG][WARN] Unsupported HTTPS categories (bits=0x%08X)"), dwUnsupported);
+        AppendLogOutput(s);
+    }
+
+    // Extension bits (NETADAPTER + EXTDEV)
+    if (dwTypes & 0x00010000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NETADAPTER;
+    m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;
+    if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
 GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
 		// 还原 hidden checkbox 防止下次复选
 		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
