@@ -10900,7 +10900,14 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-			if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKEY))
+			
+    if (0 == m_iThisTask_SelectedOperationType && iThisTask_ClientCount > 0 && iThisTask_EachClient_PerSecondItems > 0)
+    {
+        AfxMessageBox(_T("No log type selected"));
+        return;
+    }
+
+if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKEY))
 
 
 
