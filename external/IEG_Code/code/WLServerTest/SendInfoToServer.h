@@ -105,6 +105,17 @@ public:
 	BOOL SendClientNetAdapterLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientUDiskPlugLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask);
+    // New per-category HTTPS senders (aligned with C# SimulatorApp)
+    BOOL SendClientProcessAlertLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientAdminLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientUsbLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientUsbWarningLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientFirewallLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientOsResourceLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientRegProtectLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientMacProtectLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientSafetyStoreLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientThreatFakeLogToServer(LPTSTR lpComputerID);
 };
 
 

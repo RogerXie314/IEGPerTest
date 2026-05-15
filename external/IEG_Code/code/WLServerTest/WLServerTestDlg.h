@@ -47,6 +47,7 @@ typedef struct _LOG_SENDER_THREAD_ARG
 	SOCKET          sock;
 
 	DWORD           dwExtDevSubTypeMask; // bitmask for ExtDev sub-types (same encoding as dwTypes)
+    DWORD           dwHttpsSubTypes;       // full dwTypes mask for per-category routing
 }LOG_SENDER_THREAD_ARG,*PLOG_SENDER_THREAD_ARG;  
 
 
@@ -134,6 +135,7 @@ public:
 
 	int m_iThisTask_SelectedOperationType;
 	DWORD       m_dwExtDevSubTypeMask;  // ExtDev sub-type bitmask for log sender thread
+    DWORD           m_dwHttpsSubTypes;      // full dwTypes mask for per-category routing
 
 	LONGLONG m_lMsgLogSuccessCount;
 	LONGLONG m_lFileLog_WL_SuccessCount;

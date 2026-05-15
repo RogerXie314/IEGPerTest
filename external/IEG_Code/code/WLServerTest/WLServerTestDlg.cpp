@@ -8618,22 +8618,25 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 			if (g_bStopTask || g_bStopLogTask) break; // r6
-			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_OPT)
+					// Per-category HTTPS dispatch (aligned with C# SimulatorApp)
+		DWORD dwSub = pHeapArgs->dwHttpsSubTypes;
+		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_OPT)
+		{
+			if (dwSub & 0x00000001) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000080) SendInfoToServer_LogPort.SendClientUsbLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000100) SendInfoToServer_LogPort.SendClientUsbWarningLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000200) SendInfoToServer_LogPort.SendClientFirewallLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000002) SendInfoToServer_LogPort.SendClientOsResourceLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientRegProtectLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientMacProtectLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000800) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000004) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00002000) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+			// Fallback for any remaining OPT bits (safety store, etc.)
+			DWORD dwMapped = dwSub & 0x00000001 | dwSub & 0x00000080 | dwSub & 0x00000100 | dwSub & 0x00000200 | dwSub & 0x00000002 | dwSub & 0x00000010 | dwSub & 0x00000020 | dwSub & 0x00000800 | dwSub & 0x00000004 | dwSub & 0x00002000;
+			if (0 == dwMapped) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+		}
 
-
-
-
-			{ 
-
-
-
-
-				bRet = SendInfoToServer_LogPort.SendClientOptLogToServer(szThisThread_Selected_ComputerID);
-
-
-
-
-			}
 
 
 
@@ -11235,6 +11238,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 					pHeapArgsForAllThread_MsgLog->iThisTask_SelectedLogType = m_iThisTask_SelectedOperationType;
+		pHeapArgsForAllThread_MsgLog->dwHttpsSubTypes = m_dwHttpsSubTypes;
 					pHeapArgsForAllThread_MsgLog->dwExtDevSubTypeMask = m_dwExtDevSubTypeMask;
 
 
@@ -11486,6 +11490,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 					pHeapArgsForAllThread_FileLog->iThisTask_SelectedLogType = m_iThisTask_SelectedOperationType;
+		pHeapArgsForAllThread_FileLog->dwHttpsSubTypes = m_dwHttpsSubTypes;
 
 
 
@@ -12724,7 +12729,8 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 	if (m_catThreatDll.GetCheck())       dwTypes |= 0x20000000;
 	if (m_catThreatOs.GetCheck())        dwTypes |= 0x40000000;
 
-	if (dwTypes == 0)
+		m_dwHttpsSubTypes = dwTypes;
+if (dwTypes == 0)
 	{
 		AfxMessageBox(_T("Please select at least one log category"));
 		return;

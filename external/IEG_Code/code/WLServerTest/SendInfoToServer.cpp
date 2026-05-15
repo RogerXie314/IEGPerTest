@@ -2732,6 +2732,168 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	return bRet;
 }
 
+
+// New per-category HTTPS senders (aligned with C# SimulatorApp)
+
+BOOL CSendInfoToServer::SendClientProcessAlertLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_PROCESS, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":201,\"CMDContent\":[{\"Time\":\"%s\",\"HoldBack\":0,\"IntegrityCheck\":0,\"CertCheck\":0,\"Type\":1,\"SubType\":6,\"FullPath\":\"C:\\\\Windows\\\\System32\\\\cmd.exe\",\"ParentProcess\":\"explorer.exe\",\"CompanyName\":\"Microsoft\",\"ProductName\":\"Windows\",\"Version\":\"10.0\",\"UserName\":\"Admin\",\"Hash\":\"-\",\"IEGHash\":\"-\",\"DefIntegrity\":\"-\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientProcessAlertLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientAdminLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_OPERATOR, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":203,\"CMDContent\":[{\"Time\":\"%s\",\"UserName\":\"Admin\",\"LogContent\":\"WLServerTest simulated admin operation\",\"dwIsSuccess\":1}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientAdminLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientUsbLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_USB, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":204,\"CMDVER\":1,\"CMDContent\":[{\"Time\":\"%s\",\"UsbType\":15,\"LogContent\":\"USB device plugged\"}],\"CMDUsbContent\":[],\"CMDContentOtherDev\":[]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientUsbLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientUsbWarningLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_ACCESS_USB_WARNING, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":209,\"CMDContent\":[{\"Time\":\"%s\",\"LogContent\":\"USB access warning\",\"UsbType\":\"storage\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientUsbWarningLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientFirewallLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_FIREWALL, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":205,\"CMDContent\":[{\"Time\":\"%s\",\"Type\":0,\"LogContent\":\"Firewall rule triggered\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientFirewallLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientOsResourceLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_UPLOAD_OS_RES, m_strServerIP, _ttoi(m_strServerPort));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":206,\"CMDContent\":[{\"Time\":%lld,\"Message\":\"OS resource alert\",\"ResourceType\":1}]}]"),
+        (LPCTSTR)lpComputerID, (long long)time(NULL));
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientOsResourceLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientRegProtectLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_REGPROTECT, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":208,\"CMDContent\":[{\"Time\":\"%s\",\"Block\":1,\"FullPath\":\"HKLM\\\\Software\\\\Demo\",\"LogContent\":\"1\",\"LogType\":2,\"ProcessName\":\"regedit.exe\",\"Username\":\"Admin\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientRegProtectLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientMacProtectLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HOSTREINFORCE_MAC_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":208,\"CMDContent\":[{\"Time\":\"%s\",\"Block\":1,\"FullPath\":\"C:\\\\Temp\\\\demo.txt\",\"LogContent\":\"1\",\"LogType\":4,\"ProcessName\":\"notepad.exe\",\"Username\":\"Admin\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientMacProtectLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientSafetyStoreLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SAFETY_APPSTORE_LOG_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":212,\"CMDContent\":[{\"Time\":\"%s\",\"AppName\":\"demo-app\",\"Version\":\"1.0\",\"Action\":\"install\",\"Result\":\"success\"}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientSafetyStoreLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+BOOL CSendInfoToServer::SendClientThreatFakeLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_THREATFAKE, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":210,\"CMDContent\":[{\"FakeIP\":\"10.0.0.1\",\"FakePort\":3389,\"Protocol\":\"RDP\",\"StartTime\":\"%s\",\"Type\":1}]}]"),
+        (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientThreatFakeLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
 // UDiskPlug: USB device plug/unplug event (hotplugDevLog.do, CMDID=204, CMDVER=1)
 // Reference: WLUtilities/WLJsonParse.cpp::UsbDiskPlugLog_GetJsonByVector (else branch)
 //   Fields: Time, UDiskType, serialID, registerStatus, DiskDriverLetter (array), plugEvent
