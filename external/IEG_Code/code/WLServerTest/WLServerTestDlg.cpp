@@ -5412,8 +5412,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?ᰴ�?
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(FALSE);
-
+	
 
 
 
@@ -5782,8 +5781,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?ᰴ�?
 
 
 
-                GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE);
-
+                
 
 
 
@@ -6097,8 +6095,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?ᰴ�?
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE);
-
+	
 
 
 
@@ -9339,8 +9336,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-		  g_WLServerTestDlg->GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE);
-
+		  
 
 
 
@@ -9684,7 +9680,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(FALSE);  
+	/* removed */  
 	g_bStopTask = FALSE; // v14: reset stop flag before launching HB threads
 
 
@@ -10041,8 +10037,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE);
-
+	
 
 
 
@@ -10617,8 +10612,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(FALSE);
-
+	
 
 
 
@@ -10632,8 +10626,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(FALSE);
-
+	
 
 
 
@@ -11688,7 +11681,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	//GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE); //modified by lzq 0621:ֻ?�?????��?
+	///* removed */ //modified by lzq 0621:ֻ?�?????��?
 
 
 
@@ -11909,8 +11902,7 @@ void CWLServerTestDlg::OnBnClicked_Lowest_StopTask()
 
 
 
-		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(FALSE);
-
+		
 
 
 
@@ -11974,8 +11966,7 @@ void CWLServerTestDlg::OnBnClicked_Lowest_StopTask()
 
 
 
-		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->EnableWindow(TRUE);
-
+		
 
 
 
