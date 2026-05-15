@@ -12842,7 +12842,7 @@ if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
 		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
 
 		// Set threat detection type for TCP channel
-		m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_THREAT;
+		m_iThisTask_SelectedOperationType = (int)((dwTypes & 0x7C000000) | CLIENT_MSGLOG_THREAT);
 		if (nTcpC > 0) OnBnClickedButton_Lowest_AddTask();
 
 		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
