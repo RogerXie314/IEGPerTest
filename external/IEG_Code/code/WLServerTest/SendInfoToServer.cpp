@@ -2318,8 +2318,8 @@ BOOL CSendInfoToServer::SendClientDataProtectLogToServer(LPTSTR lpComputerID)
 		pLog->Result = 1;
 		pLog->Action = 1;
 
-		_tcscpy(pLog->Subject, _T("C:\\���ݱ�����������.exe"));
-		_tcscpy(pLog->Object, _T("C:\\���ݱ������Կ���.exe"));
+		_tcscpy(pLog->Subject, _T("C:\\Windows\\System32\\notepad.exe"));
+		_tcscpy(pLog->Object, _T("C:\\Users\\admin\\Documents\\secret.doc"));
 
 		pMData_DataProtectLog = new CWLMetaData(iLogHeadBodyLen,pLogBuf_DataProtectLog);
 
@@ -2405,8 +2405,8 @@ BOOL CSendInfoToServer::SendClientSysProtectLogToServer(LPTSTR lpComputerID)
 		pLog->Result = 1;
 		pLog->Action = 1;
 
-		_tcscpy(pLog->Subject, _T("C:\\ϵͳ������������.exe"));
-		_tcscpy(pLog->Object, _T("C:\\ϵͳ�������Կ���.exe"));
+		_tcscpy(pLog->Subject, _T("C:\\Windows\\System32\\cmd.exe"));
+		_tcscpy(pLog->Object, _T("C:\\Windows\\System32\\Tasks\\evil.dll"));
 
 		pMData_SysProtectLog = new CWLMetaData(iLogHeadBodyLen,pLogBuf_SysProtectLog);
 
