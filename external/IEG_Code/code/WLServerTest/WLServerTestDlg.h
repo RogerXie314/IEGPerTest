@@ -106,9 +106,6 @@ private:
 	CComboBox m_comAppLog_Task_EachClientTotalItems;
 	CComboBox m_comAppLog_Task_EachClientPerSecondItems;
 
-	CButton m_Check_OPTLog;
-	CButton m_Check_THTLog;
-	CButton m_Check_NWLLog;
   
 	
 
@@ -180,7 +177,6 @@ public:
 
 	void PrepareVecClients_UpdateControls();
 	
-	afx_msg void OnBnClickedWlFileChooseButton();
 	afx_msg void OnIpnFieldchangedIpaddressClient(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClicked_Lowest_StopTask();
 	afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
@@ -198,17 +194,6 @@ public:
 	CStatic mMsgLog_ThreatOpt_TotalCount_RightTotal;
 	
 
-	afx_msg void OnBnClickedOptLog();
-	afx_msg void OnBnClickedThtLog();
-	afx_msg void OnBnClickedNwlLog();
-	afx_msg void OnBnClicked_PwlChooseFile_CheckBox();
-	afx_msg void OnBnClickedCheckBaseLine();
-	afx_msg void OnBnClickedCheckUkey();
-	afx_msg void OnBnClickedDataprotectLog();
-	afx_msg void OnBnClickedSysprotectLog();
-	afx_msg void OnBnClickedBackupLog();
-	afx_msg void OnBnClickedVirusLog();
-	afx_msg void OnBnClickedWhitelistPathType();
     CButton m_bRegisterSameTime;
     CStatic m_RegisterThreadCount;
     
