@@ -866,18 +866,15 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
 
-    DDX_Control(pDX, IDC_OPT_LOG, m_Check_OPTLog);
+    
 
 
 
-
-    DDX_Control(pDX, IDC_THT_LOG, m_Check_THTLog);
-
+    
 
 
 
-    DDX_Control(pDX, IDC_NWL_LOG, m_Check_NWLLog);
-
+    
 
 
 
@@ -14294,7 +14291,7 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
     if (dwTypes & 0x00010000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NETADAPTER;
     m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;
     if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
-GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+OnBnClickedButton_Lowest_AddTask();
 		// 还原 hidden checkbox 防止下次复选
 		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
@@ -14328,7 +14325,7 @@ GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
 		((CButton*)GetDlgItem(IDC_CHECK_BASE_LINE))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_CHECK_UKEY))->SetCheck(0);
 		((CButton*)GetDlgItem(IDC_WHITE_LIST))->SetCheck(0);
-		GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+		OnBnClickedButton_Lowest_AddTask();
 		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
 		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
 	}
@@ -14358,7 +14355,7 @@ void CWLServerTestDlg::OnBnClickedWlUpload()
 	// Force-check the hidden IDC_WHITE_LIST so AddTask picks up FILE_LOG_TYPE
 	CButton* pWLChk = (CButton*)GetDlgItem(IDC_WHITE_LIST);
 	if (pWLChk) pWLChk->SetCheck(BST_CHECKED);
-	GetDlgItem(IDC_BUTTON_APPLOG_SEND_LowestAddTask)->SendMessage(BM_CLICK);
+	OnBnClickedButton_Lowest_AddTask();
 	if (pWLChk) pWLChk->SetCheck(BST_UNCHECKED); // restore
 	AppendLogOutput(_T("[WL] Whitelist upload task added"));
 }
