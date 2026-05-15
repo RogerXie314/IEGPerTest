@@ -10153,6 +10153,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 	int iThisTask_EachClient_PerSecondItems = _ttoi(strThisTask_EachClientPerSecondItems);
+	int iOrigPerSecond = iThisTask_EachClient_PerSecondItems; // save before forced min
 	if (iThisTask_EachClient_PerSecondItems <= 0) iThisTask_EachClient_PerSecondItems = 1; // v6: 结束结束�?
 
 
@@ -10902,7 +10903,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 			
-    if (0 == m_iThisTask_SelectedOperationType && iThisTask_ClientCount > 0 && iThisTask_EachClient_PerSecondItems > 0)
+    if (0 == m_iThisTask_SelectedOperationType && (iThisTask_ClientCount > 0 || iOrigPerSecond > 0))
     {
         AfxMessageBox(_T("No log type selected"));
         return;
