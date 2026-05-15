@@ -10212,7 +10212,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	m_iThisTask_SelectedOperationType &= (CLIENT_MSGLOG_NETADAPTER | CLIENT_MSGLOG_EXTDEV | CLIENT_MSGLOG_UDISKPLUG); // preserve extension bits set by caller
+	// m_iThisTask_SelectedOperationType set by caller (OnBnClickedLogAdd) via CAT_* checkboxes
 
 
 
