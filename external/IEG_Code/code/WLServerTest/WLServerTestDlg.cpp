@@ -8627,8 +8627,8 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			if (dwSub & 0x00000100) SendInfoToServer_LogPort.SendClientUsbWarningLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000200) SendInfoToServer_LogPort.SendClientFirewallLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000002) SendInfoToServer_LogPort.SendClientOsResourceLogToServer(szThisThread_Selected_ComputerID);
-			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientRegProtectLogToServer(szThisThread_Selected_ComputerID);
-			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientMacProtectLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 2);
+			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 4);
 			if (dwSub & 0x00000800) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000004) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00002000) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
@@ -8784,7 +8784,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-				SendInfoToServer_LogPort.SendClientDataProtectLogToServer(szThisThread_Selected_ComputerID);
+			SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 1);
 
 
 
@@ -12809,7 +12809,7 @@ if (dwTypes == 0)
     if (bVulnProtect)           m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_THREAT;
     if (bVirus)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_Virus;
     if (bNonWl)                 m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NWL;
-    if (bOs || bOutbound || bMandatory || bUsb || bUsbWarn || bFirewall || bProcAudit || bWlTamper)
+    if (bOs || bOutbound || bMandatory || bUsb || bUsbWarn || bFirewall || bProcAudit || bWlTamper || bRegProtect)
         m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_OPT;
     if (bUdiskPlug)             m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_UDISKPLUG;
 

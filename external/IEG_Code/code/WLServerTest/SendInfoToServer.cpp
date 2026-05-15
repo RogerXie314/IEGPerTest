@@ -2928,3 +2928,19 @@ BOOL CSendInfoToServer::SendClientUDiskPlugLogToServer(LPTSTR lpComputerID)
 		CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 	return bRet;
 }
+BOOL CSendInfoToServer::SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_UPLOAD_HOSTDEFENCE_WARNING, m_strServerIP, _ttoi(m_strServerPort));
+    CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
+    CString sJson;
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":208,\"CMDContent\":[{\"Block\":1,\"FullPath\":\"C:\\\\Temp\\\\demo.txt\",\"LogContent\":\"1\",\"LogType\":%d,\"ProcessName\":\"notepad.exe\",\"Time\":\"%s\",\"Username\":\"Admin\"}]}]"),
+        (LPCTSTR)lpComputerID, logType, (LPCTSTR)sTime);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
+    if (!bRet) WriteError(_T("SendClientHostDefenceLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
