@@ -4867,7 +4867,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-    if (((CButton *)g_WLServerTestDlg->GetDlgItem(IDC_WHITE_LIST))->GetCheck())
+    if (FALSE)
 
 
 
@@ -5317,7 +5317,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?ᰴ�?
 
 
 
-        if (((CButton *)GetDlgItem(IDC_WHITE_LIST))->GetCheck())
+        if (FALSE /*removed*/)
 
 
 
@@ -10222,7 +10222,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_OPT_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10247,7 +10247,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_THT_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10272,7 +10272,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_NWL_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10297,7 +10297,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_WHITE_LIST))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10357,7 +10357,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_CHECK_BASE_LINE))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10387,7 +10387,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_CHECK_UKEY))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10417,7 +10417,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_DATAPROTECT_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10447,7 +10447,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_SYSPROTECT_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10472,7 +10472,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_Backup_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10502,7 +10502,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_Virus_LOG))->GetCheck())
+	if (FALSE /*removed*/)
 
 
 
@@ -10532,7 +10532,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	if (((CButton *)GetDlgItem(IDC_Whitelist_Path_Type))->GetCheck())
+	if (FALSE)
 
 
 
@@ -12811,11 +12811,11 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
     if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
 OnBnClickedButton_Lowest_AddTask();
 		// 还原 hidden checkbox 防止下次复选
-		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
 		AppendLogOutput(_T("[LOG] HTTPS 通道任务已添加"));
 	}
 
@@ -12833,18 +12833,18 @@ OnBnClickedButton_Lowest_AddTask();
 		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
 
 		// Clear all hidden checkboxes, then set threat type only
-		((CButton*)GetDlgItem(IDC_OPT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_NWL_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_DATAPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_SYSPROTECT_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_Virus_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(1);
-		((CButton*)GetDlgItem(IDC_Backup_LOG))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_CHECK_BASE_LINE))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_CHECK_UKEY))->SetCheck(0);
-		((CButton*)GetDlgItem(IDC_WHITE_LIST))->SetCheck(0);
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
+		/*removed*/;
 		OnBnClickedButton_Lowest_AddTask();
-		((CButton*)GetDlgItem(IDC_THT_LOG))->SetCheck(0);
+		/*removed*/;
 		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
 	}
 }
@@ -12871,7 +12871,7 @@ void CWLServerTestDlg::OnBnClickedWlUpload()
 		return;
 	}
 	// Force-check the hidden IDC_WHITE_LIST so AddTask picks up FILE_LOG_TYPE
-	CButton* pWLChk = (CButton*)GetDlgItem(IDC_WHITE_LIST);
+	CButton* pWLChk = (CButton*)NULL /*removed*/;
 	if (pWLChk) pWLChk->SetCheck(BST_CHECKED);
 	OnBnClickedButton_Lowest_AddTask();
 	if (pWLChk) pWLChk->SetCheck(BST_UNCHECKED); // restore
