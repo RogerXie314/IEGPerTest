@@ -12852,7 +12852,7 @@ if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
 		/*removed*/;
 		/*removed*/;
 		/*removed*/;
-		OnBnClickedButton_Lowest_AddTask();
+	if (nHttpsC > 0) OnBnClickedButton_Lowest_AddTask();
 		/*removed*/;
 		AppendLogOutput(_T("[LOG] TCP 威胁通道任务已添加"));
 	}
