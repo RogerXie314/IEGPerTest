@@ -352,5 +352,6 @@ public:
 
     // --- �Զ�����Ϣ�����ڿ��߳�׷����־��---
     afx_msg LRESULT OnAppendLogOutput(WPARAM wParam, LPARAM lParam);
+    afx_msg void OnBnClickedWlFileChooseButton();
 
 };

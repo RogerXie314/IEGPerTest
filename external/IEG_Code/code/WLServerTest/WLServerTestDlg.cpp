@@ -1278,6 +1278,7 @@ BEGIN_MESSAGE_MAP(CWLServerTestDlg, CDialog)
 
 
 //	ON_WM_DROPFILES()
+	ON_BN_CLICKED(IDC_WL_FILE_CHOOSE_BUTTON, &CWLServerTestDlg::OnBnClickedWlFileChooseButton)
 
 
 
@@ -12862,6 +12863,13 @@ void CWLServerTestDlg::OnBnClickedLogStop()
 	AppendLogOutput(_T("[LOG] Stop task sent"));
 }
 
+
+void CWLServerTestDlg::OnBnClickedWlFileChooseButton()
+{
+	CString cstrFile;
+	CFileDialog dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.wl)|*.wl|"), NULL);
+	if (dlgFile.DoModal()) { cstrFile = dlgFile.GetPathName(); m_WLFilePathEdit.SetWindowText(cstrFile); }
+}
 void CWLServerTestDlg::OnBnClickedWlUpload()
 {
 	// v15: IDC_WHITE_LIST is hidden; check file path, force-check it, then delegate
