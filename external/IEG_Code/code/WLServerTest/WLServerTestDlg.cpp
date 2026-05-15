@@ -12818,7 +12818,7 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
     if (dwTypes & 0x00010000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_NETADAPTER;
     m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;
     if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
-OnBnClickedButton_Lowest_AddTask();
+if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
 		// 还原 hidden checkbox 防止下次复选
 		/*removed*/;
 		/*removed*/;
