@@ -33,6 +33,7 @@ external/IEG_Code/code/WLServerTest/*
 !external/IEG_Code/code/WLServerTest/*.vcxproj.filters
 !external/IEG_Code/code/WLServerTest/*.sln
 !external/IEG_Code/code/WLServerTest/*.ini
+!external/IEG_Code/code/WLServerTest/*.dll
 !external/IEG_Code/code/WLServerTest/res/
 external/IEG_Code/code/WLServerTest/res/*
 !external/IEG_Code/code/WLServerTest/res/*.ico
