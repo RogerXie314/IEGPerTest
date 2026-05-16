@@ -8630,11 +8630,11 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			if (dwSub & 0x00000002) SendInfoToServer_LogPort.SendClientOsResourceLogToServer(szThisThread_Selected_ComputerID);
 			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 2);
 			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 4);
-			if (dwSub & 0x00000800) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000800) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 2, 6);
 			if (dwSub & 0x00000004) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
-			if (dwSub & 0x00002000) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+			if ((dwSub & 0x00002000)) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 3, 3);
 			// Fallback for any remaining OPT bits (safety store, etc.)
-			DWORD dwMapped = dwSub & 0x00000001 | dwSub & 0x00000080 | dwSub & 0x00000100 | dwSub & 0x00000200 | dwSub & 0x00000002 | dwSub & 0x00000010 | dwSub & 0x00000020 | dwSub & 0x00000800 | dwSub & 0x00000004 | dwSub & 0x00002000;
+			DWORD dwMapped = dwSub & 0x00000001 | dwSub & 0x00000080 | dwSub & 0x00000100 | dwSub & 0x00000200 | dwSub & 0x00000002 | dwSub & 0x00000010 | dwSub & 0x00000020 | dwSub & 0x00000800 | dwSub & 0x00000004 | (dwSub & 0x00002000);
 			if (0 == dwMapped) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
 		}
 

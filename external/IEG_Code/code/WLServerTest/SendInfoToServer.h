@@ -106,7 +106,7 @@ public:
 	BOOL SendClientUDiskPlugLogToServer(LPTSTR lpComputerID);
 	BOOL SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD dwSubTypeMask);
     // New per-category HTTPS senders (aligned with C# SimulatorApp)
-    BOOL SendClientProcessAlertLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientProcessAlertLogToServer(LPTSTR lpComputerID, int type = 2, int subType = 6);
     BOOL SendClientAdminLogToServer(LPTSTR lpComputerID);
     BOOL SendClientUsbLogToServer(LPTSTR lpComputerID);
     BOOL SendClientUsbWarningLogToServer(LPTSTR lpComputerID);
