@@ -12708,6 +12708,8 @@ void CWLServerTestDlg::OnBnClickedLogAdd()
 	if (m_catVirusAlert.GetCheck())      dwTypes |= 0x00000040;
 	if (m_catUsb.GetCheck())             dwTypes |= 0x00000080;
 	if (m_catUsbWarning.GetCheck())      dwTypes |= 0x00000100;
+	if (m_catUsb.GetCheck())             dwTypes |= 0x00000080;
+	if (m_catUsb.GetCheck())             dwTypes |= 0x00000080;
 	if (m_catFirewall.GetCheck())        dwTypes |= 0x00000200;
 	if (m_catVulnProtect.GetCheck())     dwTypes |= 0x00000400;
 	if (m_catProcAudit.GetCheck())       dwTypes |= 0x00000800;
