@@ -8658,7 +8658,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-				 SendInfoToServer_LogPort.SendClientNwlLogToServer_FiveType(szThisThread_Selected_ComputerID);
+				 SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 1, 6);
 
 
 
