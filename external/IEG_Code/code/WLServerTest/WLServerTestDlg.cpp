@@ -8559,7 +8559,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-		if (g_bStopTask || g_bStopLogTask)
+		if (g_bStopLogTask)
 
 
 
@@ -8619,7 +8619,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 					// Per-category HTTPS dispatch (aligned with C# SimulatorApp)
 		DWORD dwSub = pHeapArgs->dwHttpsSubTypes;
 		if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_OPT)
@@ -8633,7 +8633,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 			if (dwSub & 0x00000010) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 2);
 			if (dwSub & 0x00000020) SendInfoToServer_LogPort.SendClientHostDefenceLogToServer(szThisThread_Selected_ComputerID, 4);
 			if (dwSub & 0x00000800) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 2, 6);
-			if (dwSub & 0x00000004) SendInfoToServer_LogPort.SendClientAdminLogToServer(szThisThread_Selected_ComputerID);
+			if (dwSub & 0x00000004) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 1, 6);
 			if ((dwSub & 0x00002000)) SendInfoToServer_LogPort.SendClientProcessAlertLogToServer(szThisThread_Selected_ComputerID, 3, 3);
 			// Fallback for any remaining OPT bits (safety store, etc.)
 			DWORD dwMapped = dwSub & 0x00000001 | dwSub & 0x00000080 | dwSub & 0x00000100 | dwSub & 0x00000200 | dwSub & 0x00000002 | dwSub & 0x00000010 | dwSub & 0x00000020 | dwSub & 0x00000800 | dwSub & 0x00000004 | (dwSub & 0x00002000);
@@ -8649,7 +8649,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NWL)
 
 
@@ -8675,7 +8675,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_THREAT)
 
 
@@ -8776,7 +8776,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_DATAPROTECT)
 
 
@@ -8802,7 +8802,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_SYSPROTECT)
 
 
@@ -8828,7 +8828,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_BACKUP)
 
 
@@ -8854,27 +8854,27 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_Virus)
 			{
 				SendInfoToServer_LogPort.SendClientVirusLogToServer(szThisThread_Selected_ComputerID);
 			}
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_NETADAPTER)
 			{
 				BOOL bNetRet = SendInfoToServer_LogPort.SendClientNetAdapterLogToServer(szThisThread_Selected_ComputerID);
 				if (!bNetRet) g_WLServerTestDlg->AppendLogOutput(_T("[NET] Send FAILED"));
 			}
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_EXTDEV)
 			{
 				BOOL bExtRet = SendInfoToServer_LogPort.SendClientExtDevLogToServer(szThisThread_Selected_ComputerID, pHeapArgs->dwExtDevSubTypeMask);
 				if (!bExtRet) g_WLServerTestDlg->AppendLogOutput(_T("[EXT] Send FAILED"));
 			}
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UDISKPLUG)
 			{
 				BOOL bUdiskRet = SendInfoToServer_LogPort.SendClientUDiskPlugLogToServer(szThisThread_Selected_ComputerID);
@@ -8972,7 +8972,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_BLINE)
 
 
@@ -8993,7 +8993,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-			if (g_bStopTask || g_bStopLogTask) break; // r6
+			if (g_bStopLogTask) break; // r6
 			if (pHeapArgs->iThisTask_SelectedLogType & CLIENT_MSGLOG_UKEY)
 
 
@@ -9177,7 +9177,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 		{ // r6: chunked sleep for fast stop response
 			int _slpR6 = pHeapArgs->iMsgLog_SleepInterval;
 			for (int _eR6 = 0; _eR6 < _slpR6; _eR6 += 50) {
-				if (g_bStopTask || g_bStopLogTask) break;
+				if (g_bStopLogTask) break;
 				Sleep(50);
 			}
 		}
@@ -9303,7 +9303,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-		if (g_bStopTask || g_bStopLogTask)
+		if (g_bStopLogTask)
 
 
 
@@ -12698,7 +12698,7 @@ void CWLServerTestDlg::OnBnClickedHbStop()
 
 void CWLServerTestDlg::OnBnClickedLogAdd()
 {
-	g_bStopTask = TRUE; g_bStopLogTask = TRUE;  Sleep(300);  g_bStopTask = FALSE; g_bStopLogTask = FALSE;
+	g_bStopLogTask = TRUE;  Sleep(300);  g_bStopLogTask = FALSE;
 	DWORD dwTypes = 0;
 	if (m_catClientOps.GetCheck())       dwTypes |= 0x00000001;
 	if (m_catOs.GetCheck())              dwTypes |= 0x00000002;
