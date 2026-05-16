@@ -2742,7 +2742,7 @@ BOOL CSendInfoToServer::SendClientProcessAlertLogToServer(LPTSTR lpComputerID)
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_LOG_PROCESS, m_strServerIP, _ttoi(m_strServerPort));
     CString sTime = CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S"));
     CString sJson;
-    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":201,\"CMDContent\":[{\"Time\":\"%s\",\"HoldBack\":0,\"IntegrityCheck\":0,\"CertCheck\":0,\"Type\":1,\"SubType\":6,\"FullPath\":\"C:\\\\Windows\\\\System32\\\\cmd.exe\",\"ParentProcess\":\"explorer.exe\",\"CompanyName\":\"Microsoft\",\"ProductName\":\"Windows\",\"Version\":\"10.0\",\"UserName\":\"Admin\",\"Hash\":\"-\",\"IEGHash\":\"-\",\"DefIntegrity\":\"-\"}]}]"),
+    sJson.Format(_T("[{\"ComputerID\":\"%s\",\"CMDTYPE\":200,\"CMDID\":201,\"CMDContent\":[{\"Time\":\"%s\",\"HoldBack\":0,\"IntegrityCheck\":0,\"CertCheck\":0,\"Type\":2,\"SubType\":6,\"FullPath\":\"C:\\\\Windows\\\\System32\\\\cmd.exe\",\"ParentProcess\":\"explorer.exe\",\"CompanyName\":\"Microsoft\",\"ProductName\":\"Windows\",\"Version\":\"10.0\",\"UserName\":\"Admin\",\"Hash\":\"-\",\"IEGHash\":\"-\",\"DefIntegrity\":\"-\"}]}]"),
         (LPCTSTR)lpComputerID, (LPCTSTR)sTime);
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)(LPCSTR)CStringA(sJson), &pResult);
