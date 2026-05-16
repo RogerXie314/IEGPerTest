@@ -2758,6 +2758,54 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	return bRet;
 }
 
+BOOL CSendInfoToServer::SendClientSysFileCheckLogToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR URL_PROCESS_LOG[100] = {0};
+    _snwprintf_s(URL_PROCESS_LOG, sizeof(URL_PROCESS_LOG)/sizeof(URL_PROCESS_LOG[0]), _TRUNCATE, URL_LOG_PROCESS, m_strServerIP, _ttoi(m_strServerPort));
+
+    int iLogHeadBodyLen = (sizeof(IPC_LOG_COMMON)+sizeof(WARNING_LOG_STRUCT));
+    BYTE* pLogBuf = new BYTE[iLogHeadBodyLen];
+    memset(pLogBuf, 0, iLogHeadBodyLen);
+
+    IPC_LOG_COMMON* ipclogcomm = (IPC_LOG_COMMON*)pLogBuf;
+    ipclogcomm->dwLogType = WL_IPC_LOG_TYPE_ALARM;
+    ipclogcomm->dwDetailLogTypeLevel1 = WL_IPC_LOG_TYPE_LEVE_1_PROCESS_WHITELIST;
+    ipclogcomm->dwSize = sizeof(WARNING_LOG_STRUCT);
+
+    PWARNING_LOG_STRUCT pLog = (PWARNING_LOG_STRUCT)ipclogcomm->data;
+    pLog->bHoldback = 0;
+    WLUtils::WarningLog_Type_2_DB(OPTYPE_PWL_SYSFILE_CHECK, 0, pLog->nSubType);
+    pLog->bCertCheckFailed = 1;
+    pLog->bIntegrityCheckFailed = 1;
+    pLog->llTime = _time32(NULL);
+    _tcscpy(pLog->szFullPath, _T("c:\Tmp\OPTYPE_PWL_SYSFILE_CHECK.exe"));
+    _tcslwr(pLog->szFullPath);
+    _tcscpy(pLog->szVersion, _T("7893"));
+    _tcscpy(pLog->szCompany, _T("Some Company"));
+    _tcscpy(pLog->szProduct, _T("SomeProduct"));
+    _tcscpy(pLog->szDefIntegrity, _T("Some defintegrity"));
+    pLog->nSubType = OPTYPE_PWL_SYSFILE_CHECK;
+    pLog->processId = 0x7893;
+
+    CWLMetaData* pMData = new CWLMetaData(iLogHeadBodyLen, pLogBuf);
+    std::vector<CWLMetaData*> vecLog;
+    vecLog.push_back(pMData);
+
+    CWLJsonParse json;
+    std::string sJson = json.WarningLog_GetJsonByVector(lpComputerID, DATA_TO_SERVER_HEARTBEAT, DATA_TO_SERVER_PROCESS_ALERT_LOG, vecLog);
+
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(URL_PROCESS_LOG, (LPSTR)sJson.c_str(), &pResult);
+    if (!bRet) WriteError(_T("SendClientSysFileCheckLogToServer failed"));
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+
+    delete pMData;
+    delete[] pLogBuf;
+    return bRet;
+}
+
+
 
 // New per-category HTTPS senders (aligned with C# SimulatorApp)
 
