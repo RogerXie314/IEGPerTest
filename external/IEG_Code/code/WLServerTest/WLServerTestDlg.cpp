@@ -1022,6 +1022,7 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
     DDX_Control(pDX, IDC_CAT_USB_WARNING,        m_catUsbWarning);
+	DDX_Control(pDX, IDC_CAT_USB,               m_catUsb);
 
 
 
