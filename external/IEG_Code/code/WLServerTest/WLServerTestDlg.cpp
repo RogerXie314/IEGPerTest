@@ -12698,7 +12698,7 @@ void CWLServerTestDlg::OnBnClickedHbStop()
 
 void CWLServerTestDlg::OnBnClickedLogAdd()
 {
-	g_bStopLogTask = TRUE;  Sleep(300);  g_bStopLogTask = FALSE;
+	g_bStopTask = TRUE; g_bStopLogTask = TRUE;  Sleep(300);  g_bStopTask = FALSE; g_bStopLogTask = FALSE;
 	DWORD dwTypes = 0;
 	if (m_catClientOps.GetCheck())       dwTypes |= 0x00000001;
 	if (m_catOs.GetCheck())              dwTypes |= 0x00000002;
