@@ -259,3 +259,4 @@
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
+#define IDC_BTN_UNSELECT_ALL            1227

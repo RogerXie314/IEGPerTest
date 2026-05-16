@@ -1407,6 +1407,7 @@ ON_MESSAGE(WM_APP+100, &CWLServerTestDlg::OnAppendLogOutput)
 ON_CBN_SELCHANGE(IDC_COMBO_PROJECT_TYPE, &CWLServerTestDlg::OnProjectTypeSelChange)
 
 ON_BN_CLICKED(IDC_BUTTON_RAWPACKET, &CWLServerTestDlg::OnBnClickedRawPacket)
+	ON_BN_CLICKED(IDC_BTN_UNSELECT_ALL, &CWLServerTestDlg::OnBnClickedUnselectAll)
 END_MESSAGE_MAP()
 
 
@@ -12871,6 +12872,41 @@ void CWLServerTestDlg::OnBnClickedWlFileChooseButton()
 	CString cstrFile;
 	CFileDialog dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.wl)|*.wl|"), NULL);
 	if (dlgFile.DoModal()) { cstrFile = dlgFile.GetPathName(); m_WLFilePathEdit.SetWindowText(cstrFile); }
+}
+
+void CWLServerTestDlg::OnBnClickedUnselectAll()
+{
+	m_catClientOps.SetCheck(BST_UNCHECKED);
+	m_catOs.SetCheck(BST_UNCHECKED);
+	m_catOutbound.SetCheck(BST_UNCHECKED);
+	m_catFileProtect.SetCheck(BST_UNCHECKED);
+	m_catRegProtect.SetCheck(BST_UNCHECKED);
+	m_catMandatoryAccess.SetCheck(BST_UNCHECKED);
+	m_catVirusAlert.SetCheck(BST_UNCHECKED);
+	m_catUsb.SetCheck(BST_UNCHECKED);
+	m_catUsbWarning.SetCheck(BST_UNCHECKED);
+	m_catFirewall.SetCheck(BST_UNCHECKED);
+	m_catVulnProtect.SetCheck(BST_UNCHECKED);
+	m_catProcAudit.SetCheck(BST_UNCHECKED);
+	m_catNonWhitelist.SetCheck(BST_UNCHECKED);
+	m_catWlTamper.SetCheck(BST_UNCHECKED);
+	m_catSysGuard.SetCheck(BST_UNCHECKED);
+	m_catUDiskPlug.SetCheck(BST_UNCHECKED);
+	m_catNetAdapter.SetCheck(BST_UNCHECKED);
+	m_catExtUsbPort.SetCheck(BST_UNCHECKED);
+	m_catExtWpd.SetCheck(BST_UNCHECKED);
+	m_catExtCdrom.SetCheck(BST_UNCHECKED);
+	m_catExtWlan.SetCheck(BST_UNCHECKED);
+	m_catExtUsbEth.SetCheck(BST_UNCHECKED);
+	m_catExtFloppy.SetCheck(BST_UNCHECKED);
+	m_catExtBt.SetCheck(BST_UNCHECKED);
+	m_catExtSerial.SetCheck(BST_UNCHECKED);
+	m_catExtParallel.SetCheck(BST_UNCHECKED);
+	m_catThreatProc.SetCheck(BST_UNCHECKED);
+	m_catThreatReg.SetCheck(BST_UNCHECKED);
+	m_catThreatFile.SetCheck(BST_UNCHECKED);
+	m_catThreatDll.SetCheck(BST_UNCHECKED);
+	m_catThreatOs.SetCheck(BST_UNCHECKED);
 }
 void CWLServerTestDlg::OnBnClickedWlUpload()
 {
