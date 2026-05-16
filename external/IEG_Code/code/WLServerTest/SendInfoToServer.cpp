@@ -778,7 +778,33 @@ BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sock
 
 
 
-	bResult = TRUE;
+	
+	// DLL Load (EventType=80)
+	{
+		char szJson[2048];
+		sprintf_s(szJson, sizeof(szJson),
+			"[{\"ComputerID\":\"%S\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{\"EventType\":80,\"DllLoad.TimeStamp\":%lld,\"DllLoad.ProcessId\":1234,\"DllLoad.ProcessGuid\":\"{11111111-1111-1111-1111-111111111111}\",\"DllLoad.ProcessFileName\":\"malware_loader.exe\",\"DllLoad.ProcessName\":\"C:\\\\malware_loader.exe\",\"DllLoad.TargetDllFileName\":\"malware.dll\",\"DllLoad.TargetDllPath\":\"C:\\\\Windows\\\\System32\\\\malware.dll\",\"DllLoad.User\":\"WIN-DESKTOP\\DELL\",\"DllLoad.UserSid\":\"S-1-5-21-3782372158-3025124834-3246284786-1000\"}}]",
+			wtrsComputerID.c_str(), (long long)time(NULL)*1000);
+		TmpJson = szJson;
+		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+		{
+			strMsg.Format(_T("SendData ERROR(DLL). IP=%s"), m_strServerIP.GetBuffer());
+			WriteError(strMsg.GetBuffer());
+			goto END;
+		}
+		Sleep(50);
+	}
+
+	// WinEventLog (EventType=10)
+	TmpJson = Obj.ThreatLog_SimulateJson_WinEventLog(wtrsComputerID, wstrClientID, wstrClientIP);
+	if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+	{
+		strMsg.Format(_T("SendData ERROR(WinEvent). IP=%s"), m_strServerIP.GetBuffer());
+		WriteError(strMsg.GetBuffer());
+		goto END;
+	}
+	Sleep(50);
+bResult = TRUE;
 
 END:
 
@@ -2735,7 +2761,7 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 
 // New per-category HTTPS senders (aligned with C# SimulatorApp)
 
-BOOL CSendInfoToServer::SendClientProcessAlertLogToServer(LPTSTR lpComputerID)
+BOOL CSendInfoToServer::SendClientProcessAlertLogToServer(LPTSTR lpComputerID, int type, int subType)
 {
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
