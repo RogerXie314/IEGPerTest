@@ -6,7 +6,7 @@
 
 ---
 
-## 🆕 WLServerTest **V5.5**（2026-05-11，latest）
+## 🆕 WLServerTest **V5.9**（2026-05-16，latest）
 
 发布路径：`artifacts/WLServerTestPublish/`。
 
@@ -20,6 +20,10 @@
 **部署**（无需安装运行时）：把 `artifacts/WLServerTestPublish/` 整目录拷贝到目标机器，双击 `WLServerTest.exe`。
 
 详见：
+- [CHANGELOG_v5.9.md](CHANGELOG_v5.9.md)
+- [CHANGELOG_v5.8.md](CHANGELOG_v5.8.md)
+- [CHANGELOG_v5.7.md](CHANGELOG_v5.7.md)
+- [CHANGELOG_v5.6.md](CHANGELOG_v5.6.md)
 - [CHANGELOG_v5.5.md](CHANGELOG_v5.5.md)
 - [CHANGELOG_v5.2.md](CHANGELOG_v5.2.md)
 - [docs/项目实施文档.md](docs/项目实施文档.md)
@@ -84,7 +88,7 @@ pwsh -File scripts\build_wlservertest.ps1
 
 | 分支 | 主推工具 | 架构 | 最新版本 |
 |---|---|---|---|
-| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V5.5** |
+| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V5.9** |
 | [`simulator-subprocess`](../../tree/simulator-subprocess) | SimulatorApp | C# WPF + NativeRunner.exe 子进程（stdio 管道 IPC，C++ 与 .NET GC 隔离） | v3.9.7 |
 | [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) | SimulatorApp | C# WPF + NativeSender.dll 同进程（P/Invoke） | v3.7.31 |
 
@@ -96,6 +100,10 @@ pwsh -File scripts\build_wlservertest.ps1
 
 ```
 README.md                       # 本文件
+CHANGELOG_v5.9.md               # WLServerTest V5.9 变更日志
+CHANGELOG_v5.8.md               # WLServerTest V5.8 变更日志
+CHANGELOG_v5.7.md               # WLServerTest V5.7 变更日志
+CHANGELOG_v5.6.md               # WLServerTest V5.6 变更日志
 CHANGELOG_v5.5.md               # WLServerTest V5.5 变更日志
 CHANGELOG_v5.2.md               # WLServerTest V5.2 变更日志
 config.ini.example              # WLServerTest 配置样例
@@ -108,7 +116,7 @@ external/                       # WLServerTest 源码 + 老 IEG 代码参考库
   └── xiaobing/                  # 第三方参考
 
 artifacts/
-  └── WLServerTestPublish/      # WLServerTest V5.5 发布产物（exe + dll + ini）
+  └── WLServerTestPublish/      # WLServerTest V5.9 发布产物（exe + dll + ini）
 
 docs/                           # 文档（聊天记录 / 项目实施文档 / 项目看板 / WLServerTest UI 改造进度 等）
 tools/                          # 通用：Python 白名单解析工具（CLI + GUI）
@@ -138,7 +146,7 @@ archive/
 
 ## 📋 历史版本
 
-- **WLServerTest**（main）：V5.5（计数器原子化+卡片化+布局重排）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
+- **WLServerTest**（main）：V5.9（OPT调度大修+日志路由对齐）/ V5.8（攻击报文UI复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
 - **SimulatorApp**（其它分支）：详见 [`simulator-subprocess`](../../tree/simulator-subprocess) 与 [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) 自带 CHANGELOG
 
 详见各 `CHANGELOG_*.md` 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。

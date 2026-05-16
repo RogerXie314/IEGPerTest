@@ -117,6 +117,7 @@ public:
     BOOL SendClientMacProtectLogToServer(LPTSTR lpComputerID);
     BOOL SendClientSafetyStoreLogToServer(LPTSTR lpComputerID);
     BOOL SendClientThreatFakeLogToServer(LPTSTR lpComputerID);
+    BOOL SendClientIllegalConnectLogToServer(LPTSTR lpComputerID);
     BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
     BOOL SendClientVulDefenseLogToServer(LPTSTR lpComputerID);
 };
