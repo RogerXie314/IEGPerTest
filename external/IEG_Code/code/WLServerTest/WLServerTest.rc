@@ -97,7 +97,7 @@ END
 IDD_WLSERVERTEST_DIALOG DIALOGEX 0, 0, 820, 510
 STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_GROUP | DS_SETFONT | DS_MODALFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "WLServerTest V5.9 - 注册/心跳/日志/白名单 压测工具"
+CAPTION "WLServerTest V6.0 - 注册/心跳/日志/白名单 压测工具"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "WLServerTest  注册 / 心跳 / 日志(HTTPS+TCP) / 白名单",IDC_STATIC,"Static",0x50020000,5,5,560,10
@@ -281,8 +281,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,9,0,0
- PRODUCTVERSION 5,9,0,0
+ FILEVERSION 6,0,0,0
+ PRODUCTVERSION 6,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -298,12 +298,12 @@ BEGIN
         BLOCK "080403a8"
         BEGIN
             VALUE "CompanyName", "深圳市腾讯计算机系统有限公司"
-            VALUE "FileVersion", "5, 9, 0, 0"
+            VALUE "FileVersion", "6, 0, 0, 0"
             VALUE "InternalName", "WLServerTest.exe"
             VALUE "LegalCopyright", "版权所有 (C) 2015-2026"
             VALUE "OriginalFilename", "WLServerTest.exe"
             VALUE "ProductName", "终端安全管理"
-            VALUE "ProductVersion", "5, 9, 0, 0"
+            VALUE "ProductVersion", "6, 0, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
