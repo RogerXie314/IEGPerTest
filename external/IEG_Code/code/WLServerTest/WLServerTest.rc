@@ -68,6 +68,14 @@ END
 // Icon
 //
 
+// Visual Styles manifest - enable XP/comctl32 v6 rendering
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+#ifdef _WIN32
+#include <winres.h>
+IDI_MANIFEST            RT_MANIFEST               "res\\WLServerTest.manifest"
+#endif
+#endif
+
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\WLServerTest.ico"
@@ -97,11 +105,11 @@ END
 IDD_WLSERVERTEST_DIALOG DIALOGEX 0, 0, 820, 510
 STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_GROUP | DS_SETFONT | DS_MODALFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "WLServerTest V6.0 - 注册/心跳/日志/白名单 压测工具"
+CAPTION "WLServerTest V6.0 - ? 注册 / ? 心跳 / ? 日志(HTTPS+TCP) / ? 白名单 压测工具"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "WLServerTest  注册 / 心跳 / 日志(HTTPS+TCP) / 白名单",IDC_STATIC,"Static",0x50020000,5,5,560,10
-    CONTROL         "攻击报文",IDC_BUTTON_RAWPACKET,"Button",0x50010000,281,4,80,14
+    CONTROL         "[*] 攻击报文",IDC_BUTTON_RAWPACKET,"Button",0x50010000,281,4,80,14
     CONTROL         "服务器设置",IDC_STATIC,"Button",0x50000007,5,20,270,84
     CONTROL         "平台 Host:",IDC_STATIC,"Static",0x50020000,13,35,46,8
     CONTROL         "",IDC_EDIT_SERV_IP,"Edit",0x50810080,61,33,104,12
@@ -114,7 +122,7 @@ BEGIN
     CONTROL         "",IDC_EDIT_LOG_PORT,"Edit",0x50810080,186,47,46,12
     CONTROL         "使用日志服务器",IDC_CHECK_USE_LOG_SERVER,"Button",0x50010003,13,62,62,10
     CONTROL         "（心跳+日志均走 UDP 到日志服务器）",IDC_STATIC,"Static",0x50020000,77,63,190,8
-    CONTROL         "端口连通测试",IDC_Btn_TestConn,"Button",0x50010000,13,75,80,14
+    CONTROL         "[*] 端口连通测试",IDC_Btn_TestConn,"Button",0x50010000,13,75,80,14
     CONTROL         "",IDC_STATIC_RegisteredClientCount,"Static",0x50020000,97,78,158,8
     CONTROL         "注册设置",IDC_STATIC,"Button",0x50000007,5,106,270,116
     CONTROL         "前缀:",IDC_STATIC,"Static",0x50020000,13,121,26,8
@@ -127,15 +135,15 @@ BEGIN
     CONTROL         "",IDC_COMBO_REG_COUNT,"Edit",0x50810080,65,161,148,12
     CONTROL         "客户端版本:",IDC_STATIC,"Static",0x50020000,13,177,52,8
     CONTROL         "",IDC_COMBO_CLIENT_VERSION,"ComboBox",0x50210003,65,176,128,57
-    CONTROL         "管理版本",IDC_BUTTON_VER_MGMT,"Button",0x50010000,200,175,52,14
+    CONTROL         "[~] 管理版本",IDC_BUTTON_VER_MGMT,"Button",0x50010000,200,175,52,14
     CONTROL         "同时注册",IDC_OPT_REGISTER_SAMETIME,"Button",0x50010003,13,202,48,10
-    CONTROL         "开始注册",IDC_BUTTON_REG_REG,"Button",0x50010000,72,200,66,14
+    CONTROL         "[>>] 开始注册",IDC_BUTTON_REG_REG,"Button",0x50010000,72,200,66,14
     CONTROL         "重置",IDC_BUTTON_REG_RESET,"Button",0x50010000,152,200,40,14
     CONTROL         "项目类型 & 日志分类",IDC_STATIC,"Button",0x50000007,5,226,270,279
     CONTROL         "项目类型:",IDC_STATIC,"Static",0x50020000,13,240,34,8
     CONTROL         "",IDC_COMBO_PROJECT_TYPE,"ComboBox",0x50210003,50,238,100,57
     CONTROL         "? 分类说明",IDC_BUTTON_LOG_HELP,"Button",0x50010000,158,237,54,14
-    CONTROL         "全不选",IDC_BTN_UNSELECT_ALL,"Button",0x50010000,216,237,45,14
+    CONTROL         "[X] 全不选",IDC_BTN_UNSELECT_ALL,"Button",0x50010000,216,237,45,14
     CONTROL         "日志分类（勾选）",IDC_STATIC,"Static",0x50020000,13,255,150,8
     CONTROL         "HTTPS 短连接（15类，<=100 EPS）:",IDC_STATIC_CAT_HTTPS,"Static",0x50020000,13,264,270,8
     CONTROL         "客户端操作",IDC_CAT_CLIENT_OPS,"Button",0x50010003,18,278,87,10
@@ -180,7 +188,7 @@ BEGIN
     CONTROL         "心跳间隔(ms):",IDC_STATIC,"Static",0x50020000,288,90,50,8
     CONTROL         "",IDC_EDIT_HB_INTERVAL,"Edit",0x50810080,341,89,52,10
     CONTROL         "策略接收",IDC_CHECK_POLICY_RECV,"Button",0x50010003,402,90,48,10
-    CONTROL         "开始心跳",IDC_BUTTON_HB_START,"Button",0x50010000,288,124,60,14
+    CONTROL         "[>>] 开始心跳",IDC_BUTTON_HB_START,"Button",0x50010000,288,124,60,14
     CONTROL         "停  止",IDC_BUTTON_HB_STOP,"Button",0x50010000,2000,2000,52,14
     CONTROL         "TCP (Windows)",IDC_STATIC_HB_BADGE,"Static",0x50020000,352,124,155,8
     CONTROL         "心跳时长(分钟):",IDC_STATIC,"Static",0x50020000,288,108,60,8
@@ -191,9 +199,9 @@ BEGIN
     CONTROL         "注册后自动上传",IDC_CHECK_AUTO_WL,"Button",0x50010003,288,214,70,10
     CONTROL         "并发度:",IDC_STATIC,"Static",0x50020000,365,215,26,8
     CONTROL         "",IDC_EDIT_WL_CONCURRENT,"Edit",0x50810080,394,214,36,12
-    CONTROL         "立即上传全量",IDC_BUTTON_WL_UPLOAD,"Button",0x50010000,288,232,64,14
+    CONTROL         "[>] 上传白名单",IDC_BUTTON_WL_UPLOAD,"Button",0x50010000,288,232,64,14
     CONTROL         "结束任务",IDC_BUTTON_WL_STOP2,"Button",0x50010000,356,232,50,14
-    CONTROL         "预  览",IDC_BUTTON_WL_PREVIEW,"Button",0x50010000,410,232,40,14
+    CONTROL         "[v] 预览",IDC_BUTTON_WL_PREVIEW,"Button",0x50010000,410,232,40,14
     CONTROL         "日志发送设置",IDC_STATIC,"Button",0x50000007,280,280,178,162
     CONTROL         "每客户端总条数:",IDC_STATIC,"Static",0x50020000,288,289,60,8
     CONTROL         "",IDC_EDIT_LOG_TOTAL,"Edit",0x50810080,351,288,52,12
@@ -210,12 +218,12 @@ BEGIN
     CONTROL         "命中每:",IDC_STATIC,"Static",0x40020000,5,2000,1,1
     CONTROL         "",IDC_EDIT_TCP_HIT,"Edit",0x40810080,5,2000,1,1
     CONTROL         "轮（默认 71）",IDC_STATIC,"Static",0x40020000,5,2000,1,1
-    CONTROL         "添加任务",IDC_BUTTON_LOG_ADD,"Button",0x50010000,288,375,60,14
+    CONTROL         "[+] 添加任务",IDC_BUTTON_LOG_ADD,"Button",0x50010000,288,375,60,14
     CONTROL         "结束任务",IDC_BUTTON_LOG_STOP,"Button",0x50010000,354,375,60,14
     CONTROL         "威胁检测：每轮次发送全部勾选类型",IDC_STATIC,"Static",0x40020000,5,2000,1,1
     CONTROL         "命中轮：每 N 轮发 1 轮实际数据（0=每轮，默认 71）",IDC_STATIC,"Static",0x40020000,5,2000,1,1
     CONTROL         "HTTPS：每条单独建短连接发送",IDC_STATIC,"Static",0x40020000,5,2000,1,1
-    CONTROL         "注册统计",IDC_STATIC,"Button",0x50000007,465,20,172,58
+    CONTROL         "[STAT] 注册统计",IDC_STATIC,"Button",0x50000007,465,20,172,58
     CONTROL         "目标:",IDC_STATIC,"Static",0x50020000,473,36,22,10
     CONTROL         "0",IDC_STATIC_REG_TOTAL,"Static",0x50020000,497,36,30,10
     CONTROL         "成功:",IDC_STATIC,"Static",0x50020000,530,36,22,10
@@ -224,7 +232,7 @@ BEGIN
     CONTROL         "0",IDC_STATIC_REG_FAIL,"Static",0x50020000,497,52,30,10
     CONTROL         "已注册:",IDC_STATIC,"Static",0x50020000,530,52,30,10
     CONTROL         "0",IDC_STATIC_REG_ROUND,"Static",0x50020000,562,52,30,10
-    CONTROL         "心跳统计",IDC_STATIC,"Button",0x50000007,643,20,172,58
+    CONTROL         "[STAT] 心跳统计",IDC_STATIC,"Button",0x50000007,643,20,172,58
     CONTROL         "在线:",IDC_STATIC,"Static",0x50020000,651,36,22,10
     CONTROL         "0",IDC_STATIC_HB_ONLINE,"Static",0x50020000,675,36,26,10
     CONTROL         "/",IDC_STATIC,"Static",0x50020000,703,36,6,10
@@ -233,12 +241,12 @@ BEGIN
     CONTROL         "0",IDC_STATIC_HB_POLICY,"Static",0x50020000,691,52,24,10
     CONTROL         "心跳回包:",IDC_STATIC,"Static",0x50020000,651,64,38,10
     CONTROL         "0",IDC_STATIC_HB_RESP,"Static",0x50020000,691,64,24,10
-    CONTROL         "日志统计",IDC_STATIC,"Button",0x50000007,465,82,172,40
+    CONTROL         "[STAT] 日志统计",IDC_STATIC,"Button",0x50000007,465,82,172,40
     CONTROL         "成功:",IDC_STATIC,"Static",0x50020000,473,98,22,10
     CONTROL         "0",IDC_STATIC_LOG_SUCC2,"Static",0x50020000,497,98,40,10
     CONTROL         "失败:",IDC_STATIC,"Static",0x50020000,545,98,22,10
     CONTROL         "0",IDC_STATIC_LOG_FAIL,"Static",0x50020000,569,98,40,10
-    CONTROL         "白名单统计",IDC_STATIC,"Button",0x50000007,643,82,172,40
+    CONTROL         "[STAT] 白名单统计",IDC_STATIC,"Button",0x50000007,643,82,172,40
     CONTROL         "成功:",IDC_STATIC,"Static",0x50020000,651,98,22,10
     CONTROL         "0",IDC_STATIC_WL_SUCC2,"Static",0x50020000,675,98,40,10
     CONTROL         "失败:",IDC_STATIC,"Static",0x50020000,723,98,22,10
@@ -430,8 +438,8 @@ BEGIN
 
     // ⑤ 执行
     GROUPBOX        "5. 执行",IDC_STATIC,6,326,202,30
-    PUSHBUTTON      "开始",IDC_BTN_RP_START,12,338,90,16
-    PUSHBUTTON      "停止",IDC_BTN_RP_STOP,108,338,90,16
+    PUSHBUTTON      "[>>] 开始",IDC_BTN_RP_START,12,338,90,16
+    PUSHBUTTON      "[||] 停止",IDC_BTN_RP_STOP,108,338,90,16
 
     // ---- 右列 ----
     CONTROL         "",IDC_LIST_RP_RIGHT,"SysListView32",LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,212,22,382,170,WS_EX_CLIENTEDGE
