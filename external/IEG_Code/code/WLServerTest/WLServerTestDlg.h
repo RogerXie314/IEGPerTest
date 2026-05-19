@@ -316,6 +316,18 @@ public:
     afx_msg void    OnDestroy();
 
     // ===================================================
+    // Level 2: Hover effect & round button
+    // ===================================================
+    int             m_nHoverBtnID;       // button ID currently hovered (0=none)
+    bool            m_bMouseInDlg;       // mouse inside dialog
+    BOOL            IsHovering(UINT nID) const { return (m_nHoverBtnID == nID && m_bMouseInDlg); }
+    afx_msg void    OnMouseMove(UINT nFlags, CPoint point);
+    afx_msg void    OnMouseLeave();
+    void            DrawHoverRect(CDC* pDC, CRect rc, COLORREF clr, bool bHover);
+    void            DrawRoundButton(CDC* pDC, CRect rc, COLORREF clr, CString text, bool bHover);
+    void            DrawStatsCard(CDC* pDC, CRect rc, CString title, COLORREF bgColor);
+
+    // ===================================================
     // Phase 3: New methods
     // ===================================================
 
