@@ -1,0 +1,302 @@
+
+  stdafx.cpp
+  Fun.cpp
+  WLLogger.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(56,13): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,62): warning C4476: "_snwprintf_s": 格式说明符中的类型字段字符“Y”未知 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,62): warning C4476: "_snwprintf_s": 格式说明符中的类型字段字符“m”未知 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,62): warning C4476: "_snwprintf_s": 格式说明符中的类型字段字符“H”未知 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,62): warning C4476: "_snwprintf_s": 格式说明符中的类型字段字符“M”未知 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,98): warning C4474: _snwprintf_s: 格式字符串中传递的参数太多 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+      D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(289,98):
+      占位符和其参数预计 1 可变参数，但提供的却是 5 参数
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\common\Fun.cpp(539,18): warning C4267: “return”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  WLNetCommApi.cpp
+  CGridColumnTraitCombo.cpp
+  CGridColumnTraitDateTime.cpp
+  CGridColumnTraitEdit.cpp
+  CGridColumnTraitHyperLink.cpp
+  CGridColumnTraitImage.cpp
+  CGridColumnTraitMultilineEdit.cpp
+  CGridColumnTraitText.cpp
+  CGridListCtrlEx.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\common\UI\CGridListCtrlEx\CGridListCtrlEx.cpp(603,3): warning C4996: 'GetVersionExW': 被声明为已否决 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/common/UI/CGridListCtrlEx/CGridListCtrlEx.cpp”)
+  
+  CGridListCtrlGroups.cpp
+  CGridRowTraitText.cpp
+  CGridRowTraitXP.cpp
+  ViewConfigSection.cpp
+  WLHttpsConnection.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLNetComm\WLHttpsConnection.cpp(141,19): warning C4267: “初始化”: 从“size_t”转换到“DWORD”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLNetComm/WLHttpsConnection.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLNetComm\WLHttpsConnection.cpp(443,62): warning C4474: _snwprintf_s: 格式字符串中传递的参数太多 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLNetComm/WLHttpsConnection.cpp”)
+      D:\Development\IEGPerTest\external\IEG_Code\code\WLNetComm\WLHttpsConnection.cpp(443,62):
+      占位符和其参数预计 1 可变参数，但提供的却是 2 参数
+  
+  client.cpp
+  ProfileConfig.cpp
+  SendInfoToServer.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(370,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_SECDETECT_USER_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(532,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_PORT_PROTOCOL”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\BaseLineStruct.h(359,14): warning C4091: “typedef ”: 没有声明变量时忽略“__WL_SECDETECT_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLCUDisk\PeripheralDevice\xUSBRule.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(159,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_SRC”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(169,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(178,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_LIB_UPGRADE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(187,14): warning C4091: “typedef ”: 没有声明变量时忽略“IMPORT_PACKAGE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(196,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_MODULE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(206,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_PROCESS”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SurveilStruct.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\WLBackup\BackupStruct.h(38,14): warning C4091: “typedef ”: 没有声明变量时忽略“_REPORT_FLAG”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\WLBackup\BackupStruct.h(45,14): warning C4091: “typedef ”: 没有声明变量时忽略“_BACKUP_CONFIG_ERROR”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\user_def.h(10,14): warning C4091: “typedef ”: 没有声明变量时忽略“ENUM_USER_ADD_LCS_CHECKBOX_POS”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(58,56): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(63,45): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(73,55): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(75,46): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(200,86): warning C4244: “参数”: 从“DWORD”转换到“WORD”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(648,14): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(649,14): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(744,71): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(758,71): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(771,71): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(789,73): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(800,72): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(1100,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(1154,58): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(1487,8): warning C4101: “nSize”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(1635,16): warning C4244: “初始化”: 从“time_t”转换到“DWORD”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2127,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2237,11): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2260,56): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2265,56): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2230,7): warning C4101: “nPort”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2228,29): warning C4101: “nType”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2782,31): warning C4129: “T：: 不可识别的字符转义序列 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SendInfoToServer.cpp(2782,31): warning C4129: “O：: 不可识别的字符转义序列 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SendInfoToServer.cpp”)
+  
+  SimulateJson.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(370,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_SECDETECT_USER_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(532,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_PORT_PROTOCOL”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\BaseLineStruct.h(359,14): warning C4091: “typedef ”: 没有声明变量时忽略“__WL_SECDETECT_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLCUDisk\PeripheralDevice\xUSBRule.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(159,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_SRC”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(169,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(178,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_LIB_UPGRADE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(187,14): warning C4091: “typedef ”: 没有声明变量时忽略“IMPORT_PACKAGE_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(196,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_MODULE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\VirusProtectCommonStruct.h(206,14): warning C4091: “typedef ”: 没有声明变量时忽略“EM_VIRUS_UPGRADE_PROCESS”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SurveilStruct.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\WLBackup\BackupStruct.h(38,14): warning C4091: “typedef ”: 没有声明变量时忽略“_REPORT_FLAG”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\WLBackup\BackupStruct.h(45,14): warning C4091: “typedef ”: 没有声明变量时忽略“_BACKUP_CONFIG_ERROR”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\user_def.h(10,14): warning C4091: “typedef ”: 没有声明变量时忽略“ENUM_USER_ADD_LCS_CHECKBOX_POS”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(24,61): warning C4267: “参数”: 从“size_t”转换到“unsigned int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(89,13): warning C4244: “初始化”: 从“time_t”转换到“ULONG”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(123,68): warning C4267: “参数”: 从“size_t”转换到“unsigned long”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(126,74): warning C4267: “参数”: 从“size_t”转换到“unsigned long”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(650,11): warning C4101: “llTime”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(649,18): warning C4101: “pLogReg”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\SimulateJson.cpp(785,11): warning C4101: “llTime”: 未引用的局部变量 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/SimulateJson.cpp”)
+  
+  WLServerTest.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTest.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTest.cpp”)
+  
+  WLServerTestDlg.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(370,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_SECDETECT_USER_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\SecDetectStruct.h(532,14): warning C4091: “typedef ”: 没有声明变量时忽略“_EM_PORT_PROTOCOL”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\include\BaseLineStruct.h(359,14): warning C4091: “typedef ”: 没有声明变量时忽略“__WL_SECDETECT_TYPE”的左侧 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(6790,16): warning C4018: “<”: 有符号/无符号不匹配 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(6840,17): warning C4018: “<”: 有符号/无符号不匹配 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(7040,16): warning C4018: “<”: 有符号/无符号不匹配 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(7085,11): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(11270,60): warning C4244: “=”: 从“float”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(11521,61): warning C4244: “=”: 从“float”转换到“int”，可能丢失数据 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(12105,39): warning C4018: “>”: 有符号/无符号不匹配 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTestDlg.cpp(12205,39): warning C4018: “>=”: 有符号/无符号不匹配 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WLServerTestDlg.cpp”)
+  
+  LogCategoryHelpDlg.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/LogCategoryHelpDlg.cpp”)
+  
+  正在编译...
+  RawPacketDlg.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/RawPacketDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/RawPacketDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\RawPacketDlg.cpp(115,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/RawPacketDlg.cpp”)
+  
+  WhitelistPreviewDlg.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/WhitelistPreviewDlg.cpp”)
+  
+  VersionManagementDlg.cpp
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/VersionManagementDlg.cpp”)
+  
+D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\resource.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失 [D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\WLServerTest.vcxproj]
+  (编译源文件“/VersionManagementDlg.cpp”)
+  
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 3773 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  WLServerTest.vcxproj -> D:\Development\IEGPerTest\external\IEG_Code\code\WLServerTest\x64\Release\WLServerTest.exe
