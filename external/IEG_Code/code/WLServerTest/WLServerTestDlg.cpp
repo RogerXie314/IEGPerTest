@@ -1396,96 +1396,6 @@ ON_BN_CLICKED(IDC_BUTTON_LOG_HELP, &CWLServerTestDlg::OnBnClickedLogHelp)
 
 
 
-// =========================================================
-// Level 2: Hover effect & round button implementation
-// =========================================================
-void CWLServerTestDlg::OnMouseMove(UINT nFlags, CPoint point)
-{
-	CDialog::OnMouseMove(nFlags, point);
-
-	CWnd* pBtn = WindowFromPoint(point);
-	if (pBtn && ::IsWindow(pBtn->GetSafeHwnd())) {
-		UINT nID = pBtn->GetDlgCtrlID();
-		// Only buttons with OnCtlColor color mapping
-		switch (nID) {
-		case IDC_BUTTON_REG_REG: case IDC_BUTTON_REG_RESET:
-		case IDC_BUTTON_HB_START: case IDC_BUTTON_HB_STOP:
-		case IDC_BUTTON_LOG_ADD: case IDC_BUTTON_LOG_STOP:
-		case IDC_BUTTON_WL_UPLOAD: case IDC_BUTTON_WL_PREVIEW:
-		case IDC_BUTTON_STOP_TASK: case IDC_BTN_UNSELECT_ALL:
-		case IDC_BUTTON_VER_MGMT: case IDC_BUTTON_RAWPACKET:
-		case IDC_Btn_TestConn:
-			if (nID != m_nHoverBtnID) {
-				m_nHoverBtnID = nID;
-				Invalidate();
-			}
-			::TrackMouseEvent(nFlags);
-			return;
-		}
-	}
-	if (m_nHoverBtnID) {
-		m_nHoverBtnID = 0;
-		Invalidate();
-	}
-}
-
-void CWLServerTestDlg::OnMouseLeave()
-{
-	if (m_nHoverBtnID) {
-		Invalidate();
-		m_nHoverBtnID = 0;
-	}
-	CDialog::OnMouseLeave();
-}
-
-void CWLServerTestDlg::DrawHoverRect(CDC* pDC, CRect rc, COLORREF clr, bool bHover)
-{
-	rc.DeflateRect(1, 1);
-	if (bHover) {
-		pDC->FillSolidRect(&rc, clr);
-		pDC->Draw3dRect(&rc, RGB(255,255,255), RGB(180,180,180));
-	} else {
-		pDC->FillSolidRect(&rc, clr);
-		pDC->Draw3dRect(&rc, clr, clr);
-	}
-}
-
-void CWLServerTestDlg::DrawRoundButton(CDC* pDC, CRect rc, COLORREF clr, CString text, bool bHover)
-{
-	int r = GetRValue(clr), g = GetGValue(clr), b = GetBValue(clr);
-	COLORREF lightClr = RGB(min(255,r+50), min(255,g+50), min(255,b+50));
-
-	pDC->SetBkMode(TRANSPARENT);
-
-	if (bHover) {
-		CBrush br(lightClr);
-		pDC->FillRect(&rc, &br);
-		pDC->Draw3dRect(&rc, RGB(255,255,255), RGB(200,200,200));
-		pDC->SetTextColor(RGB(255,255,255));
-		CSize sz = pDC->GetTextExtent(text);
-		pDC->TextOut((rc.Width()-sz.cx)/2, (rc.Height()-sz.cy)/2, text);
-	} else {
-		CBrush br(clr);
-		pDC->FillRect(&rc, &br);
-		pDC->Draw3dRect(&rc, clr, clr);
-		pDC->SetTextColor(RGB(255,255,255));
-		CSize sz = pDC->GetTextExtent(text);
-		pDC->TextOut((rc.Width()-sz.cx)/2, (rc.Height()-sz.cy)/2, text);
-	}
-}
-
-void CWLServerTestDlg::DrawStatsCard(CDC* pDC, CRect rc, CString title, COLORREF bgColor)
-{
-	CRect rcTitle(rc);
-	rcTitle.bottom = rcTitle.top + 16;
-	pDC->FillSolidRect(&rcTitle, RGB(70,130,180));
-	pDC->SetTextColor(RGB(255,255,255));
-	pDC->SetBkMode(TRANSPARENT);
-	pDC->DrawText(title, &rcTitle, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
-	rc.top += 18;
-	pDC->FillSolidRect(&rc, bgColor);
-	pDC->Draw3dRect(&rc, RGB(123,176,208), RGB(123,176,208));
-}
 ON_WM_TIMER()
 
 
@@ -13264,4 +13174,43 @@ void CWLServerTestDlg::OnBnClickedRawPacket()
 {
 	CRawPacketDlg dlg(this);
 	dlg.DoModal();
+}
+
+void CWLServerTestDlg::OnMouseMove(UINT nFlags, CPoint point)
+{
+	CDialog::OnMouseMove(nFlags, point);
+
+	CWnd* pBtn = WindowFromPoint(point);
+	if (pBtn && ::IsWindow(pBtn->GetSafeHwnd())) {
+		UINT nID = pBtn->GetDlgCtrlID();
+		switch (nID) {
+		case IDC_BUTTON_REG_REG: case IDC_BUTTON_REG_RESET:
+		case IDC_BUTTON_HB_START: case IDC_BUTTON_HB_STOP:
+		case IDC_BUTTON_LOG_ADD: case IDC_BUTTON_LOG_STOP:
+		case IDC_BUTTON_WL_UPLOAD: case IDC_BUTTON_WL_PREVIEW:
+		case IDC_BUTTON_STOP_TASK: case IDC_BTN_UNSELECT_ALL:
+		case IDC_BUTTON_VER_MGMT: case IDC_BUTTON_RAWPACKET:
+		case IDC_Btn_TestConn:
+			if (nID != m_nHoverBtnID) {
+				m_nHoverBtnID = nID;
+				Invalidate();
+			}
+			TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), nFlags, pBtn->GetSafeHwnd(), TME_LEAVE };
+			::TrackMouseEvent(&tme);
+			return;
+		}
+	}
+	if (m_nHoverBtnID) {
+		m_nHoverBtnID = 0;
+		Invalidate();
+	}
+}
+
+void CWLServerTestDlg::OnMouseLeave()
+{
+	if (m_nHoverBtnID) {
+		Invalidate();
+		m_nHoverBtnID = 0;
+	}
+	CDialog::OnMouseLeave();
 }
