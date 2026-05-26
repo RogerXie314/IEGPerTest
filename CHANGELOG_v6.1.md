@@ -10,6 +10,11 @@
     - MS20-796：显示2个streams（MS20-796 #1, MS20-796 #2）
   - 确保攻击报文能完整发送，触发正确的告警检测
 
+- **GUI界面版本号更新**：修复GUI界面显示错误版本号的问题：
+  - 主窗口标题从"WLServerTest V6.0"更新为"WLServerTest V6.1"
+  - 静态文本控件从"WLServerTest"更新为"WLServerTest V6.1"
+  - 文件版本号从6.0.0.0更新为6.1.0.0
+
 - **RawPacketDlg编码问题**：修复GBK编码导致的编译错误，将中文字符替换为英文：
   - 对话框标题：攻击报文发送 → Attack Packet Sender
   - 列标题：名称、源地址、目的地址、协议、大小、信息
@@ -26,7 +31,9 @@
 ## 版本
 
 - 主版本号 6.0 → 6.1
-- 构建时间：2026-05-25
+- 文件版本号：6.0.0.0 → 6.1.0.0
+- GUI界面版本：V6.0 → V6.1
+- 构建时间：2026-05-26
 - 构建配置：Release/x64
 - 包含文件：WLServerTest.exe, WLNetComm.dll, RawPacketEngine.dll, WLServerTest.ini
 
