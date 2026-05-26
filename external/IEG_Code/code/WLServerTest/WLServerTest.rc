@@ -289,8 +289,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 6,0,0,0
- PRODUCTVERSION 6,0,0,0
+ FILEVERSION 6,1,0,0
+ PRODUCTVERSION 6,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -306,12 +306,12 @@ BEGIN
         BLOCK "080403a8"
         BEGIN
             VALUE "CompanyName", "深圳市腾讯计算机系统有限公司"
-            VALUE "FileVersion", "6, 0, 0, 0"
+            VALUE "FileVersion", "6, 1, 0, 0"
             VALUE "InternalName", "WLServerTest.exe"
             VALUE "LegalCopyright", "版权所有 (C) 2015-2026"
             VALUE "OriginalFilename", "WLServerTest.exe"
             VALUE "ProductName", "终端安全管理"
-            VALUE "ProductVersion", "6, 0, 0, 0"
+            VALUE "ProductVersion", "6, 1, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -501,3 +501,4 @@ BEGIN
     CONTROL         "保  存",IDC_VER_BTN_SAVE,"Button",0x50010001,163,334,70,14
     CONTROL         "关  闭",IDOK,"Button",0x50010000,241,334,70,14
 END
+
