@@ -229,7 +229,7 @@ BOOL CSendInfoToServer::SendData(SOCKET sockSend, const char* pSendBuff, unsigne
 	int nSendCount = 0;
 
 
-	//Э����?
+	//Э����?
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -289,7 +289,7 @@ BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSend
 	int nSendCount = 0;
 
 
-	//Э����?
+	//Э����?
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, em_portocal_compress_zlib, em_portocal_encrypt_none, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -367,7 +367,7 @@ char* CSendInfoToServer::RecvSockData(SOCKET sockRecv, unsigned int &nSrcLen, un
 		goto END;
 	}
 
-	//У����?
+	//У����?
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
@@ -563,7 +563,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	CWLNetCommApi* pNetApi = CWLNetCommApi::instance();
 	if (!pNetApi || !pNetApi->pEnableTLSv1 || !pNetApi->pdoPost)
 	{
-		WriteError(_T("WLNetComm.dll δ���أ�ȱʧ��λ����ƥ�䣩����Ѷ��? WLNetComm.dll ���� exe ͬĿ¼"));
+		WriteError(_T("WLNetComm.dll δ���أ�ȱʧ��λ����ƥ�䣩����Ѷ��? WLNetComm.dll ���� exe ͬĿ¼"));
 		return FALSE;
 	}
 	BOOL bResult = FALSE;
@@ -655,6 +655,23 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	stMsg.Format(_T("doPost OK, Json = %S"), (sJson.c_str()));
 	WriteInfo(stMsg.GetBuffer());
 
+	// 从注册响应中提取 devid，写入协议头静态变量，解决心跳报文中 nDeviceID 一直为 0 的问题
+	Json::Reader devReader;
+	Json::Value devRoot;
+	if (devReader.parse(sJson, devRoot) && devRoot.isArray() && devRoot.size() > 0)
+	{
+		Json::Value& cmdContent = devRoot[0]["CMDContent"];
+		if (cmdContent.isMember("devid") && cmdContent["devid"].isInt())
+		{
+			DWORD dwDevID = cmdContent["devid"].asUInt();
+			CProtocal::SetUniqueID(dwDevID);
+
+			CString strTmp;
+			strTmp.Format(_T("devid extracted from setup response: %u"), dwDevID);
+			WriteInfo(strTmp.GetBuffer());
+		}
+	}
+
 	CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
 
 	std::string sData1 = m_json.Setup_GetJsonInstallEnd(szClientID.GetBuffer(),szClientID.GetBuffer(), 1, 1, 0);
@@ -678,7 +695,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 
 //
 /*
-// ͨ�������ӷ�����в�����־�������?���������˿�192.168.7.254 8441  JinGe
+// ͨ�������ӷ�����в�����־�������?���������˿�192.168.7.254 8441  JinGe
 BOOL CSendInfoToServer::SendDetectLogTCP(client& pCurClient, SOCKET sockSend, std::wstring& strJson)
 {
 if(!SendData(sockSend, strJson.c_str(), strJson.length()-1, 1))
@@ -716,7 +733,7 @@ BOOL CSendInfoToServer::RecvDetectLogTCP(client& pCurClient, SOCKET sockSend )
 #define THREATLOG_TYPE_FILE_CLOSE		(11)
 
 */ // TCP - ������в��־ 
-BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, BOOL bHit)//ÿ���߳�ִ��һ�����������?  ÿ��json��ʵ��Ҫ����ճ����Sleep(100);
+BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, BOOL bHit)//ÿ���߳�ִ��һ�����������?  ÿ��json��ʵ��Ҫ����ճ����Sleep(100);
 {
 	CString strMsg = _T("");
 	BOOL bResult = FALSE;
@@ -783,10 +800,10 @@ BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sock
 	{
 		char szJson[2048];
 		sprintf_s(szJson, sizeof(szJson),
-			"[{\"ComputerID\":\"%S\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{\"EventType\":80,\"DllLoad.TimeStamp\":%lld,\"DllLoad.ProcessId\":1234,\"DllLoad.ProcessGuid\":\"{11111111-1111-1111-1111-111111111111}\",\"DllLoad.ProcessFileName\":\"malware_loader.exe\",\"DllLoad.ProcessName\":\"C:\\\\malware_loader.exe\",\"DllLoad.TargetDllFileName\":\"malware.dll\",\"DllLoad.TargetDllPath\":\"C:\\\\Windows\\\\System32\\\\malware.dll\",\"DllLoad.User\":\"WIN-DESKTOP\\DELL\",\"DllLoad.UserSid\":\"S-1-5-21-3782372158-3025124834-3246284786-1000\"}}]",
+			"[{\"ComputerID\":\"%S\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{\"EventType\":80,\"DllLoad.TimeStamp\":%lld,\"DllLoad.ProcessId\":1234,\"DllLoad.ProcessGuid\":\"{11111111-1111-1111-1111-111111111111}\",\"DllLoad.ProcessFileName\":\"malware_loader.exe\",\"DllLoad.ProcessName\":\"C:\\\\malware_loader.exe\",\"DllLoad.TargetDllFileName\":\"malware.dll\",\"DllLoad.TargetDllPath\":\"C:\\\\Windows\\\\System32\\\\malware.dll\",\"DllLoad.User\":\"WIN-DESKTOP\\\\DELL\",\"DllLoad.UserSid\":\"S-1-5-21-3782372158-3025124834-3246284786-1000\"}}]",
 			wtrsComputerID.c_str(), (long long)time(NULL)*1000);
 		TmpJson = szJson;
-		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length(), THREAT_EVENT_UPLOAD_CMDID))
 		{
 			strMsg.Format(_T("SendData ERROR(DLL). IP=%s"), m_strServerIP.GetBuffer());
 			WriteError(strMsg.GetBuffer());
@@ -820,7 +837,7 @@ BOOL CSendInfoToServer::SendThreatLog_Data(SOCKET sockSend, const char *pSendBuf
 	int nSendCount = 0;
 
 
-	//Э����?
+	//Э����?
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -901,7 +918,7 @@ DWORD CSendInfoToServer::RecvThreatLog_(SOCKET sockRecv)
 		goto END;
 	}
 
-	//У����?
+	//У����?
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
@@ -922,7 +939,7 @@ DWORD CSendInfoToServer::RecvThreatLog_(SOCKET sockRecv)
 		goto END;
 	}
 
-	//�����û�а���?�еĻ�ȡ������������
+	//�����û�а���?�еĻ�ȡ������������
 	if (nBodyLen > 0)
 	{
 		saBufBody = new char[nBodyLen];
@@ -1097,7 +1114,7 @@ DWORD CSendInfoToServer::ParseRevData_ThreatLog(std::string strJson)
 				return 4;
 			}
 
-			// ���ؽ��?
+			// ���ؽ��?
 			char *pResultJson = NULL;
 			int iResult = ERROR_SUCCESS;
 
@@ -1195,7 +1212,7 @@ DWORD CSendInfoToServer::RecvHeartbeat(SOCKET sockRecv)
 		goto END;
 	}
 
-	//У����?
+	//У����?
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
@@ -1216,7 +1233,7 @@ DWORD CSendInfoToServer::RecvHeartbeat(SOCKET sockRecv)
 		goto END;
 	}
 
-	//�����û�а���?�еĻ�ȡ������������
+	//�����û�а���?�еĻ�ȡ������������
 	if (nBodyLen > 0)
 	{
 		saBufBody = new char[nBodyLen];
@@ -1248,7 +1265,7 @@ END:
 }
 
 // HTTPS��ʽ���÷�ʽֻ�����ڽ������� :
-BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:https������   ʵ����ȥUSM�������?
+BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:https������   ʵ����ȥUSM�������?
 {
 	CWLJsonParse cJson;
 	char *retData = NULL;
@@ -1339,7 +1356,7 @@ DWORD CSendInfoToServer::ParseRevData(std::string strJson)
 				return 4;
 			}
 
-			// ���ؽ��?
+			// ���ؽ��?
 			char* pResultJson = NULL;
 			int  iResult = ERROR_SUCCESS;
 
@@ -1515,7 +1532,7 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_SingleRule(LPTSTR lpComputerID)
 	_tcscpy(pLog->szProduct,_T("SomeProduct"));
 	_tcscpy(pLog->szDefIntegrity,_T("Some defintegrity"));
 	/*
-	//�������������������?
+	//�������������������?
 	typedef enum TYPE_OPTYPE_PWL
 	{
 	OPTYPE_PWL_CONTROL = 1,
@@ -1582,7 +1599,7 @@ OPTYPE_PWL_SYSFILE_CHECK,
 OPTYPE_PWL_AUTO_APPROVE,
 */
 /*
-//�������������������?
+//�������������������?
 typedef enum TYPE_OPTYPE_PWL
 {
 OPTYPE_PWL_CONTROL = 1,
@@ -1909,7 +1926,7 @@ BOOL CSendInfoToServer::SendClientOptLogToServer(LPTSTR lpComputerID)
 
 	char chGuid[MAX_PATH]= {0};
 	CreateGuidString((LPTSTR)chGuid);
-	strOpt.Format(_T("�����ֶΣ�������?--WLServerTest--�������ݣ�%s"),chGuid);
+	strOpt.Format(_T("�����ֶΣ�������?--WLServerTest--�������ݣ�%s"),chGuid);
 	_tcscpy(OperationLogStruct.szLogContent, strOpt.GetBuffer());
 
 	std::vector<ADMIN_OPERATION_LOG_STRUCT*> vec;
@@ -2279,7 +2296,7 @@ BOOL CSendInfoToServer::Send_FileLog_WL_ToServer(LPTSTR lpComputerID, CString cs
 	}
 	else
 	{
-		WriteError(_T("����������ϴ�ʧ�ܣ�?%lu"),re);
+		WriteError(_T("����������ϴ�ʧ�ܣ�?%lu"),re);
 	}
 	return bRet;
 }
@@ -2482,7 +2499,7 @@ sJson = InjectComputerIP(sJson, m_strClientIP);
 
 /*
 * @fn           SendClientBackupLogToServer
-* @brief        ������ָ����?
+* @brief        ������ָ����?
 * @param[in]    lpComputerID
 * @param[out]   
 * @return       
@@ -2501,8 +2518,8 @@ BOOL CSendInfoToServer::SendClientBackupLogToServer(LPTSTR lpComputerID)
 
 	stBackup.ID = _T("4DBE9C130678C1393162507A6E902ADF04413DE9E9273B4ABF5C3093F6058DDF");
 	stBackup.uuid = _T("37D2F730603548CC9EA50297B3A89F12");
-	stBackup.wstrFileName = _T("C:\\������ָ������ļ�?.txt");
-	stBackup.wstrProcessName = _T("C:\\������ָ����Խ���?.exe");
+	stBackup.wstrFileName = _T("C:\\������ָ������ļ�?.txt");
+	stBackup.wstrProcessName = _T("C:\\������ָ����Խ���?.exe");
 	stBackup.wstrHashValue = _T("81659AE1A757A783D8847896027723E8DDC7AB2EA2CB698C3E943A6C0BCC276E");
 	stBackup.wstrFileType = _T(".txt");
 	stBackup.llFileSize = 1;
@@ -2701,23 +2718,23 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	//   FD=13, BLUETOOTH=6, SERIALPORT=7, PARALLELPORT=8
 	struct ExtDevEntry { DWORD mask; int usbType; const char* nameUtf8; };
 	static const ExtDevEntry entries[] = {
-		// USB接口使用�?禁�??
+		// USB接口使用�?禁�??
 		{ 0x00020000, 15, "USB\xE6\x8E\xA5\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// 移动设�?�使用�??禁�??
+		// 移动设�?�使用�??禁�??
 		{ 0x00040000, 14, "\xE7\xA7\xBB\xE5\x8A\xA8\xE8\xAE\xBE\xE5\xA4\x87\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// CDROM使用�?禁�??
+		// CDROM使用�?禁�??
 		{ 0x00080000,  4, "CDROM\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// wifi使用�?禁�??
+		// wifi使用�?禁�??
 		{ 0x00100000,  5, "wifi\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// USB网卡使用�?禁�??
+		// USB网卡使用�?禁�??
 		{ 0x00200000, 20, "USB\xE7\xBD\x91\xE5\x8D\xA1\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// �?盘使用�??禁�??
+		// �?盘使用�??禁�??
 		{ 0x00400000, 13, "\xE8\xBD\xAF\xE7\x9B\x98\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// 蓝牙使用�?禁�??
+		// 蓝牙使用�?禁�??
 		{ 0x00800000,  6, "\xE8\x93\x9D\xE7\x89\x99\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// 串口使用�?禁�??
+		// 串口使用�?禁�??
 		{ 0x01000000,  7, "\xE4\xB8\xB2\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// 并口使用�?禁�??
+		// 并口使用�?禁�??
 		{ 0x02000000,  8, "\xE5\xB9\xB6\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
 	};
 
