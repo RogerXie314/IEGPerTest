@@ -1,32 +1,51 @@
 # IEGPerTest — WLServerTest 压测工具（`main` 分支）
 
-`main` 分支主推 **WLServerTest** —— 基于老 IEG 代码树持续翻新的 MFC 桌面压测工具（x64 单 exe），用于模拟客户端注册、TCP 心跳、HTTPS 日志、白名单上传。
+`main` 分支主推 **WLServerTest** —— 基于老 IEG 代码树持续翻新的 MFC 桌面压测工具（x64 单 exe），用于模拟客户端注册、TCP 心跳、TCP/HTTPS 威胁日志上报、白名单上传。
 
 > 仓库还有两条 SimulatorApp（C# WPF）架构分支，见下方[「仓库分支结构」](#-仓库分支结构重要)。
 
 ---
 
-## 🆕 WLServerTest **V5.9**（2026-05-16，latest）
+## 🆕 WLServerTest **V6.5**（2026-07-20，latest）
 
 发布路径：`artifacts/WLServerTestPublish/`。
 
-**V5.5 亮点**：
-- 修复多线程注册时"已注册"计数器丢更新的概率 bug（`InterlockedIncrement`）
-- "任务与状态"区改为 4 张卡片式分组（注册/心跳/日志/白名单）
-- 主窗口三列布局优化：左列收窄、中列左移 25 DLU、右列加宽，给"任务面板/日志输出"更多空间
-- 修复异机 500 客户端启动约 1 分钟崩溃（`WLNetComm.dll` 加载失败防御）
-- 心跳设置新增"心跳时长(分钟)"输入框，默认 7200
+### V6.5 核心功能
+
+**客户端模拟**
+
+| 功能 | 说明 |
+|------|------|
+| 客户端注册 | 并发批量注册，devid 从服务端获取后持久化到 INI，重启自动恢复 |
+| TCP 心跳 | 按 ClientID 保活，独立控制启停，不干扰日志发送任务 |
+| 威胁日志发送 | TCP/HTTPS 双通道，File/ProcStart/Reg/DLL Load/WinEventLog 五种类型可分别勾选过滤 |
+| 白名单上传 | 批量上报文件白名单到平台 |
+| 攻击报文回放 | 从抓包样本加载、按 stream 拆分回放 |
+
+**V6.5 版本特性**
+
+- **devid 按客户端持久化**：注册 devid 写入 `[DevID]` 段 INI，重启免重注册；协议头自动注入
+- **威胁日志类型复选框过滤**：五种日志类型可按位掩码单独开关，未勾选的零开销跳过
+- **ComputerIP 注入**：所有威胁日志 JSON `CMDContent` 中包含对应客户端 IP
+- **Debug 日志开关**：界面复选框控制 `OutputDebugString` 诊断输出，不勾选零性能影响
+- **"结束任务"精准控制**：仅停止日志发送任务行，不误伤共用列表的心跳任务
+- **协议健壮性修复**：JSON `\D` 非法转义 / DLL Load 截断缺 `]` / 注册 devid=0 等问题全部修复
+
+### V6.3 重要修复
+
+- DLL Load JSON fastjson 转义兼容
+- 协议头 `nDeviceID` 正确取值
+- JSON 边界截断问题
 
 **部署**（无需安装运行时）：把 `artifacts/WLServerTestPublish/` 整目录拷贝到目标机器，双击 `WLServerTest.exe`。
 
-详见：
-- [CHANGELOG_v5.9.md](CHANGELOG_v5.9.md)
-- [CHANGELOG_v5.8.md](CHANGELOG_v5.8.md)
-- [CHANGELOG_v5.7.md](CHANGELOG_v5.7.md)
-- [CHANGELOG_v5.6.md](CHANGELOG_v5.6.md)
-- [CHANGELOG_v5.5.md](CHANGELOG_v5.5.md)
-- [CHANGELOG_v5.2.md](CHANGELOG_v5.2.md)
-- [docs/项目实施文档.md](docs/项目实施文档.md)
+Tooltips 速查：
+
+- **Debug 日志**：配合 Sysinternals DebugView（`Dbgview.exe`，`Capture → Capture Global Win32`），勾选复选框后实时查看 JSON 注入诊断
+- **注册**：`[控制] → [注册]` 选"并发注册"，devid 自动写入 `[DevID]` 段 INI；Reset 后清空 devid 缓存
+- **日志发送**：可同时勾选多种类型（Exec/Script/Reg/DLL/WinEvent），`dwSubTypes` 位掩码过滤
+
+---
 
 ### 编译 WLServerTest
 
@@ -78,7 +97,6 @@ pwsh -File scripts\build_wlservertest.ps1
 - [docs/分析-WLServerTest与NativeRunner代码差异及压力稳定性评估.md](docs/分析-WLServerTest与NativeRunner代码差异及压力稳定性评估.md)
 - [docs/project_dashboard.html](docs/project_dashboard.html) — 项目看板
 - [tools/README.md](tools/README.md) — Python 白名单解析工具（CLI + GUI）
-- [scripts/estimate_client_limit.ps1](scripts/estimate_client_limit.ps1) — 单机客户端上限评估
 
 ---
 
@@ -88,7 +106,7 @@ pwsh -File scripts\build_wlservertest.ps1
 
 | 分支 | 主推工具 | 架构 | 最新版本 |
 |---|---|---|---|
-| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V5.9** |
+| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V6.5** |
 | [`simulator-subprocess`](../../tree/simulator-subprocess) | SimulatorApp | C# WPF + NativeRunner.exe 子进程（stdio 管道 IPC，C++ 与 .NET GC 隔离） | v3.9.7 |
 | [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) | SimulatorApp | C# WPF + NativeSender.dll 同进程（P/Invoke） | v3.7.31 |
 
@@ -100,13 +118,6 @@ pwsh -File scripts\build_wlservertest.ps1
 
 ```
 README.md                       # 本文件
-CHANGELOG_v5.9.md               # WLServerTest V5.9 变更日志
-CHANGELOG_v5.8.md               # WLServerTest V5.8 变更日志
-CHANGELOG_v5.7.md               # WLServerTest V5.7 变更日志
-CHANGELOG_v5.6.md               # WLServerTest V5.6 变更日志
-CHANGELOG_v5.5.md               # WLServerTest V5.5 变更日志
-CHANGELOG_v5.2.md               # WLServerTest V5.2 变更日志
-config.ini.example              # WLServerTest 配置样例
 
 external/                       # WLServerTest 源码 + 老 IEG 代码参考库
   ├── IEG_Code/code/
@@ -116,15 +127,15 @@ external/                       # WLServerTest 源码 + 老 IEG 代码参考库
   └── xiaobing/                  # 第三方参考
 
 artifacts/
-  └── WLServerTestPublish/      # WLServerTest V5.9 发布产物（exe + dll + ini）
+  └── WLServerTestPublish/      # WLServerTest V6.5 发布产物（exe + dll + ini）
 
-docs/                           # 文档（聊天记录 / 项目实施文档 / 项目看板 / WLServerTest UI 改造进度 等）
+docs/                           # 文档（项目实施文档 / 项目看板 等）
 tools/                          # 通用：Python 白名单解析工具（CLI + GUI）
 scripts/
-  └── estimate_client_limit.ps1 # 单机客户端上限评估
+  └── build_wlservertest.ps1    # 一键编译脚本
 
 archive/
-  └── simulator-app/            # SimulatorApp 历史构建脚本归档（sln/bat/ps1/RELEASE_NOTES 等）
+  └── simulator-app/            # SimulatorApp 历史构建脚本归档
 ```
 
 ---
@@ -142,12 +153,11 @@ archive/
 
 - **分支策略**：`main` 长期主推 WLServerTest；SimulatorApp 两种架构活在专用分支上
 - **Git 代理**（如需）：`git config --global http.https://github.com.proxy http://127.0.0.1:7897`
-- **版本号需手动改**：`WLServerTest.rc`（main）/ `SimulatorApp.csproj`（其它分支），脚本不自增
+- **版本号需手动改**：`WLServerTest.rc`，脚本不自增
 
 ## 📋 历史版本
 
-- **WLServerTest**（main）：V6.1（攻击报文多stream修复）/ V6.0（注册doPost弹窗移除+RawPacketEngine入库）/ V5.9（OPT调度大修+日志路由对齐）/ V5.8（攻击报文UI复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
+- **WLServerTest**（main）：V6.5（devid 持久化+威胁日志过滤+ComputerIP 注入+Debug 开关）/ V6.3（DLL Load 转义+devid 协议头+JSON 截断修复）/ V6.2（清理+文档整理）/ V6.1（攻击报文多 stream 修复）/ V6.0（注册 doPost 弹窗移除+RawPacketEngine 入库）/ V5.9（OPT 调度大修+日志路由对齐）/ V5.8（攻击报文 UI 复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR 联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
 - **SimulatorApp**（其它分支）：详见 [`simulator-subprocess`](../../tree/simulator-subprocess) 与 [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) 自带 CHANGELOG
 
-详见各 `CHANGELOG_*.md` 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。
-
+详见 [docs/项目实施文档.md](docs/项目实施文档.md) 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。
