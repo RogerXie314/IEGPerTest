@@ -1,6 +1,14 @@
 #include "StdAfx.h"
 #include "SendInfoToServer.h"
 
+// Global debug toggle
+BOOL g_bEnableDebugOutput = FALSE;
+
+// Helper: conditionally output debug string based on global toggle
+static inline void DbgOutA(const char* psz) {
+    if (g_bEnableDebugOutput) OutputDebugStringA(psz);
+}
+
 
 #include "wlServertest.h"
 
@@ -22,11 +30,33 @@
 
 extern BOOL g_bSamePath;
 
-// Helper: �� ComputerIP �ֶ�ע����־ JSON������ÿ�� "CMDTYPE": ֮ǰ��
+// Helper: inject "ComputerIP":"xxx", right after "CMDContent":{ in threat log JSON
 static std::string InjectComputerIP(const std::string& sJson, const CString& csClientIP)
 {
-    (void)csClientIP;
-    return sJson;
+    if (sJson.empty() || csClientIP.IsEmpty())
+        return sJson;
+
+    const char* szMarker = "\"CMDContent\":{";
+    size_t pos = sJson.find(szMarker);
+    if (pos == std::string::npos)
+    {
+        DbgOutA("=== [DEBUG] InjectComputerIP: marker NOT FOUND in JSON ===\n");
+        return sJson;
+    }
+
+    pos += strlen(szMarker);  // right after the opening {
+
+    CT2A ipBuf(csClientIP);
+    char szInject[256];
+    sprintf_s(szInject, sizeof(szInject), "\"ComputerIP\":\"%s\",", (const char*)ipBuf);
+
+    char szDbg[512];
+    sprintf_s(szDbg, sizeof(szDbg), "=== [DEBUG] InjectComputerIP: injected \"ComputerIP\":\"%s\" at offset %zu ===\n", (const char*)ipBuf, pos);
+    DbgOutA(szDbg);
+
+    std::string sOut = sJson;
+    sOut.insert(pos, szInject);
+    return sOut;
 }
 
 CSendInfoToServer::CSendInfoToServer(void)
@@ -279,10 +309,11 @@ END:
 }
 
 //2.ThreatLog 5��:����SendData
-BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSendBuff, unsigned int nSendLen,int cmdID)
+BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSendBuff, unsigned int nSendLen,int cmdID, DWORD dwDeviceID)
 {
 	BOOL bRes = FALSE;
 	CProtocal protocal;
+	if (dwDeviceID != 0) protocal.SetDeviceID(dwDeviceID);
 	char *pProtocalData = NULL;
 	unsigned int nProtocalLen = 0;
 	tstring strErr;
@@ -557,7 +588,7 @@ BOOL CSendInfoToServer::CloseConnection(SOCKET sockClose)
 	return TRUE;
 }
 
-BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szClientID,CString szComputerIP, CString szVersion, CString szOS)
+BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szClientID,CString szComputerIP, CString szVersion, CString szOS, DWORD* pdwOutDevID)
 {
 	// v5.2: WLNetComm.dll ����ʧ�ܷ���
 	CWLNetCommApi* pNetApi = CWLNetCommApi::instance();
@@ -665,6 +696,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 		{
 			DWORD dwDevID = cmdContent["devid"].asUInt();
 			CProtocal::SetUniqueID(dwDevID);
+			if (pdwOutDevID) *pdwOutDevID = dwDevID;
 
 			CString strTmp;
 			strTmp.Format(_T("devid extracted from setup response: %u"), dwDevID);
@@ -733,15 +765,16 @@ BOOL CSendInfoToServer::RecvDetectLogTCP(client& pCurClient, SOCKET sockSend )
 #define THREATLOG_TYPE_FILE_CLOSE		(11)
 
 */ // TCP - ������в��־ 
-BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, BOOL bHit)//ÿ���߳�ִ��һ�����������?  ÿ��json��ʵ��Ҫ����ճ����Sleep(100);
+BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, DWORD dwSubTypes, BOOL bHit)//ÿ���߳�ִ��һ�����������?  ÿ��json��ʵ��Ҫ����ճ����Sleep(100);
 {
-	CString strMsg = _T("");
+		CString strMsg = _T("");
 	BOOL bResult = FALSE;
 
 	std::wstring wtrsComputerID = pCurClient.Client_GetComputerID();
 	std::wstring wstrClientIP = pCurClient.GetClientIP();
 	std::wstring wstrClientID = pCurClient.GetClientID();
 	CString csClientIP_TCP(wstrClientIP.c_str());
+	DWORD dwDevID = pCurClient.GetDevID();  // per-client devid from registration
 
 	//����json  ������5��json
 
@@ -754,56 +787,89 @@ BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sock
 	
 
 	//File 30
-	TmpJson = Obj.ThreatLog_SimulateJson_File(wtrsComputerID, bHit);
-
-	//BufLen = Obj.ThreatLog_SimulateJson_File_ReturnBuf(wtrsComputerID,&pSendBuf);
-
-	if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+	if (dwSubTypes & 0x10000000)
 	{
-		strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
-		WriteError(strMsg.GetBuffer());
+		TmpJson = Obj.ThreatLog_SimulateJson_File(wtrsComputerID, bHit);
+		DbgOutA("=== [DEBUG] File JSON BEFORE Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		TmpJson = InjectComputerIP(TmpJson, csClientIP_TCP);
+		DbgOutA("=== [DEBUG] File JSON AFTER  Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
 
-		goto END; 
+		//BufLen = Obj.ThreatLog_SimulateJson_File_ReturnBuf(wtrsComputerID,&pSendBuf);
+
+		if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID, dwDevID))
+		{
+			strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
+			WriteError(strMsg.GetBuffer());
+
+			goto END; 
+		}
+		Sleep(50);
 	}
-	Sleep(50);
-
 
 
 	//ProcStart 60
-	TmpJson = Obj.ThreatLog_SimulateJson_ProcStart(wtrsComputerID,wstrClientID,wstrClientIP, bHit);
-
-	if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+	if (dwSubTypes & 0x04000000)
 	{
-		strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
-		WriteError(strMsg.GetBuffer());
+		TmpJson = Obj.ThreatLog_SimulateJson_ProcStart(wtrsComputerID,wstrClientID,wstrClientIP, bHit);
+		DbgOutA("=== [DEBUG] ProcStart JSON BEFORE Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		TmpJson = InjectComputerIP(TmpJson, csClientIP_TCP);
+		DbgOutA("=== [DEBUG] ProcStart JSON AFTER  Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
 
-		goto END;
+		if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID, dwDevID))
+		{
+			strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
+			WriteError(strMsg.GetBuffer());
+
+			goto END;
+		}
+		Sleep(50);
 	}
-	Sleep(50);
 
 
 	//Reg 40
-	TmpJson = Obj.ThreatLog_SimulateJson_Reg(wtrsComputerID,wstrClientID,wstrClientIP, bHit);
-
-	if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+	if (dwSubTypes & 0x08000000)
 	{
-		strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
-		WriteError(strMsg.GetBuffer());
+		TmpJson = Obj.ThreatLog_SimulateJson_Reg(wtrsComputerID,wstrClientID,wstrClientIP, bHit);
+		DbgOutA("=== [DEBUG] Reg JSON BEFORE Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		TmpJson = InjectComputerIP(TmpJson, csClientIP_TCP);
+		DbgOutA("=== [DEBUG] Reg JSON AFTER  Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
 
-		goto END;
-	}  
+		if(!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID, dwDevID))
+		{
+			strMsg.Format(_T("SendData ERROR. IP=%s, data= %S"), m_strServerIP.GetBuffer(), (TmpJson.c_str()));
+			WriteError(strMsg.GetBuffer());
 
+			goto END;
+		}
+		Sleep(50);
+	}
 
 
 	
 	// DLL Load (EventType=80)
+	if (dwSubTypes & 0x20000000)
 	{
 		char szJson[2048];
 		sprintf_s(szJson, sizeof(szJson),
-			"[{\"ComputerID\":\"%S\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{\"EventType\":80,\"DllLoad.TimeStamp\":%lld,\"DllLoad.ProcessId\":1234,\"DllLoad.ProcessGuid\":\"{11111111-1111-1111-1111-111111111111}\",\"DllLoad.ProcessFileName\":\"malware_loader.exe\",\"DllLoad.ProcessName\":\"C:\\\\malware_loader.exe\",\"DllLoad.TargetDllFileName\":\"malware.dll\",\"DllLoad.TargetDllPath\":\"C:\\\\Windows\\\\System32\\\\malware.dll\",\"DllLoad.User\":\"WIN-DESKTOP\\\\DELL\",\"DllLoad.UserSid\":\"S-1-5-21-3782372158-3025124834-3246284786-1000\"}}]",
-			wtrsComputerID.c_str(), (long long)time(NULL)*1000);
+			"[{\"ComputerID\":\"%S\",\"CMDTYPE\":200,\"CMDID\":21,\"CMDContent\":{\"ComputerIP\":\"%S\",\"EventType\":80,\"DllLoad.TimeStamp\":%lld,\"DllLoad.ProcessId\":1234,\"DllLoad.ProcessGuid\":\"{11111111-1111-1111-1111-111111111111}\",\"DllLoad.ProcessFileName\":\"malware_loader.exe\",\"DllLoad.ProcessName\":\"C:\\\\malware_loader.exe\",\"DllLoad.TargetDllFileName\":\"malware.dll\",\"DllLoad.TargetDllPath\":\"C:\\\\Windows\\\\System32\\\\malware.dll\",\"DllLoad.User\":\"WIN-DESKTOP\\\\DELL\",\"DllLoad.UserSid\":\"S-1-5-21-3782372158-3025124834-3246284786-1000\"}}]",
+			wtrsComputerID.c_str(), csClientIP_TCP.GetBuffer(), (long long)time(NULL)*1000);
 		TmpJson = szJson;
-		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length(), THREAT_EVENT_UPLOAD_CMDID))
+		DbgOutA("=== [DEBUG] DLL Load JSON ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length(), THREAT_EVENT_UPLOAD_CMDID, dwDevID))
 		{
 			strMsg.Format(_T("SendData ERROR(DLL). IP=%s"), m_strServerIP.GetBuffer());
 			WriteError(strMsg.GetBuffer());
@@ -813,14 +879,24 @@ BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sock
 	}
 
 	// WinEventLog (EventType=10)
-	TmpJson = Obj.ThreatLog_SimulateJson_WinEventLog(wtrsComputerID, wstrClientID, wstrClientIP);
-	if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID))
+	if (dwSubTypes & 0x40000000)
 	{
-		strMsg.Format(_T("SendData ERROR(WinEvent). IP=%s"), m_strServerIP.GetBuffer());
-		WriteError(strMsg.GetBuffer());
-		goto END;
+		TmpJson = Obj.ThreatLog_SimulateJson_WinEventLog(wtrsComputerID, wstrClientID, wstrClientIP);
+		DbgOutA("=== [DEBUG] WinEventLog JSON BEFORE Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		TmpJson = InjectComputerIP(TmpJson, csClientIP_TCP);
+		DbgOutA("=== [DEBUG] WinEventLog JSON AFTER  Inject ===\n");
+		DbgOutA(TmpJson.c_str());
+		DbgOutA("\n");
+		if (!SendData_OnlyCompress(sockSend, TmpJson.c_str(), TmpJson.length()-1, THREAT_EVENT_UPLOAD_CMDID, dwDevID))
+		{
+			strMsg.Format(_T("SendData ERROR(WinEvent). IP=%s"), m_strServerIP.GetBuffer());
+			WriteError(strMsg.GetBuffer());
+			goto END;
+		}
+		Sleep(50);
 	}
-	Sleep(50);
 bResult = TRUE;
 
 END:

@@ -7,6 +7,7 @@
 #include "afxcmn.h"
 #include "../common/UI/CGridListCtrlEx/CGridListCtrlEx.h"
 #include "client.h"
+#include <set>
 
 // CWLServerTestDlg �Ի���
 class  CWLServerTestDlg;
@@ -129,6 +130,7 @@ private:
 
 public:
 	CGridListCtrlEx			m_listHeartBeat_MainWindow;
+	std::set<int> m_setLogTaskRows;
 	CGridListCtrlEx			m_listLowPart_MainWindow;
 	CCriticalSection		m_csHeatbeatListCtrl;	
 	
@@ -175,7 +177,7 @@ public:
 	DWORD RecvHeartBeatBack_TCP_ThreatLog(SOCKET sockRecv);
 	BOOL SendHeartbeat_ThreatLog(client& curClient);
 	
-	BOOL RegisterClientToServer(CString computerID, CString lpGuid,CString szIP);
+	BOOL RegisterClientToServer(CString computerID, CString lpGuid,CString szIP, DWORD* pdwOutDevID = NULL);
 
 	void PrepareVecClients_UpdateControls();
 	
@@ -214,6 +216,7 @@ public:
     CEdit       m_editLogHost;
     CEdit       m_editLogPort;
     CButton     m_chkUseLogServer;
+    CButton     m_chkDebug;
 
     // --- OS ���� ---
     CButton     m_radioOsWin;
@@ -368,5 +371,6 @@ public:
     afx_msg LRESULT OnAppendLogOutput(WPARAM wParam, LPARAM lParam);
     afx_msg void OnBnClickedWlFileChooseButton();
 	afx_msg void OnBnClickedUnselectAll();
+	afx_msg void OnBnClickedDebug();
 
 };

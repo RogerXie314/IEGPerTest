@@ -962,6 +962,7 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
     DDX_Control(pDX, IDC_CHECK_USE_LOG_SERVER,   m_chkUseLogServer);
+    DDX_Control(pDX, IDC_CHECK_DEBUG,          m_chkDebug);
 
 
 
@@ -1409,6 +1410,7 @@ ON_CBN_SELCHANGE(IDC_COMBO_PROJECT_TYPE, &CWLServerTestDlg::OnProjectTypeSelChan
 
 ON_BN_CLICKED(IDC_BUTTON_RAWPACKET, &CWLServerTestDlg::OnBnClickedRawPacket)
 	ON_BN_CLICKED(IDC_BTN_UNSELECT_ALL, &CWLServerTestDlg::OnBnClickedUnselectAll)
+	ON_BN_CLICKED(IDC_CHECK_DEBUG, &CWLServerTestDlg::OnBnClickedDebug)
 	ON_WM_MOUSEMOVE()
 	ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
@@ -1772,6 +1774,9 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 		objTmpClient.Client_SetComputerID();
+		// v6.5: restore server-assigned devid from INI
+		DWORD dwSavedDevID = CProfileConfig::GetProfileConfigInstance()->ReadDevID_FromIni(objTmpClient.GetClientID());
+		if (dwSavedDevID != 0) objTmpClient.SetDevID(dwSavedDevID);
 
 
 
@@ -3159,6 +3164,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 		CProfileConfig::GetProfileConfigInstance()->WriteTotalClientCount_ToIni(m_iPreviousRegistered_ClientCount);   //ûǰ?�?????ȡõ-1д0PreviousRegisteredClientCount=0
+		CProfileConfig::GetProfileConfigInstance()->ClearAllDevIDs_FromIni();  // v6.5
 
 
 
@@ -3799,7 +3805,7 @@ BOOL CWLServerTestDlg::CheckServer_IP_Port_HBPort_NotEmpty()
 
 
 
-BOOL CWLServerTestDlg::RegisterClientToServer(CString szComputerID, CString szClientID,CString szClientIP)
+BOOL CWLServerTestDlg::RegisterClientToServer(CString szComputerID, CString szClientID,CString szClientIP, DWORD* pdwOutDevID)
 
 
 
@@ -3821,7 +3827,7 @@ BOOL CWLServerTestDlg::RegisterClientToServer(CString szComputerID, CString szCl
 
 
 
-	return SendInfoToServer.RegisterClientToServer(szComputerID,szClientID,szClientIP,strVer,strOS);
+	return SendInfoToServer.RegisterClientToServer(szComputerID,szClientID,szClientIP,strVer,strOS, pdwOutDevID);
 
 
 
@@ -4281,7 +4287,8 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //ֻά
 
 
 
-            if (g_WLServerTestDlg->RegisterClientToServer(cclient->Client_GetComputerID(),
+
+            DWORD dwDevID = 0;            if (g_WLServerTestDlg->RegisterClientToServer(cclient->Client_GetComputerID(),
 
 
 
@@ -4291,7 +4298,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //ֻά
 
 
 
-                cclient->GetClientIP()))
+                cclient->GetClientIP(), &dwDevID))
 
 
 
@@ -4302,6 +4309,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //ֻά
 
 
                 cclient->Client_SetRegistered(TRUE);
+                if (dwDevID != 0) { cclient->SetDevID(dwDevID); CProfileConfig::GetProfileConfigInstance()->WriteDevID_ToIni(cclient->GetClientID(), dwDevID); }
 
 
 
@@ -4705,10 +4713,12 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
         WriteInfo(_T("RegisterClientToServer Begin, ClientID = %s"), pClient->GetClientID().GetBuffer());
 
+        DWORD dwDevID = 0;
 
 
 
-        if (g_WLServerTestDlg->RegisterClientToServer(pClient->Client_GetComputerID(),pClient->GetClientID(),pClient->GetClientIP()))
+
+        if (g_WLServerTestDlg->RegisterClientToServer(pClient->Client_GetComputerID(),pClient->GetClientID(),pClient->GetClientIP(), &dwDevID))
 
 
 
@@ -4764,6 +4774,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
             pClient->Client_SetRegistered(TRUE);
+            if (dwDevID != 0) { pClient->SetDevID(dwDevID); CProfileConfig::GetProfileConfigInstance()->WriteDevID_ToIni(pClient->GetClientID(), dwDevID); }
 
 
 
@@ -7449,7 +7460,8 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-                if (g_WLServerTestDlg->RegisterClientToServer(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_GetComputerID(),
+
+                DWORD dwDevID = 0;                if (g_WLServerTestDlg->RegisterClientToServer(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_GetComputerID(),
 
 
 
@@ -7459,7 +7471,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-                    g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientIP()))
+                    g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientIP(), &dwDevID))
 
 
 
@@ -7470,6 +7482,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
                     g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_SetRegistered(TRUE);
+                    if (dwDevID != 0) { g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].SetDevID(dwDevID); CProfileConfig::GetProfileConfigInstance()->WriteDevID_ToIni(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientID(), dwDevID); }
 
 
 
@@ -7709,7 +7722,8 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-                if (g_WLServerTestDlg->RegisterClientToServer(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_GetComputerID(),
+
+                DWORD dwDevID = 0;                if (g_WLServerTestDlg->RegisterClientToServer(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_GetComputerID(),
 
 
 
@@ -7719,7 +7733,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-                                        g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientIP()))
+                                        g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientIP(), &dwDevID))
 
 
 
@@ -7730,6 +7744,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
                     g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].Client_SetRegistered(TRUE);
+                    if (dwDevID != 0) { g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].SetDevID(dwDevID); CProfileConfig::GetProfileConfigInstance()->WriteDevID_ToIni(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]].GetClientID(), dwDevID); }
 
 
 
@@ -8759,7 +8774,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //һ߳? �
 
 
 
-					SendInfoToServer_HBPort.SendThreatLog_ToserverTCP(objForHBThreatLog,pHeapArgs->sock, bHit);
+					SendInfoToServer_HBPort.SendThreatLog_ToserverTCP(objForHBThreatLog,pHeapArgs->sock, pHeapArgs->dwHttpsSubTypes, bHit);
 
 
 
@@ -10848,6 +10863,8 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 	m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 6, _T("开始中"));
 
+	// Track log task rows for OnBnClickedLogStop
+	if (m_iThisTask_SelectedOperationType & MSG_LOG_TYPE) m_setLogTaskRows.insert(iThisTask_InsertLineIndex);
 
 
 
@@ -12866,6 +12883,13 @@ if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
 void CWLServerTestDlg::OnBnClickedLogStop()
 {
 	g_bStopLogTask = TRUE; // r3: only stop log, leave HB running
+	// Only update threat log task rows, not heartbeat rows sharing the same list
+	for (int iRow : m_setLogTaskRows)
+	{
+		CString strStatus = m_listHeartBeat_MainWindow.GetItemText(iRow, 6);
+		if (strStatus == _T("ִ����"))
+			m_listHeartBeat_MainWindow.SetItemText(iRow, 6, _T("��ֹͣ"));
+	}
 	AppendLogOutput(_T("[LOG] Stop task sent"));
 }
 
@@ -12875,6 +12899,11 @@ void CWLServerTestDlg::OnBnClickedWlFileChooseButton()
 	CString cstrFile;
 	CFileDialog dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.wl)|*.wl|"), NULL);
 	if (dlgFile.DoModal()) { cstrFile = dlgFile.GetPathName(); m_WLFilePathEdit.SetWindowText(cstrFile); }
+}
+
+void CWLServerTestDlg::OnBnClickedDebug()
+{
+	g_bEnableDebugOutput = m_chkDebug.GetCheck();
 }
 
 void CWLServerTestDlg::OnBnClickedUnselectAll()

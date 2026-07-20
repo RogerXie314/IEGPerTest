@@ -13,6 +13,7 @@ client::client(__in CString inClientID, __in CString inClientIP)
 	m_bHasFileLogSent = FALSE;
 	m_bHasMsgLogSent = FALSE;
 	m_bRegistered = FALSE;
+	m_dwDevID = 0;
 }
 
 client::~client(void) 

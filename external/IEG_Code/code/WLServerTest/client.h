@@ -3,17 +3,18 @@
 class client
 {
 private:
-	CString m_clientID;     // ¸Ä½øÇ®ÓÃ×÷ComputerID£¬ÏÖÔÝÓÃÓÚ±£´æÓÃ»§¶¨ÒåµÄ¿Í»§¶ËÇ°×º
+	CString m_clientID;     // ï¿½Ä½ï¿½Ç®ï¿½ï¿½ï¿½ï¿½ComputerIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Í»ï¿½ï¿½ï¿½Ç°×º
 	CString m_csComputerID_PreClientIDSuf;
 	CString m_clientIP;
 
-	BOOL m_bHasHeartBeatSent;   // µ±Ç°¿Í»§¶ËÊÇ·ñÒÑÔÚ·¢ËÍÐÄÌø
+	BOOL m_bHasHeartBeatSent;   // ï¿½ï¿½Ç°ï¿½Í»ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ú·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	BOOL m_bHasFileLogSent; // µ±Ç°¿Í»§¶ËÎÄ¼þÀàÐÍÈÕÖ¾ÉÏ´«±ê¼Ç
+	BOOL m_bHasFileLogSent; // ï¿½ï¿½Ç°ï¿½Í»ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ï´ï¿½ï¿½ï¿½ï¿½
 
-	BOOL m_bHasMsgLogSent;  // µ±Ç°¿Í»§¶ËÏûÏ¢ÀàÐÍÈÕÖ¾ÉÏ´«±ê¼Ç
+	BOOL m_bHasMsgLogSent;  // ï¿½ï¿½Ç°ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ï´ï¿½ï¿½ï¿½ï¿½
 	
-	BOOL m_bRegistered; //µ±Ç°¿Í»§¶ËÊÇ·ñÊÇÒÑ×¢²á×´Ì¬
+	BOOL m_bRegistered; //ï¿½ï¿½Ç°ï¿½Í»ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½×´Ì¬
+	DWORD m_dwDevID;      // devid returned from server registration
 
 public:
 	client();
@@ -22,6 +23,9 @@ public:
 
 	CString GetClientID();
 	CString GetClientIP();
+
+	DWORD GetDevID() const { return m_dwDevID; }
+	void  SetDevID(DWORD dwDevID) { m_dwDevID = dwDevID; }
 
 	BOOL Get_IsThisClientSendingHeartBeat();
 	BOOL ThisClient_IsSendingFileLog();
