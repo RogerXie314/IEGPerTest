@@ -45,10 +45,15 @@ public:
 	int ReadTotalClientCount_FromIni();
 	BOOL WriteTotalClientCount_ToIni(int iTotalCilentCount);
 
-    // === Phase 7: °æ±¾ÁÐ±í INI ¶ÁÐ´ ===
+    // === Phase 7: ï¿½æ±¾ï¿½Ð±ï¿½ INI ï¿½ï¿½Ð´ ===
     BOOL    WriteWindowsVersionList_ToIni(CString strList);
     CString ReadWindowsVersionList_FromIni();
 
     BOOL    WriteLinuxVersionList_ToIni(CString strList);
     CString ReadLinuxVersionList_FromIni();
+
+    // devid persistence (per-client, keyed by ClientID)
+    BOOL    WriteDevID_ToIni(CString strClientID, DWORD dwDevID);
+    DWORD   ReadDevID_FromIni(CString strClientID);
+    void    ClearAllDevIDs_FromIni();
 };

@@ -245,7 +245,7 @@ CString CProfileConfig::ReadClientStartIp_FromIni()
 	return cstrClientStartIp;
 }
 
-// === Phase 7: °æ±¾ÁÐ±í INI ¶ÁÐ´£¨°æ±¾ºÅÓÃ | ·Ö¸ô£¬´æ VersionList ½Ú£©===
+// === Phase 7: ï¿½æ±¾ï¿½Ð±ï¿½ INI ï¿½ï¿½Ð´ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½ | ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ VersionList ï¿½Ú£ï¿½===
 
 BOOL CProfileConfig::WriteWindowsVersionList_ToIni(CString strList)
 {
@@ -271,4 +271,21 @@ CString CProfileConfig::ReadLinuxVersionList_FromIni()
 	GetPrivateProfileString(_T("VersionList"), _T("LinuxVersions"),
 		_T(""), szBuf, 1024, m_szConfPath);
 	return CString(szBuf);
+}
+
+// devid persistence: store/retrieve server-assigned devid per ClientID in [DevID] section
+BOOL CProfileConfig::WriteDevID_ToIni(CString strClientID, DWORD dwDevID)
+{
+	return WriteProfileInt_ToIni(_T("DevID"), strClientID, (int)dwDevID);
+}
+
+DWORD CProfileConfig::ReadDevID_FromIni(CString strClientID)
+{
+	int nVal = ReadProfileInt_FromIni(_T("DevID"), strClientID);
+	return (nVal > 0) ? (DWORD)nVal : 0;
+}
+
+void CProfileConfig::ClearAllDevIDs_FromIni()
+{
+	WriteProfileString_ToIni(_T("DevID"), NULL, NULL); // remove entire section
 }

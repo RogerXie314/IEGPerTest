@@ -30,10 +30,15 @@ struct BuiltinPacket {
     CString name;
     CString targetOs;
     CString resourceName;
-    bool selected;    std::vector<BYTE> packetData;
-    std::vector<RpeRule> rules;
-    unsigned int checksumFlags;
-
+    bool selected;
+    std::vector<BYTE> packetData;  // 保持向后兼容
+    std::vector<RpeRule> rules;    // 保持向后兼容
+    unsigned int checksumFlags;    // 保持向后兼容
+    
+    // 支持多个streams
+    std::vector<std::vector<BYTE>> streamsData;
+    std::vector<std::vector<RpeRule>> streamsRules;
+    std::vector<unsigned int> streamsFlags;
 };
 
 class CRawPacketDlg : public CDialog
@@ -99,7 +104,8 @@ private:
     bool m_isRunning;
 
     // Timer for stats
-    UINT_PTR m_nStatsTimer;    unsigned long long m_lastSendTotal;
+    UINT_PTR m_nStatsTimer;
+    unsigned long long m_lastSendTotal;
     unsigned long long m_lastSendBytes;
     DWORD m_startTick;
     CString m_iniPath;

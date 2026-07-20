@@ -146,7 +146,7 @@ archive/
 
 ## 📋 历史版本
 
-- **WLServerTest**（main）：V5.9（OPT调度大修+日志路由对齐）/ V5.8（攻击报文UI复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
+- **WLServerTest**（main）：V6.1（攻击报文多stream修复）/ V6.0（注册doPost弹窗移除+RawPacketEngine入库）/ V5.9（OPT调度大修+日志路由对齐）/ V5.8（攻击报文UI复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
 - **SimulatorApp**（其它分支）：详见 [`simulator-subprocess`](../../tree/simulator-subprocess) 与 [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) 自带 CHANGELOG
 
 详见各 `CHANGELOG_*.md` 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。

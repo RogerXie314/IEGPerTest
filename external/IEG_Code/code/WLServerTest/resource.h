@@ -260,3 +260,4 @@
 #endif
 #endif
 #define IDC_BTN_UNSELECT_ALL            1227
+#define IDC_CHECK_DEBUG                 1228

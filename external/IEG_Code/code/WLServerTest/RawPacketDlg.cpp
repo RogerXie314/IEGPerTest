@@ -192,7 +192,7 @@ static CString GetFriendlyName(const char* pcapName)
 BOOL CRawPacketDlg::OnInitDialog()
 {
     CDialog::OnInitDialog();
-    SetWindowText(_T("�������ķ���"));
+    SetWindowText(_T("Attack Packet Sender"));
     TCHAR exePath[MAX_PATH];
     
     // ������ñ��Ĺ�ѡ�б������С��ޱ�ͷ��
@@ -207,23 +207,23 @@ BOOL CRawPacketDlg::OnInitDialog()
         CListCtrl* pLC = (CListCtrl*)pListRight;
         pLC->SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
         pLC->InsertColumn(0, _T("#"),        LVCFMT_LEFT, 28);
-        pLC->InsertColumn(1, _T("����"),     LVCFMT_LEFT, 110);
-        pLC->InsertColumn(2, _T("Դ��ַ"),   LVCFMT_LEFT, 90);
-        pLC->InsertColumn(3, _T("Ŀ�ĵ�ַ"), LVCFMT_LEFT, 90);
-        pLC->InsertColumn(4, _T("Э��"),     LVCFMT_LEFT, 50);
-        pLC->InsertColumn(5, _T("����(B)"),  LVCFMT_RIGHT, 50);
-        pLC->InsertColumn(6, _T("��Ϣ"),     LVCFMT_LEFT, 120);
+        pLC->InsertColumn(1, _T("Name"),     LVCFMT_LEFT, 110);
+        pLC->InsertColumn(2, _T("Src Addr"),   LVCFMT_LEFT, 90);
+        pLC->InsertColumn(3, _T("Dest Addr"), LVCFMT_LEFT, 90);
+        pLC->InsertColumn(4, _T("Protocol"),     LVCFMT_LEFT, 50);
+        pLC->InsertColumn(5, _T("Size(B)"),  LVCFMT_RIGHT, 50);
+        pLC->InsertColumn(6, _T("Info"),     LVCFMT_LEFT, 120);
     }
 
     // Speed mode
     m_cbSpeedMode.AddString(_T("PPS"));
-    m_cbSpeedMode.AddString(_T("���(ms)"));
-    m_cbSpeedMode.AddString(_T("���"));
+    m_cbSpeedMode.AddString(_T("Interval(ms)"));
+    m_cbSpeedMode.AddString(_T("Fastest"));
     m_cbSpeedMode.SetCurSel(0);
 
     // Send mode
-    m_cbSendMode.AddString(_T("����"));
-    m_cbSendMode.AddString(_T("����"));
+    m_cbSendMode.AddString(_T("Continuous"));
+    m_cbSendMode.AddString(_T("Burst"));
     m_cbSendMode.SetCurSel(0);
 
     m_editSpeedValue.SetWindowText(_T("1000"));
@@ -402,11 +402,22 @@ void CRawPacketDlg::LoadBuiltinPackets()
         bp.id=i; bp.name=def.name; bp.targetOs=def.os;
         bp.resourceName.Empty(); bp.selected=false;
         bp.checksumFlags=0;
-        // Combine all streams for this attack type
+        
+        // 保存所有streams的信息
         for (int s=0; s<def.streamCount; s++) {
-            bp.packetData.insert(bp.packetData.end(), def.streams[s], def.streams[s]+def.lens[s]);
-            bp.rules.insert(bp.rules.end(), def.rules[s], def.rules[s]+def.ruleCounts[s]);
-            if (bp.checksumFlags==0) bp.checksumFlags=def.flags[s];
+            // 为每个stream创建独立的数据包副本
+            std::vector<BYTE> streamData(def.streams[s], def.streams[s] + def.lens[s]);
+            std::vector<RpeRule> streamRules(def.rules[s], def.rules[s] + def.ruleCounts[s]);
+            bp.streamsData.push_back(streamData);
+            bp.streamsRules.push_back(streamRules);
+            bp.streamsFlags.push_back(def.flags[s]);
+            
+            // 保持向后兼容：将第一个stream的数据也保存到packetData中
+            if (s == 0) {
+                bp.packetData = streamData;
+                bp.rules = streamRules;
+                bp.checksumFlags = def.flags[s];
+            }
         }
         m_builtinPackets.push_back(bp);
     }
@@ -491,33 +502,83 @@ void CRawPacketDlg::OnStart()
     for (size_t i=0; i<m_builtinPackets.size(); ++i)
     {
         if (!m_builtinPackets[i].selected) continue;
-        std::vector<BYTE>& pkt=m_builtinPackets[i].packetData;
-        if (pkt.empty()) continue;
-        SetDestMac(pkt.data(),(int)pkt.size(),dstMac);
-        SetDestIp(pkt.data(),(int)pkt.size(),dstIp);
-        unsigned int cksum=DetectChecksumFlags(pkt.data(),(int)pkt.size());
-        if (cksum==0) cksum=m_builtinPackets[i].checksumFlags;
-        std::vector<RpeRule>& rules=m_builtinPackets[i].rules;
-        const RpeRule* rp=rules.empty()?NULL:rules.data();
-        int rc=(int)rules.size();
-        CStringA name(m_builtinPackets[i].name);
-        int ret=RPE_AddStream(pkt.data(),(int)pkt.size(),name,(void*)rp,rc,cksum);
-        if (ret>=0) {
-            streamCount++;
-            if (pLC) {
-                DWORD src=0,dst=0;
-                if (pkt.size()>=34) {
-                    src=(pkt[26]<<24)|(pkt[27]<<16)|(pkt[28]<<8)|pkt[29];
-                    dst=(pkt[30]<<24)|(pkt[31]<<16)|(pkt[32]<<8)|pkt[33];
+        
+        // 检查是否有多个streams
+        bool hasMultipleStreams = !m_builtinPackets[i].streamsData.empty();
+        
+        if (hasMultipleStreams) {
+            // 处理多个streams
+            for (size_t s=0; s<m_builtinPackets[i].streamsData.size(); ++s) {
+                std::vector<BYTE>& pkt = m_builtinPackets[i].streamsData[s];
+                if (pkt.empty()) continue;
+                SetDestMac(pkt.data(),(int)pkt.size(),dstMac);
+                SetDestIp(pkt.data(),(int)pkt.size(),dstIp);
+                unsigned int cksum = DetectChecksumFlags(pkt.data(),(int)pkt.size());
+                if (cksum==0 && s < m_builtinPackets[i].streamsFlags.size()) 
+                    cksum = m_builtinPackets[i].streamsFlags[s];
+                
+                std::vector<RpeRule>& rules = m_builtinPackets[i].streamsRules[s];
+                const RpeRule* rp = rules.empty() ? NULL : rules.data();
+                int rc = (int)rules.size();
+                CStringA name(m_builtinPackets[i].name);
+                int ret = RPE_AddStream(pkt.data(),(int)pkt.size(),name,(void*)rp,rc,cksum);
+                if (ret>=0) {
+                    streamCount++;
+                    if (pLC) {
+                        DWORD src=0,dst=0;
+                        if (pkt.size()>=34) {
+                            src=(pkt[26]<<24)|(pkt[27]<<16)|(pkt[28]<<8)|pkt[29];
+                            dst=(pkt[30]<<24)|(pkt[31]<<16)|(pkt[32]<<8)|pkt[33];
+                        }
+                        int row=pLC->InsertItem(streamCount-1,_T(""));
+                        CString sText; sText.Format(_T("%d"),streamCount); pLC->SetItemText(row,0,sText);
+                        
+                        // 显示stream编号
+                        CString displayName = m_builtinPackets[i].name;
+                        if (m_builtinPackets[i].streamsData.size() > 1) {
+                            CString streamNum; streamNum.Format(_T(" #%d"), (int)s+1);
+                            displayName += streamNum;
+                        }
+                        
+                        pLC->SetItemText(row,1,displayName);
+                        pLC->SetItemText(row,2,IpToStr(src));
+                        pLC->SetItemText(row,3,IpToStr(dst));
+                        pLC->SetItemText(row,4,GetProtocolName(pkt.data(),(int)pkt.size()));
+                        sText.Format(_T("%d"),(int)pkt.size()); pLC->SetItemText(row,5,sText);
+                        pLC->SetItemText(row,6,_T("Builtin"));
+                    }
                 }
-                int row=pLC->InsertItem(streamCount-1,_T(""));
-                CString s; s.Format(_T("%d"),streamCount); pLC->SetItemText(row,0,s);
-                pLC->SetItemText(row,1,m_builtinPackets[i].name);
-                pLC->SetItemText(row,2,IpToStr(src));
-                pLC->SetItemText(row,3,IpToStr(dst));
-                pLC->SetItemText(row,4,GetProtocolName(pkt.data(),(int)pkt.size()));
-                s.Format(_T("%d"),(int)pkt.size()); pLC->SetItemText(row,5,s);
-                pLC->SetItemText(row,6,_T("Builtin"));
+            }
+        } else {
+            // 向后兼容：处理单个数据包
+            std::vector<BYTE>& pkt=m_builtinPackets[i].packetData;
+            if (pkt.empty()) continue;
+            SetDestMac(pkt.data(),(int)pkt.size(),dstMac);
+            SetDestIp(pkt.data(),(int)pkt.size(),dstIp);
+            unsigned int cksum=DetectChecksumFlags(pkt.data(),(int)pkt.size());
+            if (cksum==0) cksum=m_builtinPackets[i].checksumFlags;
+            std::vector<RpeRule>& rules=m_builtinPackets[i].rules;
+            const RpeRule* rp=rules.empty()?NULL:rules.data();
+            int rc=(int)rules.size();
+            CStringA name(m_builtinPackets[i].name);
+            int ret=RPE_AddStream(pkt.data(),(int)pkt.size(),name,(void*)rp,rc,cksum);
+            if (ret>=0) {
+                streamCount++;
+                if (pLC) {
+                    DWORD src=0,dst=0;
+                    if (pkt.size()>=34) {
+                        src=(pkt[26]<<24)|(pkt[27]<<16)|(pkt[28]<<8)|pkt[29];
+                        dst=(pkt[30]<<24)|(pkt[31]<<16)|(pkt[32]<<8)|pkt[33];
+                    }
+                    int row=pLC->InsertItem(streamCount-1,_T(""));
+                    CString s; s.Format(_T("%d"),streamCount); pLC->SetItemText(row,0,s);
+                    pLC->SetItemText(row,1,m_builtinPackets[i].name);
+                    pLC->SetItemText(row,2,IpToStr(src));
+                    pLC->SetItemText(row,3,IpToStr(dst));
+                    pLC->SetItemText(row,4,GetProtocolName(pkt.data(),(int)pkt.size()));
+                    s.Format(_T("%d"),(int)pkt.size()); pLC->SetItemText(row,5,s);
+                    pLC->SetItemText(row,6,_T("Builtin"));
+                }
             }
         }
     }
@@ -591,6 +652,7 @@ void CRawPacketDlg::UpdateStats()
     s.Format(_T("%.0f"),avgPps); m_stAvgPps.SetWindowText(s);
 }
 
-    afx_msg void OnBnClickedImport();    std::vector<BuiltinPacket> m_importedPackets;
+    afx_msg void OnBnClickedImport();
+    std::vector<BuiltinPacket> m_importedPackets;
     void LoadEtcFile(const CString& path);
 
