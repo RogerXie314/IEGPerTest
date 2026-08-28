@@ -313,7 +313,8 @@ BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSend
 {
 	BOOL bRes = FALSE;
 	CProtocal protocal;
-	if (dwDeviceID != 0) protocal.SetDeviceID(dwDeviceID);
+	// [V6.5.1] 注释掉 per-client devid 注入，避免心跳(devid=0)与日志(devid=per_client)不一致
+	// if (dwDeviceID != 0) protocal.SetDeviceID(dwDeviceID);
 	char *pProtocalData = NULL;
 	unsigned int nProtocalLen = 0;
 	tstring strErr;
@@ -695,7 +696,8 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 		if (cmdContent.isMember("devid") && cmdContent["devid"].isInt())
 		{
 			DWORD dwDevID = cmdContent["devid"].asUInt();
-			CProtocal::SetUniqueID(dwDevID);
+			// [V6.5.1] 注释掉 SetUniqueID，避免静态变量竞态导致所有连接心跳 devid 被最后一个注册线程覆盖
+			// CProtocal::SetUniqueID(dwDevID);
 			if (pdwOutDevID) *pdwOutDevID = dwDevID;
 
 			CString strTmp;
