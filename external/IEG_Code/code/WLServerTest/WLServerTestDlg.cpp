@@ -12887,8 +12887,8 @@ void CWLServerTestDlg::OnBnClickedLogStop()
 	for (int iRow : m_setLogTaskRows)
 	{
 		CString strStatus = m_listHeartBeat_MainWindow.GetItemText(iRow, 6);
-		if (strStatus == _T("÷¥––÷–"))
-			m_listHeartBeat_MainWindow.SetItemText(iRow, 6, _T("“—Õ£÷π"));
+		if (strStatus == _T("ÊâßË°å‰∏≠"))
+			m_listHeartBeat_MainWindow.SetItemText(iRow, 6, _T("Â∑≤ÂÅúÊ≠¢"));
 	}
 	AppendLogOutput(_T("[LOG] Stop task sent"));
 }
