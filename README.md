@@ -6,9 +6,16 @@
 
 ---
 
-## 🆕 WLServerTest **V6.5**（2026-07-20，latest）
+## 🆕 WLServerTest **V6.5.1**（2026-09-02，latest）
 
-发布路径：`artifacts/WLServerTestPublish/`。
+发布路径：`artifacts/V6.5.1/`。
+
+### V6.5.1 版本特性
+
+- **高并发日志压力掉线修复**：根因是 devid 相关两处缺陷（`RegisterClientToServer` 静态变量竞态、心跳/日志 devid 不一致），已注释掉 `SetDeviceID` 注入与 `SetUniqueID` 提取，日志报文 devid 回归 0 与心跳保持一致
+- **400×1 日志压力稳定**：`400×1` 日志压力下运行无掉线，超过 V6.5 的 300×1 / 100×3 场景
+- **UI 乱码修复**：日志停止按钮状态文本（"执行中"/"已停止"）编码乱码修复
+- 保留 V6.5 全部功能（下方）
 
 ### V6.5 核心功能
 
@@ -37,7 +44,7 @@
 - 协议头 `nDeviceID` 正确取值
 - JSON 边界截断问题
 
-**部署**（无需安装运行时）：把 `artifacts/WLServerTestPublish/` 整目录拷贝到目标机器，双击 `WLServerTest.exe`。
+**部署**（无需安装运行时）：把 `artifacts/V6.5.1/` 整目录拷贝到目标机器，双击 `WLServerTest.exe`。
 
 Tooltips 速查：
 
@@ -106,7 +113,7 @@ pwsh -File scripts\build_wlservertest.ps1
 
 | 分支 | 主推工具 | 架构 | 最新版本 |
 |---|---|---|---|
-| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V6.5** |
+| **`main`**（当前） | **WLServerTest** | MFC + 纯原生 C++（基于老 IEG 代码树优化） | **V6.5.1** |
 | [`simulator-subprocess`](../../tree/simulator-subprocess) | SimulatorApp | C# WPF + NativeRunner.exe 子进程（stdio 管道 IPC，C++ 与 .NET GC 隔离） | v3.9.7 |
 | [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) | SimulatorApp | C# WPF + NativeSender.dll 同进程（P/Invoke） | v3.7.31 |
 
@@ -127,7 +134,7 @@ external/                       # WLServerTest 源码 + 老 IEG 代码参考库
   └── xiaobing/                  # 第三方参考
 
 artifacts/
-  └── WLServerTestPublish/      # WLServerTest V6.5 发布产物（exe + dll + ini）
+  └── V6.5.1/                    # WLServerTest V6.5.1 发布产物（exe + dll）
 
 docs/                           # 文档（项目实施文档 / 项目看板 等）
 tools/                          # 通用：Python 白名单解析工具（CLI + GUI）
@@ -157,7 +164,7 @@ archive/
 
 ## 📋 历史版本
 
-- **WLServerTest**（main）：V6.5（devid 持久化+威胁日志过滤+ComputerIP 注入+Debug 开关）/ V6.3（DLL Load 转义+devid 协议头+JSON 截断修复）/ V6.2（清理+文档整理）/ V6.1（攻击报文多 stream 修复）/ V6.0（注册 doPost 弹窗移除+RawPacketEngine 入库）/ V5.9（OPT 调度大修+日志路由对齐）/ V5.8（攻击报文 UI 复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR 联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
+- **WLServerTest**（main）：V6.5.1（高并发日志压力掉线修复+UI 乱码修复）/ V6.5（devid 持久化+威胁日志过滤+ComputerIP 注入+Debug 开关）/ V6.3（DLL Load 转义+devid 协议头+JSON 截断修复）/ V6.2（清理+文档整理）/ V6.1（攻击报文多 stream 修复）/ V6.0（注册 doPost 弹窗移除+RawPacketEngine 入库）/ V5.9（OPT 调度大修+日志路由对齐）/ V5.8（攻击报文 UI 复刻）/ V5.7（短连接漏发修复）/ V5.6（IEG/EDR 联动）/ V5.5（计数器原子化+卡片化）/ V5.2（崩溃修复+心跳时长）/ V5.1 / V5.0
 - **SimulatorApp**（其它分支）：详见 [`simulator-subprocess`](../../tree/simulator-subprocess) 与 [`simulator-inproc-dll`](../../tree/simulator-inproc-dll) 自带 CHANGELOG
 
 详见 [docs/项目实施文档.md](docs/项目实施文档.md) 与 [archive/simulator-app/RELEASE_NOTES_v3.9.7.md](archive/simulator-app/RELEASE_NOTES_v3.9.7.md)。
