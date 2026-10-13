@@ -1,4 +1,4 @@
-ï»¿// WLServerTestDlg.cpp : ÊµÄ¼
+?// WLServerTestDlg.cpp : ??
 
 
 
@@ -31,6 +31,7 @@
 
 
 #include "SendInfoToServer.h"
+#include "ClientConfigUploader.h"
 
 
 
@@ -112,7 +113,7 @@ class CRawPacketDlg;
 
 
 
-int g_nTotalRegistered_ClientCount = 0;		              //Ç°×¢Ä¿Í»?
+int g_nTotalRegistered_ClientCount = 0;		              //?????
 
 
 
@@ -132,12 +133,12 @@ int g_nHeartBeatSending_ClientCount = 0;
 
 
 
-volatile long g_nHeartBeatNotSending_ClientCount = 0;     //Ç°Î´Ä¿Í»
+volatile long g_nHeartBeatNotSending_ClientCount = 0;     //?¦Ä??
 
 
 
 
-volatile long g_nFileLogNotSending_ClientCount = 0;       //Ç°Î´Ä¼Ö¾Ä¿Í»
+volatile long g_nFileLogNotSending_ClientCount = 0;       //?¦Ä????
 
 
 
@@ -147,7 +148,7 @@ volatile long g_nFileLogNotSending_ClientCount = 0;       //Ç°Î´Ä¼Ö¾Ä¿Í»
 
 
 
-volatile long g_nMsgLogNotSending_ClientCount = 0;        //Ç°Î´Ï¢Ö¾Ä¿Í»   volatile long
+volatile long g_nMsgLogNotSending_ClientCount = 0;        //?¦Ä????   volatile long
 
 
 
@@ -192,7 +193,7 @@ CString  g_strDefaultStartIP		= _T("6.6.6.6");
 
 
 
-CString g_cstrIPAd;		              //Ã»Ãµ×¸Í»ËµIPÖ·
+CString g_cstrIPAd;		              //?????IP?
 
 
 
@@ -202,7 +203,7 @@ CString g_cstrIPAd;		              //Ã»Ãµ×¸Í»ËµIPÖ·
 
 
 
-vector<client> g_vecAllClientObjects; //ĞµÇ°×¢Ä¿Í»Ë¶?
+vector<client> g_vecAllClientObjects; //§Ö??????
 
 
 
@@ -217,17 +218,17 @@ vector<client> g_vecAllClientObjects; //ĞµÇ°×¢Ä¿Í»Ë¶?
 
 
 
-CCriticalSection g_csApplogCount;	    // Í»Ö¾Ù½
+CCriticalSection g_csApplogCount;	    // ???
 
 
 
 
-CCriticalSection g_csApplogListCtrl;	// Ö¾Ğ±Ù½
+CCriticalSection g_csApplogListCtrl;	// ?§Ò?
 
 
 
 
-CCriticalSection g_csVecClients;        // g_*È«Ö±Ù½
+CCriticalSection g_csVecClients;        // g_*???
 
 
 
@@ -237,12 +238,12 @@ CCriticalSection g_csVecClients;        // g_*È«Ö±Ù½
 
 
 
-CSingleLock g_singleLockGManage(&g_csVecClients);     // È«Ö±
+CSingleLock g_singleLockGManage(&g_csVecClients);     // ??
 
 
 
 
-CSingleLock g_singleLockApplogCount(&g_csApplogCount);// Í»Ö¾
+CSingleLock g_singleLockApplogCount(&g_csApplogCount);// ??
 
 
 
@@ -260,6 +261,23 @@ CSingleLock g_singleLockListCtrl(&g_csApplogListCtrl);// ?
 BOOL g_bStopTask = FALSE;
 BOOL g_bStopLogTask = FALSE; // r3: log-only stop flag
 volatile LONG g_nActiveHbThreads = 0; // v16: active HB thread counter for safe Reset
+
+// ---- cfg upload retry queue (t6) ----
+struct CfgUploadRetryItem
+{
+    CString    strComputerID;
+    CString    strClientIP;
+    int        nRetryCount;          // attempted retry count
+    ULONGLONG  ullNextRetryTick;     // next retry time (GetTickCount64)
+};
+std::vector<CfgUploadRetryItem> g_vecCfgRetryQueue;
+CCriticalSection g_csCfgRetryQueue;   // guards g_vecCfgRetryQueue
+int g_nCfgRetryMaxAttempts = 4;           // max retry attempts (INI overridable)
+const int g_nCfgRetryQueueLimit  = 1024;  // queue capacity
+int g_nCfgRetryBaseDelayMs = 1000;        // backoff base ms (INI overridable)
+volatile LONG64 g_nCfgUploadOk64    = 0;  // final upload ok count
+volatile LONG64 g_nCfgUploadFail64  = 0;  // final upload fail count
+volatile LONG64 g_nCfgUploadRetry64 = 0;  // total retry attempts count
 
 
 
@@ -294,7 +312,7 @@ BOOL g_bSamePath = FALSE;
 
 
 
-// Ó¦Ã³ò¡°¹Ú¡Ëµ? CAboutDlg Ô»
+// ?¨®???? CAboutDlg ?
 
 
 
@@ -329,7 +347,7 @@ public:
 
 
 
-// Ô»
+// ?
 
 
 
@@ -349,7 +367,7 @@ public:
 
 
 
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV ?
 
 
 
@@ -359,7 +377,7 @@ public:
 
 
 
-// Êµ
+// ?
 
 
 
@@ -459,6 +477,8 @@ ON_BN_CLICKED(IDC_BUTTON_LOG_STOP, &CWLServerTestDlg::OnBnClickedLogStop)
 
 
 ON_BN_CLICKED(IDC_BUTTON_WL_UPLOAD, &CWLServerTestDlg::OnBnClickedWlUpload)
+ON_BN_CLICKED(IDC_BUTTON_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedUploadCfg)
+ON_BN_CLICKED(IDC_CHECK_AUTO_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedChkAutoUploadCfg)
 
 
 
@@ -519,7 +539,7 @@ END_MESSAGE_MAP()
 
 
 
-// CWLServerTestDlg Ô»
+// CWLServerTestDlg ?
 
 
 
@@ -529,22 +549,22 @@ END_MESSAGE_MAP()
 
 
 
-// WLHeartBeat.hÄ¼Ğ¸Æ¹
+// WLHeartBeat.h?§Ú?
 
 
 
 
-#define HEARTBEAT_CMD_NOREGISTER	18		//TCPØ£Í»Î´×¢
+#define HEARTBEAT_CMD_NOREGISTER	18		//TCP??¦Ä?
 
 
 
 
-#define HEARTBEAT_CMD_POLCY			17		//Ô±Ö¸?
+#define HEARTBEAT_CMD_POLCY			17		//???
 
 
 
 
-#define HEARTBEAT_CMD_BACK			1		//Ö¸
+#define HEARTBEAT_CMD_BACK			1		//?
 
 
 
@@ -565,7 +585,7 @@ CWLServerTestDlg* g_WLServerTestDlg = NULL;
 
 
 CWLServerTestDlg::CWLServerTestDlg(CWnd* pParent): CDialog(CWLServerTestDlg::IDD, pParent), m_lMsgLogSuccessCount(0),m_lUploadState_SuccessCount(0), m_lFileLog_WL_SuccessCount(0),
-  m_hBrushDlg(NULL), m_hBrushWhite(NULL), m_hBrushPlug(NULL), m_hBrushExt(NULL), m_hBrushThreat(NULL), m_nHoverBtnID(0), m_bMouseInDlg(false), m_nLinuxHbIntervalMs(30000) //È´IniÈ¡È¡Ê§Ü£Ä¬ÖµĞ´Ini
+  m_hBrushDlg(NULL), m_hBrushWhite(NULL), m_hBrushPlug(NULL), m_hBrushExt(NULL), m_hBrushThreat(NULL), m_nHoverBtnID(0), m_bMouseInDlg(false), m_nLinuxHbIntervalMs(30000) //?Ini??????§ÕIni
 
 
 
@@ -620,7 +640,7 @@ CWLServerTestDlg::CWLServerTestDlg(CWnd* pParent): CDialog(CWLServerTestDlg::IDD
 
 
 
-	// Ë¿
+	// ?
 
 
 
@@ -665,7 +685,7 @@ CWLServerTestDlg::CWLServerTestDlg(CWnd* pParent): CDialog(CWLServerTestDlg::IDD
 
 
 
-	// Ë¿
+	// ?
 
 
 
@@ -883,12 +903,12 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
 
-    DDX_Control(pDX, IDC_STATIC_FILELOG, m_staticFilelog);  // Ä¼Ö¾(É¹/):
+    DDX_Control(pDX, IDC_STATIC_FILELOG, m_staticFilelog);  // ??(?/):
 
 
 
 
-    DDX_Control(pDX, IDC_WL_FILE_PATH_EDIT, m_WLFilePathEdit);//Ä¼Ñ¡?
+    DDX_Control(pDX, IDC_WL_FILE_PATH_EDIT, m_WLFilePathEdit);//???
 
 
 
@@ -1132,6 +1152,8 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
     DDX_Control(pDX, IDC_CHECK_AUTO_WL,          m_chkAutoWl);
+    DDX_Control(pDX, IDC_CHECK_AUTO_UPLOAD_CFG,   m_chkAutoUploadCfg);
+    DDX_Control(pDX, IDC_STATIC_CFG_UPLOAD_STAT,  m_stCfgUploadStat);
 
 
 
@@ -1413,6 +1435,7 @@ ON_BN_CLICKED(IDC_BUTTON_RAWPACKET, &CWLServerTestDlg::OnBnClickedRawPacket)
 	ON_BN_CLICKED(IDC_CHECK_DEBUG, &CWLServerTestDlg::OnBnClickedDebug)
 	ON_WM_MOUSEMOVE()
 	ON_WM_MOUSELEAVE()
+	ON_MESSAGE(WM_APP+101, &CWLServerTestDlg::OnCfgUploadStatUpdate)
 END_MESSAGE_MAP()
 
 
@@ -1433,7 +1456,7 @@ END_MESSAGE_MAP()
 
 
 
-int Check_FirstIP_TotalRegCount_Overflow(int IPAddrClips[4],int iRegCount)//Ï·1Ç·0ÂºÍ»IP?2
+int Check_FirstIP_TotalRegCount_Overflow(int IPAddrClips[4],int iRegCount)//?1?0??IP?2
 
 
 
@@ -1443,7 +1466,7 @@ int Check_FirstIP_TotalRegCount_Overflow(int IPAddrClips[4],int iRegCount)//Ï·1Ç
 
 
 
-	//×¸Í»IPÎªX.0.0.0,Ï·
+	//??IP?X.0.0.0,?
 
 
 
@@ -1473,7 +1496,7 @@ int Check_FirstIP_TotalRegCount_Overflow(int IPAddrClips[4],int iRegCount)//Ï·1Ç
 
 
 
-	//IPÖ·Ğ¶?
+	//IP?§Ø?
 
 
 
@@ -1513,7 +1536,7 @@ int Check_FirstIP_TotalRegCount_Overflow(int IPAddrClips[4],int iRegCount)//Ï·1Ç
 
 
 
-	if (maxIPAddrClips[0] >= 255)//×¢Ò»Í»IP254.254.254.254Ï·
+	if (maxIPAddrClips[0] >= 255)//???IP254.254.254.254?
 
 
 
@@ -1578,7 +1601,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-	int nFirstIP_FromIni[4] = {0};						//Ç´IniÃµFirstClientIP--4int
+	int nFirstIP_FromIni[4] = {0};						//?Ini?FirstClientIP--4int
 
 
 
@@ -1608,7 +1631,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		AfxMessageBox(_T("èµ·å§‹IPåœ°å€æ ¼å¼ä¸æ­£ç¡®"));
+		AfxMessageBox(_T("ÆğÊ¼IPµØÖ·¸ñÊ½²»ÕıÈ·"));
 
 
 
@@ -1633,7 +1656,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		AfxMessageBox(_T("æ³¨å†Œç»“æŸï¼ŒIPåœ°å€è¶…å‡ºèŒƒå›´"));
+		AfxMessageBox(_T("×¢²á½áÊø£¬IPµØÖ·³¬³ö·¶Î§"));
 
 
 
@@ -1723,7 +1746,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		szClientID_PrefixNum.Append(sThisClientIndex);//Í¨Ç°×º+ClientNum
+		szClientID_PrefixNum.Append(sThisClientIndex);//???+ClientNum
 
 
 
@@ -1786,7 +1809,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		g_nHeartBeatNotSending_ClientCount++; //Ç°×¢ClientCount. Ò²ÎªÃ»Ã¹
+		g_nHeartBeatNotSending_ClientCount++; //??ClientCount. ???¨´
 
 
 
@@ -1826,7 +1849,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-	strPreRegCount.Format(_T("å·²æ³¨å†Œ: %d"), m_iPreviousRegistered_ClientCount);
+	strPreRegCount.Format(_T("ÒÑ×¢²á: %d"), m_iPreviousRegistered_ClientCount);
 
 
 
@@ -1841,7 +1864,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-	{//ClientØ¿Ø¼?
+	{//Client???
 
 
 
@@ -1851,7 +1874,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		//Â´×¢ClientÊ±ï¿½?????ï¿½Ê¼ï¿½?StartNum   IP  
+		//??Client???????????StartNum   IP  
 
 
 
@@ -1906,12 +1929,12 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		//2.ÂµStartIP (2.2.2.2) Ê¾ SetWindowsText
+		//2.?StartIP (2.2.2.2) ? SetWindowsText
 
 
 
 
-		//m_ctrlBox_ToRegisterClient_FirstClientIP.SetWindowText(szThisClientIP); // v5: ×¢ï¿½ï¿½ó²»¸ç»“æŸï¿½Ê¼IP
+		//m_ctrlBox_ToRegisterClient_FirstClientIP.SetWindowText(szThisClientIP); // v5: ????½áÊø??IP
 
 
 
@@ -1936,7 +1959,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-		//4.ÂµStartNum (200+10) Ê¾ SetWindowsText 
+		//4.?StartNum (200+10) ? SetWindowsText 
 
 
 
@@ -1961,7 +1984,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-	//Ôº  Òª Ø¼ÂµÄ¿Ê¼?  Öµ
+	//?  ? ?????  ?
 
 
 
@@ -1996,7 +2019,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	// ...ËµÓµÏµÍ³ËµĞ¡
+	// ...?????§³
 
 
 
@@ -2006,7 +2029,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	// IDM_ABOUTBOX ÏµÍ³î·¶Î§ï¿½?
+	// IDM_ABOUTBOX ???¦¶??
 
 
 
@@ -2096,17 +2119,17 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	// Ã´Ë¶Ô»Í¼ê¡£Ó¦Ã³Ú²Ç¶Ô»Ê±Ü½Ô¶Ö´Ğ´ï¿½?
+	// ??????¨®???????§Õ??
 
 
 
 
-	SetIcon(m_hIcon, TRUE);			// Ã´Í¼
+	SetIcon(m_hIcon, TRUE);			// ??
 
 
 
 
-	SetIcon(m_hIcon, FALSE);		// Ğ¡Í¼
+	SetIcon(m_hIcon, FALSE);		// §³?
 
 
 
@@ -2116,7 +2139,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	// TODO: Ú´Ó¶Ä³Ê¼?
+	// TODO: ?????
 
 
 
@@ -2236,12 +2259,12 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	    strHeartBeat_TitleLine.Format(_T("åºå·,50;å¼€å§‹æ—¶é—´,136;å®¢æˆ·ç«¯æ•°,80;å¿ƒè·³/å‘é€é—´éš”(ms),100;å¿ƒè·³æ—¶é•¿(min),0;æ´»è·ƒå®¢æˆ·ç«¯/æ¶ˆæ¯æ—¥å¿—,130;çŠ¶æ€,90;æ›´æ–°æ—¶é—´/æ–‡ä»¶æ—¥å¿—,136;å¤±è´¥å®¢æˆ·ç«¯æ•°,150"));
+	    strHeartBeat_TitleLine.Format(_T("ĞòºÅ,50;¿ªÊ¼Ê±¼ä,136;¿Í»§¶ËÊı,80;ĞÄÌø/·¢ËÍ¼ä¸ô(ms),100;ĞÄÌøÊ±³¤(min),0;»îÔ¾¿Í»§¶Ë/ÏûÏ¢ÈÕÖ¾,130;×´Ì¬,90;¸üĞÂÊ±¼ä/ÎÄ¼şÈÕÖ¾,136;Ê§°Ü¿Í»§¶ËÊı,150"));
 
 
 
 
-	  strLog_MSGFILE_TitleLine.Format(_T("åºå·,50;å¼€å§‹æ—¶é—´,150;å®¢æˆ·ç«¯æ•°,80; å‘é€é—´éš”(ms),100;å‘é€æ—¶é•¿(min),0;æ¶ˆæ¯æ—¥å¿—,130;æ–‡ä»¶æ—¥å¿—,100;çŠ¶æ€,100"));
+	  strLog_MSGFILE_TitleLine.Format(_T("ĞòºÅ,50;¿ªÊ¼Ê±¼ä,150;¿Í»§¶ËÊı,80; ·¢ËÍ¼ä¸ô(ms),100;·¢ËÍÊ±³¤(min),0;ÏûÏ¢ÈÕÖ¾,130;ÎÄ¼şÈÕÖ¾,100;×´Ì¬,100"));
 
 
 
@@ -2442,14 +2465,14 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	m_comHB_TotalMinutes.AddString(_T("14400")); // r8: 10 å¤©ï¼Œä½œä¸ºæ–°UIé»˜è®¤
+	m_comHB_TotalMinutes.AddString(_T("14400")); // r8: 10 Ìì£¬×÷ÎªĞÂUIÄ¬ÈÏ
 
 
 
 
-	m_comHB_TotalMinutes.SetCurSel(m_comHB_TotalMinutes.GetCount() - 1); // r8: é»˜è®¤é€‰ 14400 åˆ†é’Ÿ (10 å¤©)
+	m_comHB_TotalMinutes.SetCurSel(m_comHB_TotalMinutes.GetCount() - 1); // r8: Ä¬ÈÏÑ¡ 14400 ·ÖÖÓ (10 Ìì)
 
-	// v5.2: å¿ƒè·³æ—¶é•¿è¾“å…¥æ¡†é»˜è®¤ 7200 åˆ†é’Ÿ
+	// v5.2: ĞÄÌøÊ±³¤ÊäÈë¿òÄ¬ÈÏ 7200 ·ÖÖÓ
 	if (m_editHbDuration.GetSafeHwnd()) m_editHbDuration.SetWindowText(_T("7200"));
 
 
@@ -2700,7 +2723,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	/*Ö±Ê¼
+	/*??
 
 
 
@@ -2712,11 +2735,11 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	ScrInfo.nPage = 10; //Ã»?
+	ScrInfo.nPage = 10; //??
 
 
 
-	ScrInfo.nMax = 100; //Ã¹Î»?0C100
+	ScrInfo.nMax = 100; //¨´¦Ë?0C100
 
 
 
@@ -2833,12 +2856,12 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	//1.È¡Ç°×¢Ü¸?
+	//1.?????
 
 
 
 
-	m_iPreviousRegistered_ClientCount = CProfileConfig::GetProfileConfigInstance()->ReadTotalClientCount_FromIni();//Ã»Ğ£È¡Ãµ?-1
+	m_iPreviousRegistered_ClientCount = CProfileConfig::GetProfileConfigInstance()->ReadTotalClientCount_FromIni();//?§µ???-1
 
 
 
@@ -2858,7 +2881,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		g_nTotalRegistered_ClientCount = m_iPreviousRegistered_ClientCount;//lzq:DlgÊ¼Ê±ï¿½?????ï¿½Ini-->g_nTotalRegistered_ClientCount
+		g_nTotalRegistered_ClientCount = m_iPreviousRegistered_ClientCount;//lzq:Dlg?????????Ini-->g_nTotalRegistered_ClientCount
 
 
 
@@ -2868,7 +2891,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		//2.È¡StartIP
+		//2.?StartIP
 
 
 
@@ -2933,7 +2956,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		//3.È¡IDPrefix
+		//3.?IDPrefix
 
 
 
@@ -2993,7 +3016,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		//4.È¡StartNum
+		//4.?StartNum
 
 
 
@@ -3058,7 +3081,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		PrepareVecClients_UpdateControls();//lzq:DlgÊ¼Ê±ï¿½?????ï¿½Ç°×¢Ä¸Clientï¿½?????ï¿½ï¿½?? FileLog MsgLog(Ç°Ç°Ğ·×¢)
+		PrepareVecClients_UpdateControls();//lzq:Dlg????????????Client?????????? FileLog MsgLog(??§Ù?)
 
 
 
@@ -3098,7 +3121,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		strTmp.Format(_T("å·²æ³¨å†Œ: %d"),g_nTotalRegistered_ClientCount);
+		strTmp.Format(_T("ÒÑ×¢²á: %d"),g_nTotalRegistered_ClientCount);
 
 
 
@@ -3163,7 +3186,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		CProfileConfig::GetProfileConfigInstance()->WriteTotalClientCount_ToIni(m_iPreviousRegistered_ClientCount);   //Ã»Ç°?ï¿½?????È¡Ãµ-1Ğ´0PreviousRegisteredClientCount=0
+		CProfileConfig::GetProfileConfigInstance()->WriteTotalClientCount_ToIni(m_iPreviousRegistered_ClientCount);   //???????????-1§Õ0PreviousRegisteredClientCount=0
 		CProfileConfig::GetProfileConfigInstance()->ClearAllDevIDs_FromIni();  // v6.5
 
 
@@ -3207,7 +3230,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	ApplyProjectTypeSelection(); // Ä¬ï¿½ï¿½ IEG Ô¤Ñ¡
+	ApplyProjectTypeSelection(); // ??? IEG ??
 
 	// Disable Visual Styles on buttons for custom coloring via OnCtlColor
 	HMODULE hUxTheme = ::LoadLibrary(_T("uxtheme.dll"));
@@ -3238,7 +3261,11 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	// OS Type: default Windows
+	// ???????????????????????????????—¤RC ???¦Ä?????
+// t7: load cfg-upload settings (auto-upload switch + retry params) from INI
+LoadCfgUploadSettingsFromIni();
+
+// OS Type: default Windows
 
 
 
@@ -3395,7 +3422,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 			pCh->SetFont(&m_fontNormal, FALSE);
 	}
 
-	return TRUE;  // Ç½ÃµØ¼ò·µ» TRUE
+	return TRUE;  // ???? TRUE
 
 
 
@@ -3475,17 +3502,17 @@ void CWLServerTestDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 
 
-//  Ô»Ğ¡Å¥ÒªÄ´?
+//  ?§³????
 
 
 
 
-//  Æ¸Í¼ê¡£Ê¹ï¿½?/Í¼Ä£Íµ MFC Ó¦Ã³
+//  ??????/??? MFC ?¨®
 
 
 
 
-//  ï¿½?????É¿Ô¶É¡
+//  ????????¨À
 
 
 
@@ -3515,7 +3542,7 @@ void CWLServerTestDlg::OnPaint()
 
 
 
-		CPaintDC dc(this); // Ú»Æµï¿½?????
+		CPaintDC dc(this); // ????????
 
 
 
@@ -3535,7 +3562,7 @@ void CWLServerTestDlg::OnPaint()
 
 
 
-		// Ê¹Í¼Ú¹Ğ¾
+		// ???§à
 
 
 
@@ -3575,7 +3602,7 @@ void CWLServerTestDlg::OnPaint()
 
 
 
-		// Í¼
+		// ?
 
 
 
@@ -3620,7 +3647,7 @@ void CWLServerTestDlg::OnPaint()
 
 
 
-//Ã»Ï¶Ğ¡Ê±ÏµÍ³Ã´ËºÈ¡Ã¹Ê¾?
+//??§³??????¨´??
 
 
 
@@ -3811,7 +3838,7 @@ BOOL CWLServerTestDlg::RegisterClientToServer(CString szComputerID, CString szCl
 
 
 {
-	// v6: ï¿½ï¿½È¡ï¿½ï¿½Ç° UI Ñ¡ï¿½ĞµÄ°æ±¾ï¿½ï¿½ OS
+	// v6: ?????? UI ??§Ö?·Ú?? OS
 	CString strVer = _T("V300R011C01B090");
 	int nSel = m_comboClientVersion.GetCurSel();
 	if (nSel >= 0) m_comboClientVersion.GetLBText(nSel, strVer);
@@ -4032,7 +4059,7 @@ BOOL CWLServerTestDlg::SendHeartbeat_ThreatLog(client& curClient)//lzq:wy
 
 
 
-unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
+unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //??
 
 
 
@@ -4047,7 +4074,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
 
-    ULONGLONG ulTime_First = GetTickCount();//Ê±È½Ï£Ğ¡ulHBTotalMilSec
+    ULONGLONG ulTime_First = GetTickCount();//???§³ulHBTotalMilSec
 
 
 
@@ -4138,6 +4165,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
                 WriteError(_T("ST:HB SendHeartbeatToserver_TCP second time fails!"));
+                cclient->Client_SetOnline(FALSE);  // t4: send fail -> offline
 
 
 
@@ -4213,6 +4241,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
             WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP returns HEARTBEAT_CMD_BACK!"));
+            g_WLServerTestDlg->OnClientOnlineEdgeDetected(*cclient);  // t4: heartbeat ack -> online edge
 
 
 
@@ -4233,11 +4262,12 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
             WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP returns HEARTBEAT_CMD_POLCY!"));
+            g_WLServerTestDlg->OnClientOnlineEdgeDetected(*cclient);  // t4: policy reply -> online edge
 
 
 
 
-            dwRet = g_WLServerTestDlg->SendHeartbeat(*cclient);//Ê±Ê¹https,Ñ¾Ê¹Ã³Ó¡È¥Ô¡?
+            dwRet = g_WLServerTestDlg->SendHeartbeat(*cclient);//??https,??¨®????
 
 
 
@@ -4267,7 +4297,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
 
-        else if (HEARTBEAT_CMD_NOREGISTER == dwRet)//Î´×¢
+        else if (HEARTBEAT_CMD_NOREGISTER == dwRet)//¦Ä?
 
 
 
@@ -4325,6 +4355,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
                 WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP Re RegisterClientToServer Succ!"));
+                g_WLServerTestDlg->OnClientOnlineEdgeDetected(*cclient, TRUE);  // t4: register ok -> online edge (force trigger for optional callback)
 
 
 
@@ -4350,6 +4381,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
                 WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP Re RegisterClientToServer Fail!"));
+                cclient->Client_SetOnline(FALSE);  // t4: re-register fail -> offline
 
 
 
@@ -4375,6 +4407,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
             WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP returns neither!"));
+            cclient->Client_SetOnline(FALSE);  // t4: unexpected reply -> offline
 
 
 
@@ -4389,8 +4422,8 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
 
-        if (g_bStopTask) break; // v9: ï¿½ï¿½Ó¦Í£Ö¹ï¿½Åºï¿½
-        if (g_bStopTask) break; // v9: ï¿½ï¿½Ó¦Í£Ö¹ï¿½Åºï¿½
+        if (g_bStopTask) break; // v9: ????????
+        if (g_bStopTask) break; // v9: ????????
         { for (int _si=0;_si<300&&!g_bStopTask;_si++) Sleep(100); } //v13: cancellable 30s
 
 
@@ -4416,7 +4449,7 @@ unsigned int ThreadFunc_HeartbeatSend_JustSend(PVOID JustSend) //Ö»Î¬
 
 
 
-        if ( ulTime_During > ulHBTotal_MilSeconds)//lzq:Ê±Ñ³
+        if ( ulTime_During > ulHBTotal_MilSeconds)//lzq:??
 
 
 
@@ -4738,7 +4771,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-            ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: å¹¶å‘åŸå­é€’å¢ï¼Œä¿®å¤å¤šçº¿ç¨‹æ³¨å†Œæ—¶è®¡æ•°ä¸¢æ›´æ–°
+            ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: ²¢·¢Ô­×ÓµİÔö£¬ĞŞ¸´¶àÏß³Ì×¢²áÊ±¼ÆÊı¶ª¸üĞÂ
 
 
 
@@ -4804,7 +4837,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-            strTmpRegisteredClientCount.Format(_T("å·²æ³¨å†Œ: %d"), g_nTotalRegistered_ClientCount);
+            strTmpRegisteredClientCount.Format(_T("ÒÑ×¢²á: %d"), g_nTotalRegistered_ClientCount);
 
 
 
@@ -4894,7 +4927,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-        //È´ß³Î¬
+        //???
 
 
 
@@ -5074,7 +5107,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
+void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
 
@@ -5099,7 +5132,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥å®¢æˆ·ç«¯ä¿¡æ¯"));
+		AfxMessageBox(_T("ÇëÊäÈë¿Í»§¶ËĞÅÏ¢"));
 
 
 
@@ -5124,7 +5157,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥å®¢æˆ·ç«¯IDå‰ç¼€"));
+		AfxMessageBox(_T("ÇëÊäÈë¿Í»§¶ËIDÇ°×º"));
 
 
 
@@ -5174,7 +5207,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("æ³¨å†Œç»“æŸæ— æ•ˆ"));
+		AfxMessageBox(_T("×¢²á½áÊøÎŞĞ§"));
 
 
 
@@ -5214,7 +5247,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥èµ·å§‹IPåœ°å€"));
+		AfxMessageBox(_T("ÇëÊäÈëÆğÊ¼IPµØÖ·"));
 
 
 
@@ -5269,7 +5302,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("èµ·å§‹IPåœ°å€æ ¼å¼ä¸æ­£ç¡®"));
+		AfxMessageBox(_T("ÆğÊ¼IPµØÖ·¸ñÊ½²»ÕıÈ·"));
 
 
 
@@ -5294,7 +5327,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		AfxMessageBox(_T("æ³¨å†Œç»“æŸï¼ŒIPåœ°å€è¶…å‡ºèŒƒå›´"));
+		AfxMessageBox(_T("×¢²á½áÊø£¬IPµØÖ·³¬³ö·¶Î§"));
 
 
 
@@ -5369,7 +5402,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-                AfxMessageBox(_T("è¯·é€‰æ‹©æ–‡ä»¶è·¯å¾„"));
+                AfxMessageBox(_T("ÇëÑ¡ÔñÎÄ¼şÂ·¾¶"));
 
 
 
@@ -5443,7 +5476,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-	//×¢á°´ï¿½? --> ? client
+	//???? --> ? client
 
 
 
@@ -5718,7 +5751,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-                ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: å¹¶å‘åŸå­é€’å¢
+                ::InterlockedIncrement((LONG*)&g_nTotalRegistered_ClientCount); // v5.3: ²¢·¢Ô­×ÓµİÔö
 
 
 
@@ -5778,7 +5811,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-                AfxMessageBox(_T("æ³¨å†Œå¤±è´¥"));
+                AfxMessageBox(_T("×¢²áÊ§°Ü"));
 
 
 
@@ -5832,7 +5865,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-            strTmpRegisteredClientCount.Format(_T("å·²æ³¨å†Œ: %d"), g_nTotalRegistered_ClientCount);
+            strTmpRegisteredClientCount.Format(_T("ÒÑ×¢²á: %d"), g_nTotalRegistered_ClientCount);
 
 
 
@@ -5857,7 +5890,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-			// Ô·Ê±È´Ò»Â´Úº?
+			// ???????
 
 
 
@@ -5932,7 +5965,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-	{//Â¿Ø¼  ?á£¨Ç£Ç°ÊµÖ»×¢Ò»Î£Å¥ï¿½??
+	{//??  ????????¦²????
 
 
 
@@ -5942,7 +5975,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		//1.ÂµÊ¼?
+		//1.???
 
 
 
@@ -5957,7 +5990,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		//GetDlgItem(IDC_EDIT_STARTNUM)->SetWindowText(cstrNextRegistration_StartNum); // v5: ×¢ï¿½ï¿½ó²»¸ç»“æŸï¿½Ê¼ï¿½ï¿½ï¿½
+		//GetDlgItem(IDC_EDIT_STARTNUM)->SetWindowText(cstrNextRegistration_StartNum); // v5: ????½áÊø?????
 
 
 
@@ -5967,7 +6000,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		//2.ÂµIP
+		//2.?IP
 
 
 
@@ -6027,7 +6060,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-	{//Ë´×¢Ï¢Â¼Ini
+	{//????Ini
 
 
 
@@ -6037,7 +6070,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-		// Ã¿ ?  ---"Ö¸Ä¿client"Ä¼Ğ¼Â¼Öµ×¢Ö»Ç¡×¢Info
+		// ? ?  ---"??client"?§Ş??????Info
 
 
 
@@ -6097,7 +6130,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:?á°´ï¿½?
 
 
 
-					  GetDlgItem(IDC_BUTTON_REG_REG)->EnableWindow(TRUE);  //Å£Ç·Ñ­×¢
+					  GetDlgItem(IDC_BUTTON_REG_REG)->EnableWindow(TRUE);  //????
 
 
 
@@ -6141,7 +6174,7 @@ void CWLServerTestDlg::OnBnClicked_ClientReg_Reset()
 
 
 
-	if (IDOK == AfxMessageBox(_T("ç¡®å®šæ¸…ç©ºå½“å‰æ‰€æœ‰å®¢æˆ·ç«¯çš„æ—¥å¿—è®°å½•ï¼Ÿ\næ–‡ä»¶æ—¥å¿—/æ¶ˆæ¯æ—¥å¿—å°†åœæ­¢"), MB_OKCANCEL))
+	if (IDOK == AfxMessageBox(_T("È·¶¨Çå¿Õµ±Ç°ËùÓĞ¿Í»§¶ËµÄÈÕÖ¾¼ÇÂ¼£¿\nÎÄ¼şÈÕÖ¾/ÏûÏ¢ÈÕÖ¾½«Í£Ö¹"), MB_OKCANCEL))
 
 
 
@@ -6181,7 +6214,7 @@ void CWLServerTestDlg::OnBnClicked_ClientReg_Reset()
 
 
 
-		strTmp.Format(_T("å·²æ³¨å†Œ: %d"),g_nTotalRegistered_ClientCount);
+		strTmp.Format(_T("ÒÑ×¢²á: %d"),g_nTotalRegistered_ClientCount);
 
 
 
@@ -6246,7 +6279,7 @@ void CWLServerTestDlg::OnBnClicked_ClientReg_Reset()
 
 
 
-		//Ã£È«Õ£?
+		//????
 		g_bStopTask = TRUE;
 		{ // v16: wait for all HB threads to finish before clearing vector
 			DWORD _t0 = GetTickCount();
@@ -6281,7 +6314,7 @@ void CWLServerTestDlg::OnBnClicked_ClientReg_Reset()
 
 
 
-unsigned int UseHBPort_ThreatLog_CheckBox(int iCurUsedClient)//lzq:Ò»ß³Ã¿Î·Ò»,?
+unsigned int UseHBPort_ThreatLog_CheckBox(int iCurUsedClient)//lzq:???¦Ç?,?
 
 
 
@@ -6486,12 +6519,12 @@ unsigned int UseHBPort_ThreatLog_CheckBox(int iCurUsedClient)//lzq:Ò»ß³Ã¿Î·Ò»,?
 
 
 
-const DWORD HBClientCount_InEveryThread = 10;  // Ò»ß³Ö´10
+const DWORD HBClientCount_InEveryThread = 10;  // ???10
 
 
 
 
-unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Client
+unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:??????10Client
 
 
 
@@ -6501,7 +6534,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	int iThisTaskLineIndex = *(int*)pArgument;//iIndex ï¿½?????-->Task
+	int iThisTaskLineIndex = *(int*)pArgument;//iIndex ??????-->Task
 
 
 
@@ -6526,7 +6559,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	 CString strHBTotalMinutes = g_WLServerTestDlg->m_listHeartBeat_MainWindow.GetItemText(iThisTaskLineIndex, 4); //lzq:Ü·
+	 CString strHBTotalMinutes = g_WLServerTestDlg->m_listHeartBeat_MainWindow.GetItemText(iThisTaskLineIndex, 4); //lzq:?
 
 
 
@@ -6536,7 +6569,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	int iHBIntervalMilSec = _ttoi(csHBIntervalMilSec); //lzq:Î´Ã£?
+	int iHBIntervalMilSec = _ttoi(csHBIntervalMilSec); //lzq:¦Ä??
 
 
 
@@ -6556,7 +6589,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	ULONGLONG ulTime_First = GetTickCount();//Ê±È½Ï£Ğ¡ulHBTotalMilSec
+	ULONGLONG ulTime_First = GetTickCount();//???§³ulHBTotalMilSec
 
 
 
@@ -6646,7 +6679,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	for (int i=0; i<g_nTotalRegistered_ClientCount; i++)                             //×¢Ä¿Í»?,Ò³Î´Ä¿Í»
+	for (int i=0; i<g_nTotalRegistered_ClientCount; i++)                             //????,?¦Ä??
 
 
 
@@ -6656,7 +6689,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-		if (!(g_vecAllClientObjects[i].Get_IsThisClientSendingHeartBeat()))  //Î¨Ò»ÃµThisClient_HasSentHBĞ¶Ç·Ñ·
+		if (!(g_vecAllClientObjects[i].Get_IsThisClientSendingHeartBeat()))  //¦·??ThisClient_HasSentHB§Ø??
 
 
 
@@ -6681,7 +6714,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-			g_vecAllClientObjects[i].Set_IsSendingHeartBeat(TRUE);//ClientÂ¼Ñ¾
+			g_vecAllClientObjects[i].Set_IsSendingHeartBeat(TRUE);//Client??
 
 
 
@@ -6711,7 +6744,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-			if (dwThisTask_ClientIndex >= HBClientCount_InEveryThread)//ÎªË´ Ñ¡ClientdwThisTask_ClientIndex == 10break
+			if (dwThisTask_ClientIndex >= HBClientCount_InEveryThread)//?? ?ClientdwThisTask_ClientIndex == 10break
 
 
 
@@ -6736,7 +6769,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	}//Îªâ£ºĞ¿ï¿½?10
+	}//??§á??10
 
 
 
@@ -6761,7 +6794,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	g_WLServerTestDlg->m_OnlineClientCountRigthData.SetWindowText(strOnlineClientCount);//Ê¾Ñ·Í¹Client;;ß¿Í»10
+	g_WLServerTestDlg->m_OnlineClientCountRigthData.SetWindowText(strOnlineClientCount);//???Client;;??10
 
 
 
@@ -6801,7 +6834,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	for(int i=0; i<dwThisTask_ClientIndex; i++)//lzq:Ç°ß³ Í»
+	for(int i=0; i<dwThisTask_ClientIndex; i++)//lzq:?? ?
 
 
 
@@ -6816,7 +6849,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-		sSendInfo[i]->CreateConnection(sock[i],g_WLServerTestDlg->m_strServerIP,g_WLServerTestDlg->m_strServerPortHB);//Ê±sock <------>IP:HBPort
+		sSendInfo[i]->CreateConnection(sock[i],g_WLServerTestDlg->m_strServerIP,g_WLServerTestDlg->m_strServerPortHB);//?sock <------>IP:HBPort
 
 
 
@@ -6851,7 +6884,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-		for(int i=0; i<dwThisTask_ClientIndex; i++)//dwThisTask_ClientIndex==10 Ê±Ë³Ë£
+		for(int i=0; i<dwThisTask_ClientIndex; i++)//dwThisTask_ClientIndex==10 ???
 
 
 
@@ -6861,12 +6894,12 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-			if(!g_WLServerTestDlg->SendHeartbeatToserver_TCP(ThisHBTask_ToUseClientsArray[i],sock[i]))//Ë´Ñ¡Ã¿client  --  TmpSock
+			if(!g_WLServerTestDlg->SendHeartbeatToserver_TCP(ThisHBTask_ToUseClientsArray[i],sock[i]))//???client  --  TmpSock
 
 
 
 
-			{// Ê§Ü£Ò»
+			{// ???
 
 
 
@@ -6991,7 +7024,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-        Sleep(30 * 1000);//Ë¯30
+        Sleep(30 * 1000);//?30
 
 
 
@@ -7006,7 +7039,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-		if (ulTime_Second - ulTime_First > ulHBTotal_MilSeconds)//lzq:Ê±Ñ³
+		if (ulTime_Second - ulTime_First > ulHBTotal_MilSeconds)//lzq:??
 
 
 
@@ -7046,7 +7079,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	//ClientØ±
+	//Client?
 
 
 
@@ -7086,7 +7119,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	//  Ô­Ê¼TotalÄ³Ô±?
+	//  ??Total???
 
 
 
@@ -7146,7 +7179,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-		g_nHeartBeatNotSending_ClientCount ++;// Ô­--
+		g_nHeartBeatNotSending_ClientCount ++;// ?--
 
 
 
@@ -7221,7 +7254,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 
 
-	//È¡Ã½ "Ô¾Í»Ë¼"    -1   Ê¾È¥
+	//?? "???"    -1   ??
 
 
 
@@ -7283,7 +7316,7 @@ unsigned int ThreadFunc_HeartbeatSend_Ori(void* pArgument) //lzq:Ã¿ß³ÌµÚ£Ä£?10Cl
 
 	if (iActiveClient <= 0)
 	{
-		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(iThisTaskLineIndex, 6, _T("å·²åœæ­¢"));
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(iThisTaskLineIndex, 6, _T("ÒÑÍ£Ö¹"));
 	}
 
 
@@ -7324,7 +7357,7 @@ std::set<int>  g_setOfflineClient;
 
 
 
-unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq:Ã¿ß³ÌµÚ£Ä£?10Client
+unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq:??????10Client
 
 
 
@@ -7339,7 +7372,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	ULONGLONG ulTime_First = GetTickCount();//Ê±È½Ï£Ğ¡ulHBTotalMilSec
+	ULONGLONG ulTime_First = GetTickCount();//???§³ulHBTotalMilSec
 
 
 
@@ -7389,7 +7422,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	for(int i=0; i < iThisThreadClientCount; i++)//lzq:Ç°ß³ Í»
+	for(int i=0; i < iThisThreadClientCount; i++)//lzq:?? ?
 
 
 
@@ -7440,7 +7473,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-		for(int i=0; i < iThisThreadClientCount; i++)//dwThisTask_ClientIndex==10 Ê±Ë³Ë£
+		for(int i=0; i < iThisThreadClientCount; i++)//dwThisTask_ClientIndex==10 ???
 
 
 
@@ -7672,7 +7705,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	            dwRet = g_WLServerTestDlg->SendHeartbeat(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]]);//Ê±Ê¹https,Ñ¾Ê¹Ã³Ó¡È¥Ô¡?
+	            dwRet = g_WLServerTestDlg->SendHeartbeat(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]]);//??https,??¨®????
 
 
 
@@ -7702,7 +7735,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-            else if (HEARTBEAT_CMD_NOREGISTER == dwRet)//Î´×¢
+            else if (HEARTBEAT_CMD_NOREGISTER == dwRet)//¦Ä?
 
 
 
@@ -7854,7 +7887,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-		if ( ulTime_During > ulHBTotal_MilSeconds)//lzq:Ê±Ñ³
+		if ( ulTime_During > ulHBTotal_MilSeconds)//lzq:??
 
 
 
@@ -7894,7 +7927,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	//ClientØ±
+	//Client?
 
 
 
@@ -7934,7 +7967,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-		//  Ô­Ê¼TotalÄ³Ô±?
+		//  ??Total???
 
 
 
@@ -7960,7 +7993,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	//Â¾Ì¬Ø¼
+	//???
 
 
 
@@ -8010,7 +8043,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	//ListØ¼
+	//List?
 
 
 
@@ -8059,7 +8092,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 	
 	if (iHBActiveClientCount > 0)
 	{
-		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("æ‰§è¡Œä¸­"));
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("Ö´ĞĞÖĞ"));
 	}
 
 	singleLockListCtrl.Unlock();
@@ -8069,7 +8102,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 	if (iHBActiveClientCount <= 0)
 	{
-		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("å·²åœæ­¢"));
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("ÒÑÍ£Ö¹"));
 		SYSTEMTIME tm;
 		GetLocalTime(&tm);
 		TCHAR szTimeNow[MAX_PATH] = {0};
@@ -8150,7 +8183,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-// Í¿Í»Ä¼Ö¾ß³
+// ?????
 
 
 
@@ -8280,7 +8313,7 @@ unsigned int ThreadFunc_FileLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)
 
 
 
-		g_singleLockApplogCount.Unlock();//Î§Ò»Ğ¡
+		g_singleLockApplogCount.Unlock();//¦¶?§³
 
 
 
@@ -8290,7 +8323,7 @@ unsigned int ThreadFunc_FileLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)
 
 
 
-        // USMÏ¸Îªæ»»ï¿½?ï¿½?????ï¿½Ö»Ï´É¹Ò»ï¿½?
+        // USM??I???????????????
 
 
 
@@ -8325,7 +8358,7 @@ unsigned int ThreadFunc_FileLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)
 
 
 
-	// ÃµÇ°Í»Ë»Ô¾×´?
+	// ???????
 
 
 
@@ -8388,7 +8421,7 @@ unsigned int ThreadFunc_FileLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)
 	if ( iActiveClient==0 && iMsgLogActNum==0)
 	{
 		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 5, _T(""));
-		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("å·²åœæ­¢"));
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("ÒÑÍ£Ö¹"));
 	}
 
 
@@ -8434,7 +8467,7 @@ unsigned int ThreadFunc_FileLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)
 
 
 
-unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? ÒªÍ·Å²
+unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //??? ???
 
 
 
@@ -8459,12 +8492,12 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	//È·Ã¿Î·ÍµÄ¿Í»Ë¶Ò»?
+	//??¦Ç??????
 
 
 
 
-	//ULONGLONG seed = GetCurrentThreadId(); // È¡ß³ID
+	//ULONGLONG seed = GetCurrentThreadId(); // ??ID
 
 
 
@@ -8504,7 +8537,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	int iThisClient_CurrentSuccessCount = 0; //É¹Ö¾Ä´	
+	int iThisClient_CurrentSuccessCount = 0; //???	
 
 
 
@@ -8567,7 +8600,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	do //ß³Ì·Ò» SleepÒ»
+	do //??? Sleep?
 
 
 
@@ -8612,7 +8645,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-		//Í¿Í»Ë²Ö¾
+		//????
 
 
 
@@ -8709,7 +8742,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-				//UseHBPort_ThreatLog_CheckBox(iThisThread_Selected_ClientIndex);//lzq:Ò»ß³ÌµÃ¿ Ò»Î½
+				//UseHBPort_ThreatLog_CheckBox(iThisThread_Selected_ClientIndex);//lzq:???? ?¦Í
 
 
 
@@ -8729,7 +8762,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-					// 70Ò»  
+					// 70?  
 
 
 
@@ -8945,7 +8978,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-				InterlockedIncrement64(&(g_WLServerTestDlg->m_lMsgLogSuccessCount));//Í³É¹ÅµÒ»
+				InterlockedIncrement64(&(g_WLServerTestDlg->m_lMsgLogSuccessCount));//????
 
 
 
@@ -9022,12 +9055,12 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-				//UkeyÏ¢
+				//Ukey?
 
 
 
 
-				VEC_ST_USERS_USM    vecUSMUsersSend;    /* Ï±È«Ã»Ğ± */
+				VEC_ST_USERS_USM    vecUSMUsersSend;    /* ???§Ò */
 
 
 
@@ -9037,7 +9070,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-				time_t t = time(NULL); //È¡Ê±
+				time_t t = time(NULL); //??
 
 
 
@@ -9117,7 +9150,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-				InterlockedIncrement64(&(g_WLServerTestDlg->m_lUploadState_SuccessCount));//Í³É¹ÅµÒ»
+				InterlockedIncrement64(&(g_WLServerTestDlg->m_lUploadState_SuccessCount));//????
 
 
 
@@ -9228,7 +9261,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	//ß³==Í»Ë£TotalCountñ¡£±ß³Ğ¸Â±Ç°Ô¾
+	//?==??TotalCount??§Ú¡À??
 
 
 
@@ -9258,7 +9291,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 5, strActiveClientCount_InMainWindowLine);//ß³Ì¼Ò»,Ï¢Ö¾Ô¾
+	g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 5, strActiveClientCount_InMainWindowLine);//???,???
 
 
 
@@ -9303,7 +9336,7 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 
 
-	if ((iThisTaskOtherThreads_FromCtr_ActiveClientCount <= 0) && (iFileLog_ActiveClientCount == 0))////Ä¼Ö¾Ô¾ Ò²==0   //modified by lzq JUNE21:<=   == 
+	if ((iThisTaskOtherThreads_FromCtr_ActiveClientCount <= 0) && (iFileLog_ActiveClientCount == 0))////??? ?==0   //modified by lzq JUNE21:<=   == 
 
 
 
@@ -9315,8 +9348,8 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //Ò»ß³? Ò
 
 		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 7, _T(""));
 
-		// r8: æ—¥å¿—ä»»åŠ¡è‡ªç„¶/è¢«åŠ¨ç»“æŸæ—¶ï¼ŒæŠŠ"çŠ¶æ€"åˆ—ç½®ä¸º"å·²åœæ­¢"
-		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("å·²åœæ­¢"));
+		// r8: ÈÕÖ¾ÈÎÎñ×ÔÈ»/±»¶¯½áÊøÊ±£¬°Ñ"×´Ì¬"ÁĞÖÃÎª"ÒÑÍ£Ö¹"
+		g_WLServerTestDlg->m_listHeartBeat_MainWindow.SetItemText(pHeapArgs->iThisTask_LineIndex, 6, _T("ÒÑÍ£Ö¹"));
 
 
 
@@ -9450,7 +9483,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥å®¢æˆ·ç«¯ä¿¡æ¯"));
+		AfxMessageBox(_T("ÇëÊäÈë¿Í»§¶ËĞÅÏ¢"));
 
 
 
@@ -9500,12 +9533,12 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	m_comHB_ClientCount.GetWindowText(strNeedHB_ClientCount);     //Í»
+	m_comHB_ClientCount.GetWindowText(strNeedHB_ClientCount);     //?
 
 
 
 
-   strTotalMinutes = _T("9999");               // override to run indefinitely //Ê±()
+   strTotalMinutes = _T("9999");               // override to run indefinitely //?()
 
 
 
@@ -9520,7 +9553,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	      int iTotalMinutes = _ttoi(strTotalMinutes);//Ê±
+	      int iTotalMinutes = _ttoi(strTotalMinutes);//?
 
 
 
@@ -9540,7 +9573,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-		AfxMessageBox(_T("å·²æ³¨å†Œå®¢æˆ·ç«¯ä¸èƒ½é‡å¤æ³¨å†Œ"));
+		AfxMessageBox(_T("ÒÑ×¢²á¿Í»§¶Ë²»ÄÜÖØ¸´×¢²á"));
 
 
 
@@ -9570,7 +9603,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	int iPreviousTaskItemCount = m_listHeartBeat_MainWindow.GetItemCount();//iTaskItemCount Ê¾Ğ§?
+	int iPreviousTaskItemCount = m_listHeartBeat_MainWindow.GetItemCount();//iTaskItemCount ?§¹?
 
 
 
@@ -9625,12 +9658,12 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	//Ë´AddTaskÄ¿  ÂµÒ»
+	//?AddTask?  ??
 
 
 
 
-	int iNewTaskInsertIndex = m_listHeartBeat_MainWindow.InsertItem(iPreviousTaskItemCount, strNewTaskOrdial, 0);//iPreviousTaskItemCount Îª1 Îª1
+	int iNewTaskInsertIndex = m_listHeartBeat_MainWindow.InsertItem(iPreviousTaskItemCount, strNewTaskOrdial, 0);//iPreviousTaskItemCount ?1 ?1
 
 
 
@@ -9645,7 +9678,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 2, strNeedHB_ClientCount);//Í»
+	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 2, strNeedHB_ClientCount);//?
 
 
 
@@ -9660,12 +9693,12 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 5, strNeedHB_ClientCount);//Ô¾Í»Ë¼
+	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 5, strNeedHB_ClientCount);//???
 
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 6, _T("å¼€å§‹ä¸­"));  
+	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 6, _T("¿ªÊ¼ÖĞ"));  
 
 
 
@@ -9736,7 +9769,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	for (int i=0; i < iThisTask_ThreadCount; i++)//lzq:Í»/10 == Ù¸ß³Ì£
+	for (int i=0; i < iThisTask_ThreadCount; i++)//lzq:?/10 == ???
 
 
 
@@ -9801,7 +9834,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-			//ï¿½????? Î´memset 0 
+			//?????? ¦Ämemset 0 
 
 
 
@@ -9846,7 +9879,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-			if (!(g_vecAllClientObjects[iStartIndex_FromVector].Get_IsThisClientSendingHeartBeat()))  //Î¨Ò»ÃµThisClient_HasSentHBĞ¶Ç·Ñ·
+			if (!(g_vecAllClientObjects[iStartIndex_FromVector].Get_IsThisClientSendingHeartBeat()))  //¦·??ThisClient_HasSentHB§Ø??
 
 
 
@@ -9856,7 +9889,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-				g_vecAllClientObjects[iStartIndex_FromVector].Set_IsSendingHeartBeat(TRUE);//ClientÂ¼Ñ¾
+				g_vecAllClientObjects[iStartIndex_FromVector].Set_IsSendingHeartBeat(TRUE);//Client??
 
 
 
@@ -9896,7 +9929,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-				if (iThisThread_ClientIndex >= HB_CLIENTCOUNT_PER_THREAD)//ÎªË´ Ñ¡ClientdwThisTask_ClientIndex == 10break
+				if (iThisThread_ClientIndex >= HB_CLIENTCOUNT_PER_THREAD)//?? ?ClientdwThisTask_ClientIndex == 10break
 
 
 
@@ -9946,7 +9979,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-		g_WLServerTestDlg->m_OnlineClientCountRigthData.SetWindowText(strOnlineClientCount);//Ê¾Ñ·Í¹Client;;ß¿Í»10
+		g_WLServerTestDlg->m_OnlineClientCountRigthData.SetWindowText(strOnlineClientCount);//???Client;;??10
 
 
 
@@ -10037,7 +10070,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 6, _T("æ‰§è¡Œä¸­"));//æ¯çº¿ç¨‹ æ‰§
+	m_listHeartBeat_MainWindow.SetItemText(iNewTaskInsertIndex, 6, _T("Ö´ĞĞÖĞ"));//Ã¿Ïß³Ì Ö´
 
 
 
@@ -10096,7 +10129,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥å®¢æˆ·ç«¯ä¿¡æ¯"));
+		AfxMessageBox(_T("ÇëÊäÈë¿Í»§¶ËĞÅÏ¢"));
 
 
 
@@ -10178,7 +10211,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 	int iThisTask_EachClient_PerSecondItems = _ttoi(strThisTask_EachClientPerSecondItems);
 	int iOrigPerSecond = iThisTask_EachClient_PerSecondItems; // save before forced min
-	if (iThisTask_EachClient_PerSecondItems <= 0) iThisTask_EachClient_PerSecondItems = 1; // v6: ç»“æŸç»“æŸï¿½?
+	if (iThisTask_EachClient_PerSecondItems <= 0) iThisTask_EachClient_PerSecondItems = 1; // v6: ½áÊø½áÊø??
 
 
 
@@ -10218,7 +10251,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-		AfxMessageBox(_T("æœªæ³¨å†Œå®¢æˆ·ç«¯ä¸èƒ½å‘é€æ—¥å¿—"));
+		AfxMessageBox(_T("Î´×¢²á¿Í»§¶Ë²»ÄÜ·¢ËÍÈÕÖ¾"));
 
 
 
@@ -10358,7 +10391,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-			AfxMessageBox(_T("è¯·é€‰æ‹©æ–‡ä»¶è·¯å¾„"));
+			AfxMessageBox(_T("ÇëÑ¡ÔñÎÄ¼şÂ·¾¶"));
 
 
 
@@ -10408,7 +10441,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// UkeyÖ¾
+	// Ukey?
 
 
 
@@ -10438,7 +10471,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// İ±Ö¾
+	// ??
 
 
 
@@ -10468,7 +10501,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// ÏµÍ³Ö¾
+	// ???
 
 
 
@@ -10493,7 +10526,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// ÏµÍ³Ö¾
+	// ???
 
 
 
@@ -10523,7 +10556,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// Ö¾
+	// ?
 
 
 
@@ -10553,7 +10586,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	// Ö¾hashÇ·Í¬
+	// ?hash??
 
 
 
@@ -10613,7 +10646,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-		AfxMessageBox(_T("è¯·é€‰æ‹©æ—¥å¿—ç±»å‹"));
+		AfxMessageBox(_T("ÇëÑ¡ÔñÈÕÖ¾ÀàĞÍ"));
 
 
 
@@ -10633,7 +10666,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	//Ê½Ê¼ï¿½?????ï¿½ï¿½?
+	//???????????
 
 
 
@@ -10666,7 +10699,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	int iPreviousTaskItemCount = m_listHeartBeat_MainWindow.GetItemCount();//Ê¾Ğ§?
+	int iPreviousTaskItemCount = m_listHeartBeat_MainWindow.GetItemCount();//?§¹?
 
 
 
@@ -10751,7 +10784,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	int				iNew_Interval_MisSec   = 1000 / iThisTask_EachClient_PerSecondItems;//Ò» ?
+	int				iNew_Interval_MisSec   = 1000 / iThisTask_EachClient_PerSecondItems;//? ?
 
 
 
@@ -10766,7 +10799,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	//csNew_Interval_MilSec  = cNew_TmpBuf;		//Ã¿Ö®Ë¯ßµMilSecond
+	//csNew_Interval_MilSec  = cNew_TmpBuf;		//????MilSecond
 
 
 
@@ -10791,7 +10824,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	float		iNew_LastingSeconds    = (float)iThisTask_EachClient_TotalItems / iThisTask_EachClient_PerSecondItems;//Ã¿Í»Ê±
+	float		iNew_LastingSeconds    = (float)iThisTask_EachClient_TotalItems / iThisTask_EachClient_PerSecondItems;//???
 
 
 
@@ -10806,7 +10839,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	//csThisTask_LastingSeconds  = cNew2_TmpBuf;  //Ë´ï¿½??????
+	//csThisTask_LastingSeconds  = cNew2_TmpBuf;  //????????
 
 
 
@@ -10831,12 +10864,12 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	//Ë´AddTaskÄ¿
+	//?AddTask?
 
 
 
 
-	int iThisTask_InsertLineIndex = m_listHeartBeat_MainWindow.InsertItem(iPreviousTaskItemCount, strNewTaskOrdial, 0);////iPreviousTaskItemCount Îª2 Îª2
+	int iThisTask_InsertLineIndex = m_listHeartBeat_MainWindow.InsertItem(iPreviousTaskItemCount, strNewTaskOrdial, 0);////iPreviousTaskItemCount ?2 ?2
 
 
 
@@ -10861,7 +10894,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 6, _T("å¼€å§‹ä¸­"));
+	m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 6, _T("¿ªÊ¼ÖĞ"));
 
 	// Track log task rows for OnBnClickedLogStop
 	if (m_iThisTask_SelectedOperationType & MSG_LOG_TYPE) m_setLogTaskRows.insert(iThisTask_InsertLineIndex);
@@ -10918,7 +10951,7 @@ void CWLServerTestDlg::OnBnClickedButton_Lowest_AddTask()
 
 
 
-			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 5, strThisTask_ClientCount);//Í» == Ï¢Ö¾Ô¾
+			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 5, strThisTask_ClientCount);//? == ???
 
 
 
@@ -11045,12 +11078,12 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-		{//Ã»MsgLog
+		{//?MsgLog
 
 
 
 
-			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 5, _T("0"));//0  È¡int Ğ¶
+			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 5, _T("0"));//0  ?int §Ø
 
 
 
@@ -11080,12 +11113,12 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-			//Â½
+			//?
 
 
 
 
-			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 7, strThisTask_ClientCount);//Í» == Ä¼Ö¾Ô¾
+			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 7, strThisTask_ClientCount);//? == ???
 
 
 
@@ -11145,12 +11178,12 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-		{//Ã»FileLog
+		{//?FileLog
 
 
 
 
-			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 7, _T("0"));//0  È¡int Ğ¶
+			m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 7, _T("0"));//0  ?int §Ø
 
 
 
@@ -11397,7 +11430,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-				AfxBeginThread((AFX_THREADPROC)ThreadFunc_MsgLogSend,(PLOG_SENDER_THREAD_ARG)pHeapArgsForAllThread_MsgLog, THREAD_PRIORITY_TIME_CRITICAL, 0, 0, NULL);//Ã¿client Ò»ß³
+				AfxBeginThread((AFX_THREADPROC)ThreadFunc_MsgLogSend,(PLOG_SENDER_THREAD_ARG)pHeapArgsForAllThread_MsgLog, THREAD_PRIORITY_TIME_CRITICAL, 0, 0, NULL);//?client ??
 
 
 
@@ -11553,7 +11586,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-					pHeapArgsForAllThread_FileLog->csWhiteListFilePath = strWhiteListFilePath; //Ò»
+					pHeapArgsForAllThread_FileLog->csWhiteListFilePath = strWhiteListFilePath; //?
 
 
 
@@ -11703,7 +11736,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-	m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 6, _T("æ‰§è¡Œä¸­"));//æ¯å®¢æˆ·ç«¯çº¿ç¨‹ æ‰§
+	m_listHeartBeat_MainWindow.SetItemText(iThisTask_InsertLineIndex, 6, _T("Ö´ĞĞÖĞ"));//Ã¿¿Í»§¶ËÏß³Ì Ö´
 
 
 
@@ -11718,7 +11751,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-	///* removed */ //modified by lzq 0621:Ö»?ï¿½?????ï¿½ï¿½?
+	///* removed */ //modified by lzq 0621:???????????
 
 
 
@@ -11763,7 +11796,7 @@ void CWLServerTestDlg::OnBnClicked_PortsTest()
 
 
 
-	// TODO: Ú´Ó¿Ø¼Í¨Öª?
+	// TODO: ??????
 
 
 
@@ -11778,7 +11811,7 @@ void CWLServerTestDlg::OnBnClicked_PortsTest()
 
 
 
-		AfxMessageBox(_T("è¯·è¾“å…¥å®¢æˆ·ç«¯ä¿¡æ¯"));
+		AfxMessageBox(_T("ÇëÊäÈë¿Í»§¶ËĞÅÏ¢"));
 
 
 
@@ -11823,7 +11856,7 @@ void CWLServerTestDlg::OnBnClicked_PortsTest()
 
 
 
-		strMsg.Format(_T("IP:%s,Port:%s è¿æ¥å¤±è´¥ï¼"),m_strServerIP.GetBuffer(),m_strServerPort.GetBuffer());
+		strMsg.Format(_T("IP:%s,Port:%s Á¬½ÓÊ§°Ü£¡"),m_strServerIP.GetBuffer(),m_strServerPort.GetBuffer());
 
 
 
@@ -11863,7 +11896,7 @@ void CWLServerTestDlg::OnBnClicked_PortsTest()
 
 
 
-		strMsg.Format(_T("IP:%s,Port:%s è¿æ¥å¤±è´¥ï¼"),m_strServerIP.GetBuffer(),m_strServerPortHB.GetBuffer());
+		strMsg.Format(_T("IP:%s,Port:%s Á¬½ÓÊ§°Ü£¡"),m_strServerIP.GetBuffer(),m_strServerPortHB.GetBuffer());
 
 
 
@@ -11893,7 +11926,7 @@ void CWLServerTestDlg::OnBnClicked_PortsTest()
 
 
 
-	AfxMessageBox(_T("è¿æ¥å¯ç”¨ï¼"));
+	AfxMessageBox(_T("Á¬½Ó¿ÉÓÃ£¡"));
 
 
 
@@ -12122,7 +12155,7 @@ void CWLServerTestDlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar
 
 
 
-		if (scrollinfo.nPos+scrollinfo.nPage>scrollinfo.nMax)  //Ë´Ò»Òª×¢Ï»Ä³È£Ğ¶
+		if (scrollinfo.nPos+scrollinfo.nPage>scrollinfo.nMax)  //???????§Ø
 
 
 
@@ -12222,7 +12255,7 @@ void CWLServerTestDlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar
 
 
 
-		if (scrollinfo.nPos+scrollinfo.nPage>=scrollinfo.nMax)  //Ë´Ò»Òª×¢Ï»Ä³È£Ğ¶
+		if (scrollinfo.nPos+scrollinfo.nPage>=scrollinfo.nMax)  //???????§Ø
 
 
 
@@ -12346,7 +12379,7 @@ void CWLServerTestDlg::OnBnClickedOptRegisterSametime()
 
 
 
-    // TODO: Ú´Ó¿Ø¼Í¨Öª?
+    // TODO: ??????
 
 
 
@@ -12647,7 +12680,7 @@ void CWLServerTestDlg::OnBnClickedHbStart()
 	BOOL bLinux = (m_radioOsLinux.GetCheck() == BST_CHECKED);
 	if (!bLinux)
 	{
-		// ç»“æŸ HB ï¿½Í»ç»“æŸï¿½=ï¿½ï¿½×¢ç»“æŸç»“æŸç»“æŸÊ±ï¿½ï¿½=9999ï¿½ï¿½ï¿½Ó£ï¿½ï¿½Ö¶ï¿½Í£Ö¹ï¿½ï¿½
+		// ½áÊø HB ??½áÊø?=???½áÊø½áÊø½áÊø???=9999????????????
 		{
 			CString strCC;
 			strCC.Format(_T("%d"), g_nTotalRegistered_ClientCount > 0
@@ -12679,7 +12712,7 @@ void CWLServerTestDlg::OnBnClickedHbStart()
 			AfxMessageBox(_T("Please register clients first"));
 			return;
 		}
-		// ï¿½ï¿½ï¿½ß³ï¿½Ô¤ï¿½ï¿½ intervalï¿½ï¿½ï¿½ß³Ì°ï¿½È«ï¿½ï¿½
+		// ???????? interval?????????
 		m_nLinuxHbIntervalMs = _ttoi(strInterval);
 		if (m_nLinuxHbIntervalMs <= 0) m_nLinuxHbIntervalMs = 30000;
 		m_bLinuxHbRunning = TRUE;
@@ -12696,7 +12729,14 @@ void CWLServerTestDlg::OnBnClickedHbStart()
 					for (int i = 0; i < (int)g_vecAllClientObjects.size(); ++i)
 					{
 						if (!pDlg->m_bLinuxHbRunning) break;
-						pDlg->SendLinuxHeartbeat_HTTPS(g_vecAllClientObjects[i], strHost, nPort, nHbPort);
+						if (pDlg->SendLinuxHeartbeat_HTTPS(g_vecAllClientObjects[i], strHost, nPort, nHbPort))
+					{
+						pDlg->OnClientOnlineEdgeDetected(g_vecAllClientObjects[i]);  // t4: linux hb ok -> online edge (auto upload if checked)
+					}
+					else
+					{
+						g_vecAllClientObjects[i].Client_SetOnline(FALSE);  // t4: linux hb fail -> offline
+					}
 					}
 					lk.Unlock();
 					Sleep(nInterval);
@@ -12775,7 +12815,7 @@ if (dwTypes == 0)
 	int nTcpC     = _ttoi(strTcpC);
 	int nTcpEps   = _ttoi(strTcpEps);
 
-	// r7: åˆ†ç¦»åŒé€šé“â€”â€”HTTPS çŸ­è¿æ¥ï¼ˆä½ 26 ä½ï¼‰ä¸ TCP é•¿è¿æ¥å¨èƒæ£€æµ‹ï¼ˆé«˜ 5 ä½ 0x7C000000ï¼‰
+	// r7: ·ÖÀëË«Í¨µÀ¡ª¡ªHTTPS ¶ÌÁ¬½Ó£¨µÍ 26 Î»£©Óë TCP ³¤Á¬½ÓÍşĞ²¼ì²â£¨¸ß 5 Î» 0x7C000000£©
 	BOOL bHttpsLog = (dwTypes & 0x03FFFFFF) != 0;
 	BOOL bTcpLog   = (dwTypes & 0x7C000000) != 0;
 	BOOL bHttpsRun = bHttpsLog && (nHttpsC > 0);
@@ -12784,11 +12824,11 @@ if (dwTypes == 0)
 	if (!bHttpsRun && !bTcpRun)
 	{
 		if (bHttpsLog && !bTcpLog)
-			AfxMessageBox(_T("è¯·å¡«å†™ HTTPS å®¢æˆ·ç«¯æ•°ï¼ˆçŸ­è¿æ¥æ—¥å¿—ï¼‰"));
+			AfxMessageBox(_T("ÇëÌîĞ´ HTTPS ¿Í»§¶ËÊı£¨¶ÌÁ¬½ÓÈÕÖ¾£©"));
 		else if (!bHttpsLog && bTcpLog)
-			AfxMessageBox(_T("è¯·å¡«å†™ TCP å®¢æˆ·ç«¯æ•°ï¼ˆå¨èƒæ£€æµ‹é•¿è¿æ¥æ—¥å¿—ï¼‰"));
+			AfxMessageBox(_T("ÇëÌîĞ´ TCP ¿Í»§¶ËÊı£¨ÍşĞ²¼ì²â³¤Á¬½ÓÈÕÖ¾£©"));
 		else
-			AfxMessageBox(_T("è¯·å¡«å†™è‡³å°‘ä¸€ä¸ªé€šé“çš„å®¢æˆ·ç«¯æ•°"));
+			AfxMessageBox(_T("ÇëÌîĞ´ÖÁÉÙÒ»¸öÍ¨µÀµÄ¿Í»§¶ËÊı"));
 		return;
 	}
 
@@ -12798,7 +12838,7 @@ if (dwTypes == 0)
 	m_comAppLog_Task_EachClientTotalItems.AddString(sTmp);
 	m_comAppLog_Task_EachClientTotalItems.SetCurSel(0);
 
-	// â”€â”€ Channel 1: HTTPS çŸ­è¿æ¥ â”€â”€
+	// ©¤©¤ Channel 1: HTTPS ¶ÌÁ¬½Ó ©¤©¤
 	if (bHttpsRun)
 	{
 		sTmp.Format(_T("%d"), nHttpsC);
@@ -12811,7 +12851,7 @@ if (dwTypes == 0)
 		m_comAppLog_Task_EachClientPerSecondItems.AddString(sTmp);
 		m_comAppLog_Task_EachClientPerSecondItems.SetCurSel(0);
 
-		// r8: æŠŠæ–°ä½å›¾(dwTypes)æ˜ å°„åˆ°è€ hidden checkboxï¼ŒAddTask æ®æ­¤å† OR å› CLIENT_MSGLOG_*
+		// r8: °ÑĞÂÎ»Í¼(dwTypes)Ó³Éäµ½ÀÏ hidden checkbox£¬AddTask ¾İ´ËÔÙ OR »Ø CLIENT_MSGLOG_*
 		BOOL bFileProtect = (dwTypes & 0x00000008) ? TRUE : FALSE; // -> DATAPROTECT
     BOOL bRegProtect  = (dwTypes & 0x00000010) ? TRUE : FALSE;
     BOOL bVirus       = (dwTypes & 0x00000040) ? TRUE : FALSE; // -> CLIENT_MSGLOG_Virus
@@ -12850,16 +12890,16 @@ if (dwTypes == 0)
     m_dwExtDevSubTypeMask = dwTypes & 0x03FE0000;
     if (dwTypes & 0x03FE0000) m_iThisTask_SelectedOperationType |= CLIENT_MSGLOG_EXTDEV;
 if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
-		// è¿˜åŸ hidden checkbox é˜²æ­¢ä¸‹æ¬¡å¤é€‰
+		// »¹Ô­ hidden checkbox ·ÀÖ¹ÏÂ´Î¸´Ñ¡
 		/*removed*/;
 		/*removed*/;
 		/*removed*/;
 		/*removed*/;
 		/*removed*/;
-		AppendLogOutput(_T("[LOG] HTTPS é€šé“ä»»åŠ¡å·²æ·»åŠ "));
+		AppendLogOutput(_T("[LOG] HTTPS Í¨µÀÈÎÎñÒÑÌí¼Ó"));
 	}
 
-	// â”€â”€ Channel 2: TCP å¨èƒæ£€æµ‹é•¿è¿æ¥ â”€â”€
+	// ©¤©¤ Channel 2: TCP ÍşĞ²¼ì²â³¤Á¬½Ó ©¤©¤
 	if (bTcpRun)
 	{
 		sTmp.Format(_T("%d"), nTcpC);
@@ -12876,7 +12916,7 @@ if (bHttpsRun) OnBnClickedButton_Lowest_AddTask();
 		m_iThisTask_SelectedOperationType = (int)((dwTypes & 0x7C000000) | CLIENT_MSGLOG_THREAT);
 		if (nTcpC > 0) OnBnClickedButton_Lowest_AddTask();
 
-		AppendLogOutput(_T("[LOG] TCP å¨èƒé€šé“ä»»åŠ¡å·²æ·»åŠ "));
+		AppendLogOutput(_T("[LOG] TCP ÍşĞ²Í¨µÀÈÎÎñÒÑÌí¼Ó"));
 	}
 }
 
@@ -12887,8 +12927,8 @@ void CWLServerTestDlg::OnBnClickedLogStop()
 	for (int iRow : m_setLogTaskRows)
 	{
 		CString strStatus = m_listHeartBeat_MainWindow.GetItemText(iRow, 6);
-		if (strStatus == _T("æ‰§è¡Œä¸­"))
-			m_listHeartBeat_MainWindow.SetItemText(iRow, 6, _T("å·²åœæ­¢"));
+		if (strStatus == _T("Ö´ĞĞÖĞ"))
+			m_listHeartBeat_MainWindow.SetItemText(iRow, 6, _T("ÒÑÍ£Ö¹"));
 	}
 	AppendLogOutput(_T("[LOG] Stop task sent"));
 }
@@ -12947,12 +12987,12 @@ void CWLServerTestDlg::OnBnClickedWlUpload()
 	m_WLFilePathEdit.GetWindowText(strWLPath);
 	if (strWLPath.IsEmpty())
 	{
-		AfxMessageBox(_T("è¯·é€‰æ‹©ç™½åå•æ–‡ä»¶"));
+		AfxMessageBox(_T("ÇëÑ¡Ôñ°×Ãûµ¥ÎÄ¼ş"));
 		return;
 	}
 	if (!PathFileExists(strWLPath))
 	{
-		AfxMessageBox(_T("è¯·é€‰æ‹©æ–‡ä»¶è·¯å¾„"));
+		AfxMessageBox(_T("ÇëÑ¡ÔñÎÄ¼şÂ·¾¶"));
 		return;
 	}
 	// Force-check the hidden IDC_WHITE_LIST so AddTask picks up FILE_LOG_TYPE
@@ -12961,6 +13001,278 @@ void CWLServerTestDlg::OnBnClickedWlUpload()
 	OnBnClickedButton_Lowest_AddTask();
 	if (pWLChk) pWLChk->SetCheck(BST_UNCHECKED); // restore
 	AppendLogOutput(_T("[WL] Whitelist upload task added"));
+}
+
+void CWLServerTestDlg::OnBnClickedUploadCfg()
+{
+	// t5: ?????????????????????????????????¦²????????????????
+	// ???????????????????? -> ???????? (CSingleLock) ????????????????×® -> ????????
+	// ?? ?????????·Ú??????? -> GetTickCount64 ????????? -> ?§Ø????? -> ???????????
+	if (g_vecAllClientObjects.empty())
+	{
+		AfxMessageBox(_T("Please register clients first"));
+		return;
+	}
+
+	std::string strCfgJson;
+	CString strErrMsg;
+	if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
+	{
+		WriteError(_T("[CFG-UPLOAD] load template failed: %s"), strErrMsg.GetString());
+		AfxMessageBox(strErrMsg.IsEmpty() ? _T("Load config template failed") : strErrMsg);
+		return;
+	}
+
+	// ??????????????????????????? (ComputerID, IP) ?????? -------------------------------
+	struct CfgUploadTarget
+	{
+		CString strComputerID;
+		CString strClientIP;
+	};
+	std::vector<CfgUploadTarget> vecTargets;
+	{
+		CSingleLock lk(&g_csVecClients, TRUE);
+		for (int i = 0; i < (int)g_vecAllClientObjects.size(); ++i)
+		{
+			if (g_vecAllClientObjects[i].Client_IsRegistered())
+			{
+				CfgUploadTarget tgt;
+				tgt.strComputerID = g_vecAllClientObjects[i].Client_GetComputerID();
+				tgt.strClientIP   = g_vecAllClientObjects[i].GetClientIP();
+				vecTargets.push_back(tgt);
+			}
+		}
+	}
+
+	if (vecTargets.empty())
+	{
+		AfxMessageBox(_T("No registered clients to upload config"));
+		return;
+	}
+
+	ULONGLONG ullBatchStart = GetTickCount64();   // t5: ????????????
+	int nBatchCount = 0;
+	WriteInfo(_T("[CFG-UPLOAD] manual batch start, target=%d"), (int)vecTargets.size());
+
+	// ?????????????§Ò?????????????????????? -------------------------------
+	CString strIdPre = m_strEditCtrl_ToRegisterClient_ClientIDPrefix;
+	for (int i = 0; i < (int)vecTargets.size(); ++i)
+	{
+		if (g_bStopTask) break;
+
+		CSendInfoToServer snd(m_strServerIP, m_strServerPort, strIdPre);
+		int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID,
+		                                        (LPTSTR)(LPCTSTR)vecTargets[i].strClientIP,
+		                                        strCfgJson.c_str());
+		WriteInfo(_T("[CFG-UPLOAD] manual computerID=%s ip=%s ret=%d"), 
+		          vecTargets[i].strComputerID.GetString(), vecTargets[i].strClientIP.GetString(), nRet);
+		++nBatchCount;
+	}
+
+	ULONGLONG ullBatchCost = GetTickCount64() - ullBatchStart;   // t5: ???????????????
+	WriteInfo(_T("[CFG-UPLOAD] manual batch done, count=%d, cost=%llu ms"), nBatchCount, ullBatchCost);
+	CString strDone;
+	strDone.Format(_T("[CFG-UPLOAD] manual upload done, count=%d, cost=%llu ms"), nBatchCount, ullBatchCost);
+	AppendLogOutput(strDone);
+	PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text immediately
+}
+
+void CWLServerTestDlg::OnBnClickedChkAutoUploadCfg()
+{
+	// UI ????????????????—¨?????????????—¤??????????? HWND??
+	m_bAutoUploadCfgChecked = (m_chkAutoUploadCfg.GetCheck() == BST_CHECKED);
+	// t7: persist switch to INI for next launch
+	CProfileConfig* pCfg = CProfileConfig::GetProfileConfigInstance();
+	if (pCfg) pCfg->WriteAutoUploadCfg_ToIni(m_bAutoUploadCfgChecked);
+	AppendLogOutput(m_bAutoUploadCfgChecked ? _T("[CFG-UPLOAD] auto upload on online enabled")
+	                                        : _T("[CFG-UPLOAD] auto upload on online disabled"));
+}
+
+void CWLServerTestDlg::LoadCfgUploadSettingsFromIni()
+{
+	CProfileConfig* pCfg = CProfileConfig::GetProfileConfigInstance();
+	if (!pCfg) return;
+
+	// auto upload switch: restore from INI, then sync checkbox
+	m_bAutoUploadCfgChecked = pCfg->ReadAutoUploadCfg_FromIni();
+	m_chkAutoUploadCfg.SetCheck(m_bAutoUploadCfgChecked ? BST_CHECKED : BST_UNCHECKED);
+
+	// retry params: use INI if present, else persist defaults for exposure
+	int nMax = pCfg->ReadCfgRetryMaxAttempts_FromIni();
+	if (nMax <= 0) { nMax = 4; pCfg->WriteCfgRetryMaxAttempts_ToIni(nMax); }
+	g_nCfgRetryMaxAttempts = nMax;
+
+	int nDelay = pCfg->ReadCfgRetryBaseDelayMs_FromIni();
+	if (nDelay <= 0) { nDelay = 1000; pCfg->WriteCfgRetryBaseDelayMs_ToIni(nDelay); }
+	g_nCfgRetryBaseDelayMs = nDelay;
+
+	WriteInfo(_T("[CFG-UPLOAD] ini loaded: auto=%d maxAttempts=%d baseDelayMs=%d"),
+		(m_bAutoUploadCfgChecked ? 1 : 0), g_nCfgRetryMaxAttempts, g_nCfgRetryBaseDelayMs);
+}
+
+void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
+{
+	// ??????????4???????????????3?????????????????
+	std::string strCfgJson;
+	CString strErrMsg;
+	if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
+	{
+		WriteError(_T("[CFG-UPLOAD] load template failed: %s"), strErrMsg.GetString());
+		return;
+	}
+
+	CString strComputerID = cclient.Client_GetComputerID();
+	CString strClientIP   = cclient.GetClientIP();
+	CString strIdPre      = m_strEditCtrl_ToRegisterClient_ClientIDPrefix;
+
+	CSendInfoToServer snd(m_strServerIP, m_strServerPort, strIdPre);
+	int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)strComputerID,
+	                                        (LPTSTR)(LPCTSTR)strClientIP,
+	                                        strCfgJson.c_str());
+
+	WriteInfo(_T("[CFG-UPLOAD] computerID=%s ip=%s ret=%d"), strComputerID.GetString(), strClientIP.GetString(), nRet);
+	if (nRet == CFG_UPLOAD_RET_OK)
+	{
+		InterlockedIncrement64(&g_nCfgUploadOk64);
+	}
+	else
+	{
+		// t6: failed -> enqueue retry, final ok/fail counted in retry thread
+		if (!AddCfgUploadRetry(strComputerID, strClientIP))
+		{
+			InterlockedIncrement64(&g_nCfgUploadFail64);
+			WriteInfo(_T("[CFG-UPLOAD] enqueue retry failed, drop computerID=%s"), strComputerID.GetString());
+		}
+	}
+	PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text immediately
+}
+BOOL CWLServerTestDlg::AddCfgUploadRetry(const CString& strComputerID, const CString& strClientIP)
+{
+	if (strComputerID.IsEmpty())
+		return FALSE;
+
+	// t6: queue limit + dedup by ComputerID (one pending item per terminal)
+	{
+		CSingleLock lk(&g_csCfgRetryQueue, TRUE);
+		if ((int)g_vecCfgRetryQueue.size() >= g_nCfgRetryQueueLimit)
+		{
+			WriteInfo(_T("[CFG-UPLOAD] retry queue full, drop computerID=%s"), strComputerID.GetString());
+			return FALSE;
+		}
+		for (int i = 0; i < (int)g_vecCfgRetryQueue.size(); ++i)
+		{
+			if (g_vecCfgRetryQueue[i].strComputerID == strComputerID)
+			{
+				WriteInfo(_T("[CFG-UPLOAD] retry dup skip computerID=%s"), strComputerID.GetString());
+				return TRUE; // already queued, treat as ok
+			}
+		}
+		CfgUploadRetryItem item;
+		item.strComputerID    = strComputerID;
+		item.strClientIP      = strClientIP;
+		item.nRetryCount      = 0;
+		item.ullNextRetryTick = GetTickCount64() + g_nCfgRetryBaseDelayMs; // 1st retry after 1s
+		g_vecCfgRetryQueue.push_back(item);
+		InterlockedIncrement64(&g_nCfgUploadRetry64);
+	}
+	WriteInfo(_T("[CFG-UPLOAD] enqueued retry computerID=%s"), strComputerID.GetString());
+
+	// t6: lazy start retry thread if not running
+	if (!m_bCfgRetryThreadRunning)
+	{
+		m_bCfgRetryThreadRunning = TRUE;
+		m_hCfgRetryThread = (HANDLE)_beginthreadex(NULL, 0,
+			[](void* pArg) -> unsigned int {
+				CWLServerTestDlg* pDlg = (CWLServerTestDlg*)pArg;
+				while (pDlg->m_bCfgRetryThreadRunning && !g_bStopTask)
+				{
+					CfgUploadRetryItem item;
+					BOOL bGot = FALSE;
+					{
+						CSingleLock lk(&g_csCfgRetryQueue, TRUE);
+						ULONGLONG ullNow = GetTickCount64();
+						for (int i = 0; i < (int)g_vecCfgRetryQueue.size(); ++i)
+						{
+							if (g_vecCfgRetryQueue[i].ullNextRetryTick <= ullNow)
+							{
+								item = g_vecCfgRetryQueue[i];
+								g_vecCfgRetryQueue.erase(g_vecCfgRetryQueue.begin() + i);
+								bGot = TRUE;
+								break;
+							}
+						}
+					}
+					if (!bGot) { Sleep(100); continue; }
+
+					std::string strCfgJson;
+					CString strErrMsg;
+					if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
+					{
+						InterlockedIncrement64(&g_nCfgUploadFail64);
+						pDlg->PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text
+						WriteError(_T("[CFG-UPLOAD] retry load template failed, drop computerID=%s: %s"),
+							item.strComputerID.GetString(), strErrMsg.GetString());
+						continue;
+					}
+
+					CSendInfoToServer snd(pDlg->m_strServerIP, pDlg->m_strServerPort,
+						pDlg->m_strEditCtrl_ToRegisterClient_ClientIDPrefix);
+					int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)item.strComputerID,
+						(LPTSTR)(LPCTSTR)item.strClientIP,
+						strCfgJson.c_str());
+					WriteInfo(_T("[CFG-UPLOAD] retry computerID=%s ip=%s attempt=%d ret=%d"),
+						item.strComputerID.GetString(), item.strClientIP.GetString(), item.nRetryCount + 1, nRet);
+
+					if (nRet == CFG_UPLOAD_RET_OK)
+					{
+						InterlockedIncrement64(&g_nCfgUploadOk64);
+						pDlg->PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text
+						continue;
+					}
+
+					++item.nRetryCount;
+					if (item.nRetryCount >= g_nCfgRetryMaxAttempts)
+					{
+						InterlockedIncrement64(&g_nCfgUploadFail64);
+						pDlg->PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text
+						WriteInfo(_T("[CFG-UPLOAD] retry exhausted, drop computerID=%s"), item.strComputerID.GetString());
+						continue;
+					}
+					// backoff: 1s->2s->4s->8s (attempt k => 2^(k-1) s)
+					ULONGLONG ullDelay = (ULONGLONG)g_nCfgRetryBaseDelayMs * (1ULL << (item.nRetryCount - 1));
+					item.ullNextRetryTick = GetTickCount64() + ullDelay;
+					{
+						CSingleLock lk(&g_csCfgRetryQueue, TRUE);
+						g_vecCfgRetryQueue.push_back(item);
+					}
+				}
+				pDlg->m_bCfgRetryThreadRunning = FALSE;
+				return 0;
+			}, this, 0, NULL);
+		if (m_hCfgRetryThread) CloseHandle(m_hCfgRetryThread); // handle not awaited; flag-based stop
+		AppendLogOutput(_T("[CFG-UPLOAD] retry thread started"));
+	}
+	return TRUE;
+}
+
+void CWLServerTestDlg::OnClientOnlineEdgeDetected(client& cclient, BOOL bForce)
+{
+	// ????§Ø??????????->?????????????????????
+	// bForce=TRUE ???????????????????????????????????????????¦È???????
+	BOOL bWasOnline = cclient.Client_IsOnline();
+	if (!bForce && bWasOnline)
+	{
+		WriteInfo(_T("[CFG-UPLOAD] still online, skip edge trigger, computerID=%s"), cclient.Client_GetComputerID().GetString());
+		return;
+	}
+	cclient.Client_SetOnline(TRUE);
+	if (!m_bAutoUploadCfgChecked)
+	{
+		WriteInfo(_T("[CFG-UPLOAD] online edge, auto upload disabled, computerID=%s"), cclient.Client_GetComputerID().GetString());
+		return;
+	}
+	WriteInfo(_T("[CFG-UPLOAD] online edge detected, trigger auto upload, computerID=%s"), cclient.Client_GetComputerID().GetString());
+	UploadClientConfigForClient(cclient);
 }
 
 void CWLServerTestDlg::OnBnClickedWlStop2()
@@ -12984,7 +13296,7 @@ void CWLServerTestDlg::OnBnClickedWlPreview()
 
 void CWLServerTestDlg::OnBnClickedVerMgmt()
 {
-	// r7: æ ¹æ®å½“å‰ä¸»ç•Œé¢ OS é€‰æ‹©æ‰“å¼€å¯¹åº”çš„ç‰ˆæœ¬ç®¡ç†å¼¹çª—
+	// r7: ¸ù¾İµ±Ç°Ö÷½çÃæ OS Ñ¡Ôñ´ò¿ª¶ÔÓ¦µÄ°æ±¾¹ÜÀíµ¯´°
 	BOOL bLinux = (m_radioOsLinux.GetCheck() == BST_CHECKED);
 	CVersionManagementDlg dlg(bLinux, this);
 	dlg.DoModal();
@@ -13022,6 +13334,10 @@ void CWLServerTestDlg::UpdateStatsDisplay()
 	m_stLogSucc2.SetWindowText(s);
 	s.Format(_T("%lld"), m_lFileLog_WL_SuccessCount);
 	m_stWlSucc2.SetWindowText(s);
+	// t7: cfg upload stats (ok / fail / retry count)
+	s.Format(_T("%lld / %lld / %lld"), (LONG64)g_nCfgUploadOk64,
+		(LONG64)g_nCfgUploadFail64, (LONG64)g_nCfgUploadRetry64);
+	m_stCfgUploadStat.SetWindowText(s);
 }
 
 void CWLServerTestDlg::AppendLogOutput(LPCTSTR szMsg)
@@ -13042,10 +13358,16 @@ LRESULT CWLServerTestDlg::OnAppendLogOutput(WPARAM wParam, LPARAM /*lParam*/)
 	strTime.Format(_T("[%04d-%02d-%02d %02d:%02d:%02d.%03d] "),
 		st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	m_editLogOutput.ReplaceSel(strTime + *pStr + _T("\r\n"));
-	// v9: ä»é¡¶éƒ¨æ˜¾ç¤ºï¼Œä¸è‡ªåŠ¨æ»šåˆ°åº•ï¿½?
+	// v9: ´Ó¶¥²¿ÏÔÊ¾£¬²»×Ô¶¯¹öµ½µ×??
 	m_editLogOutput.SetSel(0, 0);
 	m_editLogOutput.PostMessage(EM_SCROLL, SB_TOP, 0);
 	delete pStr;
+	return 0;
+}
+
+LRESULT CWLServerTestDlg::OnCfgUploadStatUpdate(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	UpdateStatsDisplay();
 	return 0;
 }
 

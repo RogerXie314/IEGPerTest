@@ -1,5 +1,5 @@
 
-// WLServerTestDlg.h : ͷ�ļ�
+// WLServerTestDlg.h : ????
 //
 
 #pragma once
@@ -9,7 +9,7 @@
 #include "client.h"
 #include <set>
 
-// CWLServerTestDlg �Ի���
+// CWLServerTestDlg ?????
 class  CWLServerTestDlg;
 extern CWLServerTestDlg* g_WLServerTestDlg;
 
@@ -33,13 +33,13 @@ extern CWLServerTestDlg* g_WLServerTestDlg;
 #define FILE_LOG_TYPE       (CLIENT_FILELOG_WLFILE)
 
 
-// ������־�̲߳����ṹ��
+// ?????????????????
 typedef struct _LOG_SENDER_THREAD_ARG
 {
-	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
-	int				iThisClient_VectorIndex;       //ȫ��g_vecClinet�е�index 
+	int				iThisTask_LineIndex;           //???????vector?��?????
+	int				iThisClient_VectorIndex;       //???g_vecClinet?��?index 
 	int				iThisTask_SelectedLogType;
-	int				iMsgLog_ClientCount_X_EachClientTotalCount; // Ҫ���͵���־����
+	int				iMsgLog_ClientCount_X_EachClientTotalCount; // ?????????????
 	int             iMsgLog_ClientCount;
 	int             iMsgLog_EachClientTotalCount;
 	int             iMsgLog_EachClientPerSecondCount;
@@ -52,16 +52,16 @@ typedef struct _LOG_SENDER_THREAD_ARG
 }LOG_SENDER_THREAD_ARG,*PLOG_SENDER_THREAD_ARG;  
 
 
-// ���������̲߳����ṹ��
+// ??????????????????
 #define HB_CLIENTCOUNT_PER_THREAD 1
 typedef struct _HB_SENDER_THREAD_ARG
 {
-	int				iThisTask_LineIndex;           //�ͻ�����vector�е����?
-	int				iHBIntervalMilSec;       //ȫ��g_vecClinet�е�index 
+	int				iThisTask_LineIndex;           //???????vector?��?????
+	int				iHBIntervalMilSec;       //???g_vecClinet?��?index 
 
 	int				iHBTotalMinutes;
 
-	int				iArrClientIndex[HB_CLIENTCOUNT_PER_THREAD]; // Ҫ���͵���־����
+	int				iArrClientIndex[HB_CLIENTCOUNT_PER_THREAD]; // ?????????????
 	int             iClientCount;
 
 }HB_SENDER_THREAD_ARG,*PHB_SENDER_THREAD_ARG;
@@ -77,17 +77,17 @@ typedef struct _JUST_SEND_HEART
 class CWLServerTestDlg : public CDialog  
 {
 public:
-	CWLServerTestDlg(CWnd* pParent = NULL);	// ��׼���캯��
+	CWLServerTestDlg(CWnd* pParent = NULL);	// ?????????
 
 	enum { IDD = IDD_WLSERVERTEST_DIALOG };
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV ֧��
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV ???
 
 protected:
 	HICON m_hIcon;
 
-	// ���ɵ���Ϣӳ�亯��
+	// ??????????��??
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
@@ -103,7 +103,7 @@ private:
 	CComboBox m_comHB_ClientCount;
 	CComboBox m_comHB_Interval;
 	CComboBox m_comHB_TotalMinutes;
-	CEdit     m_editHbDuration; // v5.2: 心跳时长(分钟) 输入框
+	CEdit     m_editHbDuration; // v5.2: ����ʱ��(����) �����
 	CComboBox m_comAppLog_Task_ClientCount;
 	CComboBox m_comAppLog_Task_EachClientTotalItems;
 	CComboBox m_comAppLog_Task_EachClientPerSecondItems;
@@ -115,11 +115,11 @@ private:
 	BOOL CreateGuidString(LPTSTR lpGuid);
 
 
-	// �ͻ����ļ���־�ϴ� 
-	//Ϊ�˱���һ���ԣ������������� �������ڳ�Ա������
+	// ?????????????? 
+	//???????????????????????? ????????????????
 	//unsigned int static ThreadFunc_FileLogSend(void* pArgument);
 
-	// �ͻ�����Ϣ��־�ϴ�
+	// ??????????????
 	//unsigned int static ThreadFunc_MsgLogSend(void* pArgument);
 
 	afx_msg void OnBnClicked_RegisterClients();
@@ -149,11 +149,11 @@ public:
 	CStatic m_cRegisteredClientCounts;
 
 
-	CString m_strServerIP;    // ������ip
+	CString m_strServerIP;    // ??????ip
 	CString m_strServerPort;	
 	CString m_strServerPortHB;
 	
-	CEdit	m_ServerIPAddress;//��ע��ServerIP
+	CEdit	m_ServerIPAddress;//?????ServerIP
 	CEdit	m_ServerRegPort;
 	CEdit	m_ServerHBPort;
 
@@ -212,22 +212,22 @@ public:
     // Phase 3: New UI members (WLServerTest v2 redesign)
     // ===================================================
 
-    // --- ������/��־������ ---
+    // --- ??????/????????? ---
     CEdit       m_editLogHost;
     CEdit       m_editLogPort;
     CButton     m_chkUseLogServer;
     CButton     m_chkDebug;
 
-    // --- OS ���� ---
+    // --- OS ???? ---
     CButton     m_radioOsWin;
     CButton     m_radioOsLinux;
 
-    // --- ע�᣺�汾/��Ŀ���� ---
+    // --- ????��/??????? ---
     CComboBox   m_comboClientVersion;
     CComboBox   m_comboProjectType;
 
-    // --- 31 ����־���� CheckBox ---
-    // HTTPS ������ (15��)
+    // --- 31 ????????? CheckBox ---
+    // HTTPS ?????? (15??)
     CButton     m_catClientOps;
     CButton     m_catOs;
     CButton     m_catOutbound;
@@ -243,10 +243,10 @@ public:
     CButton     m_catNonWhitelist;
     CButton     m_catWlTamper;
     CButton     m_catSysGuard;
-    // ���? & ���� (2��)
+    // ???? & ???? (2??)
     CButton     m_catUDiskPlug;
     CButton     m_catNetAdapter;
-    // �������? (9��)
+    // ???????? (9??)
     CButton     m_catExtUsbPort;
     CButton     m_catExtWpd;
     CButton     m_catExtCdrom;
@@ -256,23 +256,33 @@ public:
     CButton     m_catExtBt;
     CButton     m_catExtSerial;
     CButton     m_catExtParallel;
-    // ��в���? TCP (5��)
+    // ??��???? TCP (5??)
     CButton     m_catThreatProc;
     CButton     m_catThreatReg;
     CButton     m_catThreatFile;
     CButton     m_catThreatDll;
     CButton     m_catThreatOs;
 
-    // --- �������� ---
+    // --- ???????? ---
     CEdit       m_editHbInterval;
     CButton     m_chkPolicyRecv;
     CStatic     m_staticHbBadge;
 
-    // --- �������ϴ� ---
+    // --- ????????? ---
     CEdit       m_editWlConcurrent;
     CButton     m_chkAutoWl;
 
-    // --- ��־�������� ---
+    // --- ???????????? ---
+    CButton     m_chkAutoUploadCfg;   // ???????????????
+    CStatic     m_stCfgUploadStat;    // ?????????????
+    volatile BOOL m_bAutoUploadCfgChecked;  // ???????????�D??????UI ????????
+
+    // --- cfg upload retry thread (t6) ---
+    volatile BOOL m_bCfgRetryThreadRunning;
+    HANDLE        m_hCfgRetryThread;
+
+
+    // --- ??????????? ---
     CEdit       m_editLogTotal;
     CEdit       m_editHttpsCount;
     CEdit       m_editHttpsEps;
@@ -280,7 +290,7 @@ public:
     CEdit       m_editTcpEps;
     CEdit       m_editTcpHit;
 
-    // --- ͳ�� Static (14��) ---
+    // --- ??? Static (14??) ---
     CStatic     m_stRegTotal;
     CStatic     m_stRegSucc;
     CStatic     m_stRegFail;
@@ -296,13 +306,13 @@ public:
     CStatic     m_stRegRound;
     CStatic     m_stHbResp;
 
-    // --- ��־�����? ---
+    // --- ????????? ---
     CEdit       m_editLogOutput;
 
-    // --- OS��Ϣ/�汾 ��̬�ı� ---
+    // --- OS???/?�� ?????? ---
     CStatic     m_staticOsInfo;
 
-    // --- Linux HTTPS �����߳̿��� ---
+    // --- Linux HTTPS ?????????? ---
     volatile BOOL   m_bLinuxHbRunning;
     HANDLE          m_hLinuxHbThread;
     int             m_nLinuxHbIntervalMs;
@@ -334,23 +344,33 @@ public:
     // Phase 3: New methods
     // ===================================================
 
-    // ����־�����ĩβ׷���ı����̰߳��?��ͨ�� PostMessage��
+    // ???????????��??????????????????? PostMessage??
     void AppendLogOutput(LPCTSTR szMsg);
 
-    // ����ͳ�� Static ��ʾ
+    // ??????? Static ???
     void UpdateStatsDisplay();
 
-    // ���� OS �������汾 ComboBox���� ProfileConfig ���汾�б���
+    // ???? OS ???????�� ComboBox???? ProfileConfig ???��?��???
     void LoadClientVersionCombo();
 
-    // ���� OsInfo ���ֺ� HB Badge
+    // ???? OsInfo ????? HB Badge
     void UpdateOsInfoText();
 
-    // Linux HTTPS ���������η��ͣ����߳�ѭ�����ã�
+    // Linux HTTPS ?????????��?????????????????
     BOOL SendLinuxHeartbeat_HTTPS(client& curClient,
                                    CString strHost, int nPort, int nHbPort);
+    // ????????????????????? -> ??? -> SendClientConfigToServer?????/????????????
+    void UploadClientConfigForClient(client& cclient);
+    // ????????->?????????????????? + ????????????????????
+    // bForce=TRUE ????????????????????????????????��????????????????????
+    void OnClientOnlineEdgeDetected(client& cclient, BOOL bForce = FALSE);
+    BOOL AddCfgUploadRetry(const CString& strComputerID, const CString& strClientIP);
+    // t7: load cfg-upload settings (switch + retry params) from INI
+    void LoadCfgUploadSettingsFromIni();
+    // t7: refresh cfg-upload stats text on main thread (PostMessage target)
+    afx_msg LRESULT OnCfgUploadStatUpdate(WPARAM wParam, LPARAM lParam);
 
-    // --- �°�ť�¼����� ---
+    // --- ?��????????? ---
     afx_msg void OnBnClickedOsWindows();
     afx_msg void OnProjectTypeSelChange();
     void ApplyProjectTypeSelection();
@@ -360,6 +380,8 @@ public:
     afx_msg void OnBnClickedLogAdd();
     afx_msg void OnBnClickedLogStop();
     afx_msg void OnBnClickedWlUpload();
+    afx_msg void OnBnClickedUploadCfg();   // ??????????
+    afx_msg void OnBnClickedChkAutoUploadCfg(); // ??????????
     afx_msg void OnBnClickedWlStop2();
     afx_msg void OnBnClickedWlPreview();
     afx_msg void OnBnClickedVerMgmt();
@@ -367,7 +389,7 @@ public:
     afx_msg void OnBnClickedLogHelp();
         afx_msg void OnTimer(UINT_PTR nIDEvent);
 
-    // --- �Զ�����Ϣ�����ڿ��߳�׷����־��---
+    // --- ??????????????????????????---
     afx_msg LRESULT OnAppendLogOutput(WPARAM wParam, LPARAM lParam);
     afx_msg void OnBnClickedWlFileChooseButton();
 	afx_msg void OnBnClickedUnselectAll();

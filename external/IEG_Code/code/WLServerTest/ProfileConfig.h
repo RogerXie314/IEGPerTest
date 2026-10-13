@@ -56,4 +56,12 @@ public:
     BOOL    WriteDevID_ToIni(CString strClientID, DWORD dwDevID);
     DWORD   ReadDevID_FromIni(CString strClientID);
     void    ClearAllDevIDs_FromIni();
+
+    // === cfg upload persistence (t7): auto-upload switch + retry params ===
+    BOOL WriteAutoUploadCfg_ToIni(BOOL bEnable);
+    BOOL ReadAutoUploadCfg_FromIni(void);        // FALSE if absent
+    BOOL WriteCfgRetryMaxAttempts_ToIni(int nMax);
+    int  ReadCfgRetryMaxAttempts_FromIni(void);  // -1 if absent
+    BOOL WriteCfgRetryBaseDelayMs_ToIni(int nDelay);
+    int  ReadCfgRetryBaseDelayMs_FromIni(void);  // -1 if absent
 };

@@ -139,7 +139,7 @@ BOOL CSendInfoToServer::CreateConnection(SOCKET& sockClient,CString strServerIP,
 		timeval tm;
 		fd_set WriteSet;
 		fd_set ExceptSet;
-		tm.tv_sec = 2;   //ï¿½È´ï¿½ï¿½ï¿½Ê±
+		tm.tv_sec = 2;   //??????
 		tm.tv_usec = 0;
 		int error = -1;
 		int len = sizeof(error);
@@ -248,7 +248,7 @@ void CSendInfoToServer::sendScanStatus(LPTSTR lpGuid, DWORD dwScanStatus)
 	}
 }
 
-//1.HB:ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½SendData
+//1.HB:????????SendData
 BOOL CSendInfoToServer::SendData(SOCKET sockSend, const char* pSendBuff, unsigned int nSendLen,int cmdID)//1.hb  
 {
 	BOOL bRes = FALSE;
@@ -259,7 +259,7 @@ BOOL CSendInfoToServer::SendData(SOCKET sockSend, const char* pSendBuff, unsigne
 	int nSendCount = 0;
 
 
-	//Ð­ï¿½ï¿½ï¿½ï¿½?
+	//§¿?????
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -276,7 +276,7 @@ BOOL CSendInfoToServer::SendData(SOCKET sockSend, const char* pSendBuff, unsigne
 		goto END;
 	}
 
-	//Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//???????
 	while(nProtocalLen - nSendCount > 0)
 	{
 		int nMax = 1024;
@@ -308,12 +308,12 @@ END:
 	return bRes;
 }
 
-//2.ThreatLog 5ï¿½ï¿½:ï¿½ï¿½ï¿½ï¿½SendData
+//2.ThreatLog 5??:????SendData
 BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSendBuff, unsigned int nSendLen,int cmdID, DWORD dwDeviceID)
 {
 	BOOL bRes = FALSE;
 	CProtocal protocal;
-	// [V6.5.1] æ³¨é‡ŠæŽ‰ per-client devid æ³¨å…¥ï¼Œé¿å…å¿ƒè·³(devid=0)ä¸Žæ—¥å¿—(devid=per_client)ä¸ä¸€è‡´
+	// [V6.5.1] ×¢ÊÍµô per-client devid ×¢Èë£¬±ÜÃâÐÄÌø(devid=0)ÓëÈÕÖ¾(devid=per_client)²»Ò»ÖÂ
 	// if (dwDeviceID != 0) protocal.SetDeviceID(dwDeviceID);
 	char *pProtocalData = NULL;
 	unsigned int nProtocalLen = 0;
@@ -321,7 +321,7 @@ BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSend
 	int nSendCount = 0;
 
 
-	//Ð­ï¿½ï¿½ï¿½ï¿½?
+	//§¿?????
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, em_portocal_compress_zlib, em_portocal_encrypt_none, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -338,7 +338,7 @@ BOOL CSendInfoToServer::SendData_OnlyCompress(SOCKET sockSend, const char* pSend
 		goto END;
 	}
 
-	//Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//???????
 	while(nProtocalLen - nSendCount > 0)
 	{
 		int nMax = 1024;
@@ -392,35 +392,35 @@ char* CSendInfoToServer::RecvSockData(SOCKET sockRecv, unsigned int &nSrcLen, un
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½Õ°ï¿½Í·
+	//??????
 	if (!RecvData(sockRecv, saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("Recv  header fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//Ð£ï¿½ï¿½ï¿½ï¿½?
+	//§µ?????
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·
+	//???????
 	if (!protocal.GetProtacalBodyLen(saBufHeader, nHeaderLen, nBodyLen))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
+	//???????
 	if (!protocal.GetProtacalCmd(saBufHeader, nHeaderLen, dwCmdID))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½Õ°ï¿½ï¿½ï¿½
+	//???????
 	if (nBodyLen <= 0)
 	{
 		WriteError(_T("invalid nBodyLen=%d"), nBodyLen);
@@ -438,7 +438,7 @@ char* CSendInfoToServer::RecvSockData(SOCKET sockRecv, unsigned int &nSrcLen, un
 	memcpy(saProtocalBuf, saBufHeader, nHeaderLen);
 	memcpy(saProtocalBuf + nHeaderLen, saBufBody, nBodyLen);
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//????????
 	if (!protocal.ParsePortocal(saProtocalBuf, nHeaderLen + nBodyLen, pSrcData, nSrcLen,  &StrErr))
 	{
 		WriteError(_T("ParsePortocal fail, errinfo=%s"), StrErr.c_str());
@@ -514,7 +514,7 @@ BOOL CSendInfoToServer::RecvData(SOCKET sockRecv, char *pRecvBuff, int nRecvLen)
 			iRecvTryCount=0;
 		}
 
-		if(iRecvTryCount>100)//ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½100ï¿½ï¿½
+		if(iRecvTryCount>100)//???????100??
 		{
 			goto END;
 		}
@@ -591,18 +591,18 @@ BOOL CSendInfoToServer::CloseConnection(SOCKET sockClose)
 
 BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szClientID,CString szComputerIP, CString szVersion, CString szOS, DWORD* pdwOutDevID)
 {
-	// v5.2: WLNetComm.dll ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü·ï¿½ï¿½ï¿½
+	// v5.2: WLNetComm.dll ??????????
 	CWLNetCommApi* pNetApi = CWLNetCommApi::instance();
 	if (!pNetApi || !pNetApi->pEnableTLSv1 || !pNetApi->pdoPost)
 	{
-		WriteError(_T("WLNetComm.dll Î´ï¿½ï¿½ï¿½Ø£ï¿½È±Ê§ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ä£©ï¿½ï¿½ï¿½ï¿½Ñ¶ï¿½ï¿½? WLNetComm.dll ï¿½ï¿½ï¿½ï¿½ exe Í¬Ä¿Â¼"));
+		WriteError(_T("WLNetComm.dll ¦Ä?????????¦Ë??????????????? WLNetComm.dll ???? exe ???"));
 		return FALSE;
 	}
 	BOOL bResult = FALSE;
 
 	CString str_URL;
 	str_URL.Format(URL_CLIENT_INSTALL, m_strServerIP, _ttoi(m_strServerPort));
-	//ï¿½ï¿½ï¿½æ°²×°URL
+	//???ëµ?URL
 	tstring m_wsURL_CLIENT_INSTALL = str_URL;
 
 	str_URL.Format(URL_RESULT, m_strServerIP, _ttoi(m_strServerPort));
@@ -620,7 +620,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	std::wstring sCupName= m_strIdPre.GetBuffer();  
 	sCupName+=sCount.GetBuffer();
 
-	// FALSE - ï¿½ï¿½ï¿½ï¿½64Î»ÏµÍ³ï¿½ï¿½ FALSE - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¨ï¿½Úµã£» TRUE - ï¿½ï¿½IEG×¢ï¿½á£¨ï¿½ï¿½ï¿½ï¿½SRSï¿½ï¿½
+	// FALSE - ????64¦Ë???? FALSE - ???????????? TRUE - ??IEG???????SRS??
 	std::string sData = m_json.SetUp_GetJson(wsComputerID, sUserName, 0x01, CMD_CLIENT_REGISTRY, sCupName, szComputerIP.GetBuffer(), _T("00-00-00-00-00-00"), (LPCTSTR)szOS, FALSE, FALSE, FALSE, TRUE, (LPCTSTR)szVersion);
 
 	CString stMsg;
@@ -630,7 +630,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	char *pResult = NULL;
 
 	//AfxMessageBox(m_wsUrlClientSetup.c_str());
-	CWLNetCommApi::instance()->pEnableTLSv1();//added by lzq:ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½Î»ï¿½ï¿½Í¬Ä¿Â¼WLNetComm.dll
+	CWLNetCommApi::instance()->pEnableTLSv1();//added by lzq:???????¦Ë?????WLNetComm.dll
 
 	if ( !CWLNetCommApi::instance()->pdoPost(m_wsURL_CLIENT_INSTALL.c_str(), (LPSTR)sData.c_str(), &pResult))
 	{
@@ -663,7 +663,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 		return FALSE;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½JSON
+	//????JSON
 	int nErrorCode = 0;
 	std::wstring wsMsg;
 	if( !m_json.Setup_CheckResultByJson(sJson, nErrorCode, wsMsg))
@@ -671,12 +671,12 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 		CString strMsg;
 		CWLJsonParse WLJsonParse;
 
-		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢Ð´ï¿½ï¿½ï¿½ï¿½Ö¾
+		// ?????????§Õ?????
 		wstring wJson = WLJsonParse.UTF8ToUnicode(sJson);
 		stMsg.Format(_T("doPost Error, Json = %s"),wJson.c_str() );
 		WriteInfo(stMsg.GetBuffer());
 
-		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½MessageBox
+		// ??????????????MessageBox
 		int MsgPos = wJson.find(_T("MESSAGE"));
 		int RstPos = wJson.find(_T("RESULT"));
 		wstring WMsg = wJson.substr(MsgPos+10, RstPos-MsgPos-12);
@@ -687,7 +687,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 	stMsg.Format(_T("doPost OK, Json = %S"), (sJson.c_str()));
 	WriteInfo(stMsg.GetBuffer());
 
-	// ä»Žæ³¨å†Œå“åº”ä¸­æå– devidï¼Œå†™å…¥åè®®å¤´é™æ€å˜é‡ï¼Œè§£å†³å¿ƒè·³æŠ¥æ–‡ä¸­ nDeviceID ä¸€ç›´ä¸º 0 çš„é—®é¢˜
+	// ´Ó×¢²áÏìÓ¦ÖÐÌáÈ¡ devid£¬Ð´ÈëÐ­ÒéÍ·¾²Ì¬±äÁ¿£¬½â¾öÐÄÌø±¨ÎÄÖÐ nDeviceID Ò»Ö±Îª 0 µÄÎÊÌâ
 	Json::Reader devReader;
 	Json::Value devRoot;
 	if (devReader.parse(sJson, devRoot) && devRoot.isArray() && devRoot.size() > 0)
@@ -696,7 +696,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 		if (cmdContent.isMember("devid") && cmdContent["devid"].isInt())
 		{
 			DWORD dwDevID = cmdContent["devid"].asUInt();
-			// [V6.5.1] æ³¨é‡ŠæŽ‰ SetUniqueIDï¼Œé¿å…é™æ€å˜é‡ç«žæ€å¯¼è‡´æ‰€æœ‰è¿žæŽ¥å¿ƒè·³ devid è¢«æœ€åŽä¸€ä¸ªæ³¨å†Œçº¿ç¨‹è¦†ç›–
+			// [V6.5.1] ×¢ÊÍµô SetUniqueID£¬±ÜÃâ¾²Ì¬±äÁ¿¾ºÌ¬µ¼ÖÂËùÓÐÁ¬½ÓÐÄÌø devid ±»×îºóÒ»¸ö×¢²áÏß³Ì¸²¸Ç
 			// CProtocal::SetUniqueID(dwDevID);
 			if (pdwOutDevID) *pdwOutDevID = dwDevID;
 
@@ -729,7 +729,7 @@ BOOL CSendInfoToServer::RegisterClientToServer(CString szComputerID, CString szC
 
 //
 /*
-// Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿ï¿½192.168.7.254 8441  JinGe
+// ??????????????§Ó?????????????????????????192.168.7.254 8441  JinGe
 BOOL CSendInfoToServer::SendDetectLogTCP(client& pCurClient, SOCKET sockSend, std::wstring& strJson)
 {
 if(!SendData(sockSend, strJson.c_str(), strJson.length()-1, 1))
@@ -743,7 +743,7 @@ goto END;
 
 BOOL CSendInfoToServer::RecvDetectLogTCP(client& pCurClient, SOCKET sockSend )
 {
-//USM:Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//USM:???????????
 //RecvData()
 }
 */
@@ -766,8 +766,8 @@ BOOL CSendInfoToServer::RecvDetectLogTCP(client& pCurClient, SOCKET sockSend )
 #define THREATLOG_TYPE_FILE_SETSECURITY	(10)
 #define THREATLOG_TYPE_FILE_CLOSE		(11)
 
-*/ // TCP - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½Ö¾ 
-BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, DWORD dwSubTypes, BOOL bHit)//Ã¿ï¿½ï¿½ï¿½ß³ï¿½Ö´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?  Ã¿ï¿½ï¿½jsonï¿½ï¿½Êµï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Õ³ï¿½ï¿½ï¿½ï¿½Sleep(100);
+*/ // TCP - ??????§Ó??? 
+BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, DWORD dwSubTypes, BOOL bHit)//??????????????????????  ???json???????????????Sleep(100);
 {
 		CString strMsg = _T("");
 	BOOL bResult = FALSE;
@@ -778,7 +778,7 @@ BOOL CSendInfoToServer::SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sock
 	CString csClientIP_TCP(wstrClientIP.c_str());
 	DWORD dwDevID = pCurClient.GetDevID();  // per-client devid from registration
 
-	//ï¿½ï¿½ï¿½ï¿½json  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½5ï¿½ï¿½json
+	//????json  ??????5??json
 
 	WLSimulateJson Obj;
 	std::string TmpJson;
@@ -915,7 +915,7 @@ BOOL CSendInfoToServer::SendThreatLog_Data(SOCKET sockSend, const char *pSendBuf
 	int nSendCount = 0;
 
 
-	//Ð­ï¿½ï¿½ï¿½ï¿½?
+	//§¿?????
 	if (!protocal.GetPortocal(pSendBuff, nSendLen, cmdID, pProtocalData, nProtocalLen, &strErr))
 	{
 		WriteError(_T("GetPortocal fail, errinfo=%s"), strErr.c_str());
@@ -932,7 +932,7 @@ BOOL CSendInfoToServer::SendThreatLog_Data(SOCKET sockSend, const char *pSendBuf
 		goto END;
 	}
 
-	//Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//???????
 	while(nProtocalLen - nSendCount > 0)
 	{
 		int nMax = 1024;
@@ -966,7 +966,7 @@ END:
 
 }
 
-// TCP - È·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ£ï¿½ï¿½ï¿½ï¿½ï¿½Ê±È·ï¿½Ï·ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½ï¿½Ç²ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ê¹ï¿½ï¿½HTTPSÖ´ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÕºÍ´ï¿½ï¿½ï¿½
+// TCP - ????????????????????????????????????????????????????????HTTPS????????????????????
 DWORD CSendInfoToServer::RecvThreatLog_(SOCKET sockRecv)
 {
 	BOOL bRes = TRUE;
@@ -989,35 +989,35 @@ DWORD CSendInfoToServer::RecvThreatLog_(SOCKET sockRecv)
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½Õ°ï¿½Í·
+	//??????
 	if (!RecvData(sockRecv, saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("Recv  header fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//Ð£ï¿½ï¿½ï¿½ï¿½?
+	//§µ?????
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·
+	//???????
 	if (!protocal.GetProtacalBodyLen(saBufHeader, nHeaderLen, nBodyLen))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
+	//???????
 	if (!protocal.GetProtacalCmd(saBufHeader, nHeaderLen, uiCmdID))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð°ï¿½ï¿½ï¿½?ï¿½ÐµÄ»ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//???????§Ñ?????§Ö???????????????
 	if (nBodyLen > 0)
 	{
 		saBufBody = new char[nBodyLen];
@@ -1097,7 +1097,7 @@ END:
 
 }
 
-// HTTPS - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½hm
+// HTTPS - ????????hm
 BOOL CSendInfoToServer::SendThreatLog_(client& curClient)
 {
 
@@ -1111,7 +1111,7 @@ BOOL CSendInfoToServer::SendThreatLog_(client& curClient)
 	BOOL bResult = FALSE;
 
 	CString strIP = m_strServerIP;
-	DWORD dwPort = _tcstoul(_T("8441"), NULL, 10); //10ï¿½ï¿½ï¿½ï¿½CString to DWORD
+	DWORD dwPort = _tcstoul(_T("8441"), NULL, 10); //10????CString to DWORD
 
 	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HEARTBEAT, strIP, dwPort);
 
@@ -1135,7 +1135,7 @@ BOOL CSendInfoToServer::SendThreatLog_(client& curClient)
 		{
 			WriteDebug(_T("recv heart beat succ, new data = %S"), retData);
 
-			//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½USMï¿½ï¿½ï¿½Øµï¿½Jsonï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//????????????USM?????Json??????????
 			m_ComputerID = curClient.Client_GetComputerID();
 			DWORD dwParse = ParseRevData(retData); 
 
@@ -1152,7 +1152,7 @@ BOOL CSendInfoToServer::SendThreatLog_(client& curClient)
 
 }
 
-// HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½HTTPSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// HTTPS - ???????HTTPS??????????
 DWORD CSendInfoToServer::ParseRevData_ThreatLog(std::string strJson)
 {
 	Json::Value root;
@@ -1192,11 +1192,11 @@ DWORD CSendInfoToServer::ParseRevData_ThreatLog(std::string strJson)
 				return 4;
 			}
 
-			// ï¿½ï¿½ï¿½Ø½ï¿½ï¿½?
+			// ???????
 			char *pResultJson = NULL;
 			int iResult = ERROR_SUCCESS;
 
-			//todo ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Jsonï¿½ï¿½pResultJsonï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½USM
+			//todo ?????????????????Json??pResultJson????????????????USM
 
 			if(NULL != pResultJson && strlen(pResultJson) > 0)
 			{
@@ -1283,35 +1283,35 @@ DWORD CSendInfoToServer::RecvHeartbeat(SOCKET sockRecv)
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½Õ°ï¿½Í·
+	//??????
 	if (!RecvData(sockRecv, saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("Recv (WL_PORTOCAL_HEAD)header fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//Ð£ï¿½ï¿½ï¿½ï¿½?
+	//§µ?????
 	if (!protocal.IsValidHeader(saBufHeader, nHeaderLen))
 	{
 		WriteError(_T("invalid protocal header, buf[0]=%C, buf[1]=%C"), saBufHeader, saBufHeader+1);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·
+	//???????
 	if (!protocal.GetProtacalBodyLen(saBufHeader, nHeaderLen, nBodyLen))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
+	//???????
 	if (!protocal.GetProtacalCmd(saBufHeader, nHeaderLen, uiCmdID))
 	{
 		WriteError(_T("GetProtacalBodyLen fail,  nHeaderLen=%d"), nHeaderLen);
 		goto END;
 	}
 
-	//ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð°ï¿½ï¿½ï¿½?ï¿½ÐµÄ»ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//???????§Ñ?????§Ö???????????????
 	if (nBodyLen > 0)
 	{
 		saBufBody = new char[nBodyLen];
@@ -1342,8 +1342,8 @@ END:
 	return dwRet;
 }
 
-// HTTPSï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ã·ï¿½Ê½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ :
-BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:httpsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½   Êµï¿½ï¿½ï¿½ï¿½È¥USMï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?
+// HTTPS??????¡Â???????????????? :
+BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:https??????   ??????USM????????
 {
 	CWLJsonParse cJson;
 	char *retData = NULL;
@@ -1355,7 +1355,7 @@ BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:httpsï¿½ï¿½ï¿½ï¿½ï
 	BOOL bResult = FALSE;
 
 	CString strIP = m_strServerIP;
-	DWORD dwPort = _tcstoul(_T("8440"), NULL, 10); //10ï¿½ï¿½ï¿½ï¿½CString to DWORD   //modified by lzq:June19    8441-->8440 ;;×¢ï¿½ï¿½
+	DWORD dwPort = _tcstoul(_T("8440"), NULL, 10); //10????CString to DWORD   //modified by lzq:June19    8441-->8440 ;;???
 
 	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HEARTBEAT, strIP, dwPort);
 
@@ -1379,7 +1379,7 @@ BOOL CSendInfoToServer::SendHeartbeat(client& curClient)//lzq:httpsï¿½ï¿½ï¿½ï¿½ï
 		{
 			WriteDebug(_T("recv heart beat succ, new data = %S"), retData);
 
-			//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½USMï¿½ï¿½ï¿½Øµï¿½Jsonï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//????????????USM?????Json??????????
 			m_ComputerID = curClient.Client_GetComputerID();
 			DWORD dwParse = ParseRevData(retData);   
 
@@ -1434,11 +1434,11 @@ DWORD CSendInfoToServer::ParseRevData(std::string strJson)
 				return 4;
 			}
 
-			// ï¿½ï¿½ï¿½Ø½ï¿½ï¿½?
+			// ???????
 			char* pResultJson = NULL;
 			int  iResult = ERROR_SUCCESS;
 
-			//todo ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Jsonï¿½ï¿½pResultJsonï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½USM
+			//todo ?????????????????Json??pResultJson????????????????USM
 
 			if(NULL != pResultJson && strlen(pResultJson) > 0)//NeverEnter
 			{
@@ -1450,7 +1450,7 @@ DWORD CSendInfoToServer::ParseRevData(std::string strJson)
 			}
 			else
 			{
-				if(!SendExecResult(CMDID, iResult)) //ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ã²ï¿½ï¿½Ô³É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í½ï¿½ï¿½ï¿½ï¿½USM
+				if(!SendExecResult(CMDID, iResult)) //??????¨°???????????????USM
 				{
 					WriteError(_T("CWLPolicyThread::MainThread: sendExecResult Failed, nPly=%d, iResult=%d"), CMDID, iResult);
 					continue;
@@ -1468,7 +1468,7 @@ DWORD CSendInfoToServer::ParseRevData(std::string strJson)
 	return ERROR_SUCCESS;
 }
 
-// HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½USM
+// HTTPS - ????????????USM
 BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult, char *pResultJson)
 {
 	if ( 3 == CMDID )
@@ -1478,7 +1478,7 @@ BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult, char *pResul
 
 	BOOL bRet = FALSE;
 	WCHAR url[100] = {0};
-	DWORD dwPort = _tcstoul(m_strServerPort, NULL, 10); //Ê®ï¿½ï¿½ï¿½ï¿½
+	DWORD dwPort = _tcstoul(m_strServerPort, NULL, 10); //?????
 
 	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_RESULT, m_strServerIP, dwPort);
 
@@ -1501,7 +1501,7 @@ BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult, char *pResul
 	return bRet;
 }
 
-// HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½USM
+// HTTPS - ????????????USM
 BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult)
 {
 	if ( 3 == CMDID )
@@ -1511,7 +1511,7 @@ BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult)
 
 	BOOL bRet = FALSE;
 	WCHAR url[100] = {0}; 
-	DWORD dwPort = _tcstoul(m_strServerPort, NULL, 10); //Ê®ï¿½ï¿½ï¿½ï¿½
+	DWORD dwPort = _tcstoul(m_strServerPort, NULL, 10); //?????
 
 	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_RESULT, m_strServerIP, dwPort);
 
@@ -1536,7 +1536,7 @@ BOOL CSendInfoToServer::SendExecResult(WORD CMDID, int nDealResult)
 	return bRet;
 }
 
-// HTTPS - ï¿½ï¿½ï¿½ï¿½CMDIDï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// HTTPS - ????CMDID??????????????
 WORD CSendInfoToServer::GetCMDTYPE(WORD CMDID)
 {
 	WORD CMDTYPE = -1;
@@ -1610,7 +1610,7 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_SingleRule(LPTSTR lpComputerID)
 	_tcscpy(pLog->szProduct,_T("SomeProduct"));
 	_tcscpy(pLog->szDefIntegrity,_T("Some defintegrity"));
 	/*
-	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?
+	//????????????????????
 	typedef enum TYPE_OPTYPE_PWL
 	{
 	OPTYPE_PWL_CONTROL = 1,
@@ -1642,7 +1642,7 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_SingleRule(LPTSTR lpComputerID)
 	std::string  sJson;
 
 	_snwprintf_s(URL_PROCESS_LOG, sizeof(URL_PROCESS_LOG)/sizeof(URL_PROCESS_LOG[0]), _TRUNCATE, URL_LOG_PROCESS, m_strServerIP, _ttoi(m_strServerPort));
-	sJson = json.WarningLog_GetJsonByVector(lpComputerID, 200, DATA_TO_SERVER_PROCESS_ALERT_LOG, vecLog);  //ï¿½Ãµï¿½ï¿½Ï·ï¿½ï¿½ï¿½jsonï¿½Ö·ï¿½ï¿½ï¿½
+	sJson = json.WarningLog_GetJsonByVector(lpComputerID, 200, DATA_TO_SERVER_PROCESS_ALERT_LOG, vecLog);  //????????json?????
 
 
 	delete pMData;
@@ -1677,7 +1677,7 @@ OPTYPE_PWL_SYSFILE_CHECK,
 OPTYPE_PWL_AUTO_APPROVE,
 */
 /*
-//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?
+//????????????????????
 typedef enum TYPE_OPTYPE_PWL
 {
 OPTYPE_PWL_CONTROL = 1,
@@ -1716,14 +1716,14 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_FiveType(LPTSTR lpComputerID)
 	CWLMetaData*  pMData_Auto = NULL;
 	BYTE*         pLogBuf_Auto = NULL;
 
-	// Æ´ï¿½Ó²ï¿½Í¬Â·ï¿½ï¿½Ê¹ï¿½ï¿½
+	// ?????¡¤?????
 	std::wstring wsThreadId = _T("");
 	std::wstring wsTime     = _T("");
 	if (!g_bSamePath)
 	{
-		DWORD dwThreadId = GetCurrentThreadId(); // ï¿½ï¿½È¡ï¿½ß³ï¿½ID
+		DWORD dwThreadId = GetCurrentThreadId(); // ??????ID
 		wchar_t buffer[20] = {0};
-		// Ê¹ï¿½ï¿½ _itow_s ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
+		// ??? _itow_s ???????
 		_itow_s(dwThreadId, buffer, sizeof(buffer) / sizeof(wchar_t), 10);
 		wsThreadId = buffer;
 
@@ -1923,7 +1923,7 @@ BOOL CSendInfoToServer::SendClientNwlLogToServer_FiveType(LPTSTR lpComputerID)
 
 	CWLJsonParse json;
 	std::string  sJson_FinalFive;
-	sJson_FinalFive = json.WarningLog_GetJsonByVector(lpComputerID, 200, DATA_TO_SERVER_PROCESS_ALERT_LOG, vecLog);  //ï¿½Ãµï¿½ï¿½Ï·ï¿½ï¿½ï¿½jsonï¿½Ö·ï¿½ï¿½ï¿½
+	sJson_FinalFive = json.WarningLog_GetJsonByVector(lpComputerID, 200, DATA_TO_SERVER_PROCESS_ALERT_LOG, vecLog);  //????????json?????
 sJson_FinalFive = InjectComputerIP(sJson_FinalFive, m_strClientIP);
 
 	if (NULL != pMData_Control)
@@ -1967,7 +1967,7 @@ sJson_FinalFive = InjectComputerIP(sJson_FinalFive, m_strClientIP);
 		delete [] pLogBuf_Auto;
 	}
 
-	//Êµï¿½Ê·ï¿½ï¿½Í±ï¿½ï¿½ï¿½jsonw
+	//?????????jsonw
 	CWLNetCommApi* objTmp = CWLNetCommApi::instance();
 
 	char*		pResult = NULL;
@@ -2004,7 +2004,7 @@ BOOL CSendInfoToServer::SendClientOptLogToServer(LPTSTR lpComputerID)
 
 	char chGuid[MAX_PATH]= {0};
 	CreateGuidString((LPTSTR)chGuid);
-	strOpt.Format(_T("ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?--WLServerTest--ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½%s"),chGuid);
+	strOpt.Format(_T("??????¦²????????--WLServerTest--?????????%s"),chGuid);
 	_tcscpy(OperationLogStruct.szLogContent, strOpt.GetBuffer());
 
 	std::vector<ADMIN_OPERATION_LOG_STRUCT*> vec;
@@ -2040,7 +2040,7 @@ sJson = InjectComputerIP(sJson, m_strClientIP);
 }
 
 //added by lzq:JUNE06
-//ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Éµï¿½ï¿½ï¿½
+//??????????
 /*
 BOOL CSendInfoToServer::SendClientThtLogToServer(LPTSTR lpComputerID,int iCurUsedClient)
 {
@@ -2083,7 +2083,7 @@ sSendInfo=NULL;
 return 0;
 }*/
 
-//added by lzq:MAY17 //ï¿½ï¿½ÒªÊµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//added by lzq:MAY17 //??????????
 /*
 BOOL CSendInfoToServer::SendClientThtLogToServer(LPTSTR lpComputerID)
 {
@@ -2098,7 +2098,7 @@ char* pResult = NULL;
 
 std::string sJson = "";
 
-//Ä£ï¿½ï¿½WinEventLog
+//???WinEventLog
 {
 sJson = objSJ.ThreatLog_SimulateJson_WinEventLog(lpComputerID);
 bRet = CWLNetCommApi::instance()->pdoPost(URL_OPERATORLOG, (LPSTR)sJson.c_str(), &pResult);
@@ -2114,7 +2114,7 @@ wstring wJson = WLJsonParse.UTF8ToUnicode(sJson);
 WriteError(_T("send threat log Error:%s"), wJson.c_str());
 }
 }
-//Ä£ï¿½ï¿½FileAccess
+//???FileAccess
 {
 sJson =  objSJ.ThreatLog_SimulateJson_File(lpComputerID);
 bRet = CWLNetCommApi::instance()->pdoPost(URL_OPERATORLOG, (LPSTR)sJson.c_str(), &pResult);
@@ -2130,7 +2130,7 @@ wstring wJson = WLJsonParse.UTF8ToUnicode(sJson);
 WriteError(_T("send threat log Error:%s"), wJson.c_str());
 }
 }
-//Ä£ï¿½ï¿½ï¿½ï¿½Ì·ï¿½ï¿½ï¿½ProcessAccess
+//?????????ProcessAccess
 {
 sJson =  objSJ.ThreatLog_SimulateJson_Proc(lpComputerID);
 bRet = CWLNetCommApi::instance()->pdoPost(URL_OPERATORLOG, (LPSTR)sJson.c_str(), &pResult);
@@ -2146,7 +2146,7 @@ wstring wJson = WLJsonParse.UTF8ToUnicode(sJson);
 WriteError(_T("send threat log Error:%s"), wJson.c_str());
 }
 }
-//Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Process
+//??????????Process
 {
 sJson =  objSJ.ThreatLog_SimulateJson_ProcStart(lpComputerID);
 bRet = CWLNetCommApi::instance()->pdoPost(URL_OPERATORLOG, (LPSTR)sJson.c_str(), &pResult);
@@ -2162,7 +2162,7 @@ wstring wJson = WLJsonParse.UTF8ToUnicode(sJson);
 WriteError(_T("send threat log Error:%s"), wJson.c_str());
 }
 }
-//Ä£ï¿½ï¿½Registry
+//???Registry
 {
 sJson = objSJ.ThreatLog_SimulateJson_Reg(lpComputerID);
 bRet = CWLNetCommApi::instance()->pdoPost(URL_OPERATORLOG, (LPSTR)sJson.c_str(), &pResult);
@@ -2185,7 +2185,7 @@ return bRet;
 
 BOOL CSendInfoToServer::UkeyToNotifyUSM(LPTSTR lpComputerID, WORD cmdType, WORD cmdID, BASELINE_PL_NEW_ST *pSecbStatus, BASELINE_PL_NEW_ST *pSecbParam, DWORD dwLevel)
 {	
-	// ï¿½ï¿½ï¿½ï¿½Jsonï¿½ï¿½
+	// ????Json??
 	std::string sJson;
 	CWLJsonParse jsonParser;
 
@@ -2209,7 +2209,7 @@ BOOL CSendInfoToServer::UkeyToNotifyUSM(LPTSTR lpComputerID, WORD cmdType, WORD 
 	bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
 	if(!bRet)
 	{
-		// ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
+		// ???????
 		WriteError(_T("BaseLIne pdoPost Error, computerID=%s"), cstrComputerID);
 		if (NULL == pResult)
 		{
@@ -2259,12 +2259,12 @@ BOOL CSendInfoToServer::BOSendUSM_AllUsers_DoPost(LPTSTR lpComputerID, __in ST_U
 	WCHAR URL_SERVER_USBKEY[100] = {0};
 	CWLJsonParse jsonParse;
 
-	/* ï¿½ï¿½×°jsonï¿½ï¿½ */
+	/* ???json?? */
 	sData = jsonParse.OSUser_GetJson(lpComputerID, stUsersHead, vecUSMUsersSend);
 
 	WriteDebug(_T("SendUSM_AllUsers_DoPost Json =  %s"), jsonParse.UTF8ToUnicode(sData).c_str());
 
-	/* ï¿½ï¿½ï¿½Íµï¿½USM */
+	/* ?????USM */
 	_snwprintf_s(URL_SERVER_USBKEY, sizeof(URL_SERVER_USBKEY)/sizeof(URL_SERVER_USBKEY[0]), _TRUNCATE, URL_USBKEY_INFO, m_strServerIP, _ttoi(m_strServerPort));
 	//if (! doPost(m_wsURL_USBKEY.c_str(), (LPSTR)sData.c_str(), &pResult))
 	if (! CWLNetCommApi::instance()->pdoPost(URL_SERVER_USBKEY, (LPSTR)sData.c_str(), &pResult))
@@ -2298,7 +2298,7 @@ BOOL CSendInfoToServer::SendUSBKeyManageToServer(LPTSTR lpComputerID,VEC_ST_USER
 	BOOL				bRet = FALSE;
 	UK_MANAGER_ST		usbKeyManagerInfo;
 	std::string			strJsonA;
-	ST_USERS_INFO_HEAD  stUsersHead;        /* ï¿½Ï±ï¿½ï¿½ï¿½ï¿½Äµï¿½Í·ï¿½ï¿½ï¿½ï¿½Ï¢ */
+	ST_USERS_INFO_HEAD  stUsersHead;        /* ?????????????? */
 
 
 	//bRet = USBKeyManagerInfo_DoPost(lpComputerID, usbKeyManagerInfo, strJsonA, err);
@@ -2325,10 +2325,10 @@ BOOL CSendInfoToServer::Send_FileLog_WL_ToServer(LPTSTR lpComputerID, CString cs
 	WORD nPort;
 	tstring StrErr;
 
-	//ï¿½ï¿½ï¿½ï¿½USMï¿½ï¿½ï¿½Í¡ï¿½ï¿½Ï´ï¿½ï¿½Ð¡ï¿½×´Ì¬
+	//????USM?????????§³???
 	sendScanStatus(lpComputerID,WL_SOLIDIFY_UPLOAD);
 
-	//ÎªÆ´ï¿½ï¿½URLï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Þ¸ï¿½
+	//????URL?????¡¤??????????
 	int nLen = wcslen(cstrWLFilePath);
 	WCHAR szPath[MAX_PATH] = {0};
 	for (int i = 0, j = 0; i < nLen; i++)
@@ -2348,33 +2348,33 @@ BOOL CSendInfoToServer::Send_FileLog_WL_ToServer(LPTSTR lpComputerID, CString cs
 	}
 
 	CBase64 base64;
-	//URLï¿½Ð°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Base64
+	//URL?§Ñ????????¡¤???????Base64
 	CString cstrUrlWlFilePath = szPath;
 	std::string strTemp = CT2A(cstrUrlWlFilePath.GetString());
 	char szTmp[FU_MAX_FILE_LEN] = {0};
 	base64.Base64URLEncode(strTemp.c_str(), strTemp.length(), szTmp, FU_MAX_FILE_LEN);
 	std::wstring wstrPath = CStrUtil::UTF8ToUnicode(szTmp);
 
-	//URLï¿½ï¿½ComputerIDï¿½ï¿½ï¿½ï¿½ï¿½Base64
+	//URL??ComputerID?????Base64
 	strTemp = CStrUtil::UnicodeToUTF8(lpComputerID).c_str();
 	base64.Base64URLEncode(strTemp.c_str(), strTemp.length(), szTmp, FU_MAX_FILE_LEN);
 	std::wstring wsClientID = CStrUtil::UTF8ToUnicode(szTmp);
 
-	//Æ´ï¿½ï¿½URL
+	//???URL
 	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_UPLOAD_WHITE_FILE_LIST,
 		m_strServerIP, _ttoi(m_strServerPort), wsClientID.c_str(), wstrPath.c_str());
 
-	//ï¿½Ï´ï¿½ï¿½Ä¼ï¿½
+	//??????
 	DWORD re = CWLNetCommApi::instance()->puploadFile(url, cstrWLFilePath);
 	if( ERROR_SUCCESS == re)
 	{
-		// ï¿½Ï´ï¿½ï¿½É¹ï¿½ï¿½ï¿½USMï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+		// ????????USM?????????????
 		sendScanStatus(lpComputerID,WL_SOLIDIFY_UPDATE);
 		return TRUE;
 	}
 	else
 	{
-		WriteError(_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½Ê§ï¿½Ü£ï¿½?%lu"),re);
+		WriteError(_T("?????????????????%lu"),re);
 	}
 	return bRet;
 }
@@ -2404,7 +2404,7 @@ BOOL CSendInfoToServer::CreateGuidString(LPTSTR lpGuid)
 
 /*
 * @fn           SendClientDataProtectLogToServer
-* @brief        ï¿½ï¿½ï¿½Ý±ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
+* @brief        ??????????
 * @param[in]    lpComputerID
 * @param[out]   
 * @return       
@@ -2491,7 +2491,7 @@ sJson = InjectComputerIP(sJson, m_strClientIP);
 
 /*
 * @fn           SendClientSysProtectLogToServer
-* @brief        ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
+* @brief        ?????????
 * @param[in]    lpComputerID
 * @param[out]   
 * @return       
@@ -2577,7 +2577,7 @@ sJson = InjectComputerIP(sJson, m_strClientIP);
 
 /*
 * @fn           SendClientBackupLogToServer
-* @brief        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½?
+* @brief        ????????????
 * @param[in]    lpComputerID
 * @param[out]   
 * @return       
@@ -2596,8 +2596,8 @@ BOOL CSendInfoToServer::SendClientBackupLogToServer(LPTSTR lpComputerID)
 
 	stBackup.ID = _T("4DBE9C130678C1393162507A6E902ADF04413DE9E9273B4ABF5C3093F6058DDF");
 	stBackup.uuid = _T("37D2F730603548CC9EA50297B3A89F12");
-	stBackup.wstrFileName = _T("C:\\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½?.txt");
-	stBackup.wstrProcessName = _T("C:\\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½?.exe");
+	stBackup.wstrFileName = _T("C:\\????????????????.txt");
+	stBackup.wstrProcessName = _T("C:\\????????????????.exe");
 	stBackup.wstrHashValue = _T("81659AE1A757A783D8847896027723E8DDC7AB2EA2CB698C3E943A6C0BCC276E");
 	stBackup.wstrFileType = _T(".txt");
 	stBackup.llFileSize = 1;
@@ -2643,7 +2643,7 @@ BOOL CSendInfoToServer::SendClientBackupLogToServer(LPTSTR lpComputerID)
 
 /*
 * @fn           SendClientBackupLogToServer
-* @brief        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
+* @brief        ???????
 * @param[in]    lpComputerID
 * @param[out]   
 * @return       
@@ -2680,7 +2680,7 @@ BOOL CSendInfoToServer::SendClientVirusLogToServer(LPTSTR lpComputerID)
 		pLog->dwScore = 0;
 		pLog->dwLevel = emLV_IGNORE;
 		pLog->dwFrom = emFromRTProtect;
-		_tcsncpy_s(pLog->wszVirusName, SAFE_PATH_LEN, _T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"), SAFE_PATH_LEN);
+		_tcsncpy_s(pLog->wszVirusName, SAFE_PATH_LEN, _T("????????"), SAFE_PATH_LEN);
 		_tcsncpy_s(pLog->wszVirusPath,_countof(pLog->wszVirusPath), _T("C:\\VirusPath.exe"),_TRUNCATE);
 		_tcsncpy_s(pLog->wszVirusSubPath, SAFE_PATH_LEN, _T("C:\\SubPath.exe"), SAFE_PATH_LEN);
 
@@ -2796,23 +2796,23 @@ BOOL CSendInfoToServer::SendClientExtDevLogToServer(LPTSTR lpComputerID, DWORD d
 	//   FD=13, BLUETOOTH=6, SERIALPORT=7, PARALLELPORT=8
 	struct ExtDevEntry { DWORD mask; int usbType; const char* nameUtf8; };
 	static const ExtDevEntry entries[] = {
-		// USBæŽ¥å£ä½¿ç”¨ï¿½?ç¦ï¿½??
+		// USB½Ó¿ÚÊ¹ÓÃ??½û???
 		{ 0x00020000, 15, "USB\xE6\x8E\xA5\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// ç§»åŠ¨è®¾ï¿½?ï¿½ä½¿ç”¨ï¿½??ç¦ï¿½??
+		// ÒÆ¶¯Éè???Ê¹ÓÃ???½û???
 		{ 0x00040000, 14, "\xE7\xA7\xBB\xE5\x8A\xA8\xE8\xAE\xBE\xE5\xA4\x87\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// CDROMä½¿ç”¨ï¿½?ç¦ï¿½??
+		// CDROMÊ¹ÓÃ??½û???
 		{ 0x00080000,  4, "CDROM\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// wifiä½¿ç”¨ï¿½?ç¦ï¿½??
+		// wifiÊ¹ÓÃ??½û???
 		{ 0x00100000,  5, "wifi\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// USBç½‘å¡ä½¿ç”¨ï¿½?ç¦ï¿½??
+		// USBÍø¿¨Ê¹ÓÃ??½û???
 		{ 0x00200000, 20, "USB\xE7\xBD\x91\xE5\x8D\xA1\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// ï¿½?ç›˜ä½¿ç”¨ï¿½??ç¦ï¿½??
+		// ??ÅÌÊ¹ÓÃ???½û???
 		{ 0x00400000, 13, "\xE8\xBD\xAF\xE7\x9B\x98\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// è“ç‰™ä½¿ç”¨ï¿½?ç¦ï¿½??
+		// À¶ÑÀÊ¹ÓÃ??½û???
 		{ 0x00800000,  6, "\xE8\x93\x9D\xE7\x89\x99\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// ä¸²å£ä½¿ç”¨ï¿½?ç¦ï¿½??
+		// ´®¿ÚÊ¹ÓÃ??½û???
 		{ 0x01000000,  7, "\xE4\xB8\xB2\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
-		// å¹¶å£ä½¿ç”¨ï¿½?ç¦ï¿½??
+		// ²¢¿ÚÊ¹ÓÃ??½û???
 		{ 0x02000000,  8, "\xE5\xB9\xB6\xE5\x8F\xA3\xE4\xBD\xBF\xE7\x94\xA8\xE8\xA2\xAB\xE7\xA6\x81\xE6\xAD\xA2" },
 	};
 
@@ -3127,5 +3127,97 @@ BOOL CSendInfoToServer::SendClientHostDefenceLogToServer(LPTSTR lpComputerID, in
     if (!bRet) WriteError(_T("SendClientHostDefenceLogToServer failed"));
     if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
     return bRet;
+}
+
+int CSendInfoToServer::SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8)
+{
+	if (lpComputerID == NULL || lpConfigJsonUtf8 == NULL)
+	{
+		WriteError(_T("SendClientConfigToServer: invalid param"));
+		return CFG_UPLOAD_RET_NET_ERROR;
+	}
+
+	// 1. ½âÎö CMDContent ¼¶Ä£°å£¨UTF-8£¬À´×Ô CClientConfigUploader£©
+	Json::Value cmdRoot;
+	Json::Reader reader;
+	if (!reader.parse(std::string(lpConfigJsonUtf8), cmdRoot) || !cmdRoot.isObject())
+	{
+		WriteError(_T("SendClientConfigToServer: parse template failed, computerID=%s"), lpComputerID);
+		return CFG_UPLOAD_RET_FAIL_REPLY;
+	}
+
+	// 2. ¶¯Ì¬Ìæ»» ComputerID / ComputerIP£¨Ä£°åÓÅÏÈ¼¶µÍÊ±°´ÖÕ¶Ë»ØÌî£©
+	cmdRoot["ComputerID"] = CStrUtil::UnicodeToUTF8(lpComputerID);
+	if (lpComputerIP != NULL && lpComputerIP[0] != _T('\0'))
+	{
+		cmdRoot["ComputerIP"] = CStrUtil::UnicodeToUTF8(lpComputerIP);
+	}
+
+	// 3. ×é×°Íâ²ã±¨ÎÄ£º[{ComputerID,CMDTYPE,CMDID,CMDContent:{...}}]
+	Json::Value outer(Json::arrayValue);
+	Json::Value item;
+	item["ComputerID"] = CStrUtil::UnicodeToUTF8(lpComputerID);
+	item["CMDTYPE"] = CMDTYPE_CMD;                        // 200
+	item["CMDID"] = DATA_TO_SERVER_UPDATE_CLIENT_STATUS;  // 201
+	item["CMDContent"] = cmdRoot;
+	outer.append(item);
+
+	Json::FastWriter writer;
+	std::string sJson = writer.write(outer);
+
+	// 4. POST /USM/clientRefresh.do
+	WCHAR url[256] = {0};
+	_snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_UPDATESTATUS, m_strServerIP.GetString(), _ttoi(m_strServerPort));
+	CString stMsg;
+	stMsg.Format(_T("UploadClientConfig . IP=%s, ComputerID=%s, data= %S"), m_strServerIP.GetString(), lpComputerID, sJson.c_str());
+	WriteInfo(stMsg.GetBuffer());
+
+	char* pResult = NULL;
+	if (!CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult))
+	{
+		WriteError(_T("SendClientConfigToServer: pdoPost failed, computerID=%s, url=%s"), lpComputerID, url);
+		if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+		return CFG_UPLOAD_RET_NET_ERROR;
+	}
+	if (pResult == NULL)
+	{
+		WriteError(_T("SendClientConfigToServer: pResult is NULL, computerID=%s"), lpComputerID);
+		return CFG_UPLOAD_RET_FAIL_REPLY;
+	}
+
+	// 5. ½âÎö»Ø°ü£ºÆÚÍû [{...,"CMDContent":{"RESULT":"SUC"/"FAIL"}}]
+	std::string sResp(pResult);
+	CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+
+	Json::Value respRoot;
+	Json::Reader respReader;
+	BOOL bSucc = FALSE;
+	if (respReader.parse(sResp, respRoot) && respRoot.isArray() && respRoot.size() > 0)
+	{
+		const Json::Value& first = respRoot[0u];
+		if (first.isMember("CMDContent") && first["CMDContent"].isObject())
+		{
+			const Json::Value& cc = first["CMDContent"];
+			if (cc.isMember("RESULT") && cc["RESULT"].isString())
+			{
+				bSucc = (cc["RESULT"].asString() == "SUC");
+			}
+		}
+	}
+	else
+	{
+		WriteError(_T("SendClientConfigToServer: response parse failed, computerID=%s, resp=%S"), lpComputerID, sResp.c_str());
+		return CFG_UPLOAD_RET_FAIL_REPLY;
+	}
+
+	if (bSucc)
+	{
+		stMsg.Format(_T("SendClientConfigToServer OK, computerID=%s"), lpComputerID);
+		WriteInfo(stMsg.GetBuffer());
+		return CFG_UPLOAD_RET_OK;
+	}
+
+	WriteError(_T("SendClientConfigToServer: server reply FAIL, computerID=%s, resp=%S"), lpComputerID, sResp.c_str());
+	return CFG_UPLOAD_RET_FAIL_REPLY;
 }
 

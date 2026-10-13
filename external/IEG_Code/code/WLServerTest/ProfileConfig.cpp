@@ -289,3 +289,35 @@ void CProfileConfig::ClearAllDevIDs_FromIni()
 {
 	WriteProfileString_ToIni(_T("DevID"), NULL, NULL); // remove entire section
 }
+
+// === cfg upload persistence (t7) ===
+BOOL CProfileConfig::WriteAutoUploadCfg_ToIni(BOOL bEnable)
+{
+	return WriteProfileInt_ToIni(_T("Global"), _T("CfgUpload_AutoUploadEnabled"), bEnable ? 1 : 0);
+}
+
+BOOL CProfileConfig::ReadAutoUploadCfg_FromIni(void)
+{
+	int nVal = ReadProfileInt_FromIni(_T("Global"), _T("CfgUpload_AutoUploadEnabled"));
+	return (nVal > 0) ? TRUE : FALSE;
+}
+
+BOOL CProfileConfig::WriteCfgRetryMaxAttempts_ToIni(int nMax)
+{
+	return WriteProfileInt_ToIni(_T("Global"), _T("CfgUpload_RetryMaxAttempts"), nMax);
+}
+
+int CProfileConfig::ReadCfgRetryMaxAttempts_FromIni(void)
+{
+	return ReadProfileInt_FromIni(_T("Global"), _T("CfgUpload_RetryMaxAttempts"));
+}
+
+BOOL CProfileConfig::WriteCfgRetryBaseDelayMs_ToIni(int nDelay)
+{
+	return WriteProfileInt_ToIni(_T("Global"), _T("CfgUpload_RetryBaseDelayMs"), nDelay);
+}
+
+int CProfileConfig::ReadCfgRetryBaseDelayMs_FromIni(void)
+{
+	return ReadProfileInt_FromIni(_T("Global"), _T("CfgUpload_RetryBaseDelayMs"));
+}

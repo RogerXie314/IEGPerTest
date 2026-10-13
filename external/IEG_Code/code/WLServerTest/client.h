@@ -15,6 +15,7 @@ private:
 	
 	BOOL m_bRegistered; //��ǰ�ͻ����Ƿ�����ע��״̬
 	DWORD m_dwDevID;      // devid returned from server registration
+	volatile BOOL m_bOnline;
 
 public:
 	client();
@@ -40,4 +41,6 @@ public:
 	
 	BOOL    Client_IsRegistered();
 	void    Client_SetRegistered(BOOL bRegistered);
+	BOOL    Client_IsOnline();
+	void    Client_SetOnline(BOOL bOnline);
 };

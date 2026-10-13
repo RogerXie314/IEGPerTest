@@ -261,3 +261,6 @@
 #endif
 #define IDC_BTN_UNSELECT_ALL            1227
 #define IDC_CHECK_DEBUG                 1228
+#define IDC_CHECK_AUTO_UPLOAD_CFG       1229
+#define IDC_BUTTON_UPLOAD_CFG           1230
+#define IDC_STATIC_CFG_UPLOAD_STAT      1231

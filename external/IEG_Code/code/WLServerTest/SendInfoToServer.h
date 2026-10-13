@@ -1,6 +1,6 @@
 #pragma once
 
-// Global debug toggle â€” controlled by IDC_CHECK_DEBUG in main dialog
+// Global debug toggle ¡ª controlled by IDC_CHECK_DEBUG in main dialog
 extern BOOL g_bEnableDebugOutput;
 #include "client.h"
 #include "..\BaseLineStruct.h"
@@ -25,72 +25,72 @@ public:
 	CString m_Domain;
 	CString m_ClientLanguage;
 	CString m_WindowsOSVersion;
-        CString m_strClientIP;       // ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½Ê±×¢ï¿½ï¿½Í»ï¿½ï¿½ï¿½IP
+        CString m_strClientIP;       // ???????????????IP
 
 
 
 	char* wchar2char(const wchar_t* wchar);
 	wchar_t* char2wchar(const char* cchar);
 
-	// TCP-ThreatLog ï¿½ï¿½ï¿½Í½Ó¿ï¿½  added by lzq:MAY19
-	// TCP - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½Ö¾
+	// TCP-ThreatLog ??????  added by lzq:MAY19
+	// TCP - ??????§Ó???
 	BOOL SendThreatLog_ToserverTCP(client& pCurClient,SOCKET sockSend, DWORD dwSubTypes = 0xFFFFFFFF, BOOL bHit = TRUE);
 	BOOL SendThreatLog_Data(SOCKET sockSend, const char *pSendBuff, unsigned int nSendLen,int cmdID);
 
-	// TCP - È·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ£ï¿½ï¿½ï¿½ï¿½ï¿½Ê±È·ï¿½Ï·ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½ï¿½Ç²ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ê¹ï¿½ï¿½HTTPSÖ´ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÕºÍ´ï¿½ï¿½ï¿½
+	// TCP - ????????????????????????????????????????????????????????HTTPS????????????????????
 	DWORD RecvThreatLog_(SOCKET sockRecv);
 	UINT RecvData_ThreatLog_(_Out_ char *pData, _In_ SOCKET sockRecv, _In_ UINT nDataLen);
 
-	// HTTPS - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½hm
+	// HTTPS - ????????hm
 	BOOL SendThreatLog_(client& curClient);
 
-	// HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½HTTPSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	// HTTPS - ???????HTTPS??????????
 	DWORD ParseRevData_ThreatLog(std::string strJson);
 
 
 	
-    // TCP - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // TCP - ????????
 	BOOL SendHeartbeatToserverTCP(client& pCurClient,SOCKET sockSend);
     BOOL SendData(SOCKET sockSend, const char *pSendBuff, unsigned int nSendLen,int cmdID);
 
 	BOOL SendData_OnlyCompress(SOCKET sockSend, const char* pSendBuff, unsigned int nSendLen,int cmdID, DWORD dwDeviceID = 0);//2.threatlog
 
-    // TCP - È·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ£ï¿½ï¿½ï¿½ï¿½ï¿½Ê±È·ï¿½Ï·ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½ï¿½Ç²ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ê¹ï¿½ï¿½HTTPSÖ´ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÕºÍ´ï¿½ï¿½ï¿½
+    // TCP - ????????????????????????????????????????????????????????HTTPS????????????????????
     DWORD RecvHeartbeat(SOCKET sockRecv);
     UINT RecvData(_Out_ char *pData, _In_ SOCKET sockRecv, _In_ UINT nDataLen);
 
-    // HTTPS - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½hm
+    // HTTPS - ????????hm
 	BOOL SendHeartbeat(client& curClient);
 
-    // HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½HTTPSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // HTTPS - ???????HTTPS??????????
     DWORD ParseRevData(std::string strJson);
 
-    // HTTPS - ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½USM
+    // HTTPS - ????????????USM
     BOOL SendExecResult(WORD CMDID, int nDealResult, char *pResultJson);
     BOOL SendExecResult(WORD CMDID, int nDealResult);
 
-    // HTTPS - ï¿½ï¿½ï¿½ï¿½CMDIDï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // HTTPS - ????CMDID??????????????
     WORD GetCMDTYPE(WORD CMDID);
 
     //
 	BOOL RegisterClientToServer(CString szComputerID, CString szClientID,CString szComputerIP, CString szVersion = _T("V300R011C01B090"), CString szOS = _T("Windows 10"), DWORD* pdwOutDevID = NULL); // v6.5: out devid
 
-	// ï¿½ï¿½ï¿½Í¿Í»ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
+	// ??????????????
 	BOOL SendClientOptLogToServer(LPTSTR lpComputerID);
 
 	BOOL SendClientNwlLogToServer_SingleRule(LPTSTR lpComputerID);
 	BOOL CSendInfoToServer::SendClientNwlLogToServer_FiveType(LPTSTR lpComputerID);
 
-	// ï¿½ï¿½ï¿½Í¿Í»ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½Ö¾
+	// ??????????§Ó???
 	//BOOL SendClientThtLogToServer(LPTSTR lpComputerID,int iCurUsedClient);
   
-	//ï¿½ï¿½ï¿½Í¿Í»ï¿½ï¿½Ë°ï¿½È«ï¿½ï¿½ï¿½ï¿½
+	//??????????????
 	BOOL SendBaseLineToServer(LPTSTR lpComputerID);
 	BOOL UkeyToNotifyUSM(LPTSTR lpComputerID, WORD cmdType, WORD cmdID, BASELINE_PL_NEW_ST *pSecbStatus, BASELINE_PL_NEW_ST *pSecbParam, DWORD dwLevel);
-	//ï¿½ï¿½ï¿½ï¿½UKeyï¿½ï¿½Ï¢
+	//????UKey???
 	BOOL SendUSBKeyManageToServer(LPTSTR lpComputerID,VEC_ST_USERS_USM &vecUSMUsersSend);
 	BOOL BOSendUSM_AllUsers_DoPost(LPTSTR lpComputerID, __in ST_USERS_INFO_HEAD & stUsersHead, VEC_ST_USERS_USM & vecUSMUsersSend);
-	// ï¿½ï¿½ï¿½Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
+	// ???????????????
 	BOOL Send_FileLog_WL_ToServer(LPTSTR lpComputerID, CString cstrWLFilePath);
 	BOOL CreateConnection(SOCKET &sockClient,CString strServerIP,const CString strServerPort);
 	char* RecvSockData(SOCKET sockRecv, unsigned int &nSrcLen, unsigned int &dwCmdID);
@@ -121,8 +121,18 @@ public:
     BOOL SendClientSafetyStoreLogToServer(LPTSTR lpComputerID);
     BOOL SendClientThreatFakeLogToServer(LPTSTR lpComputerID);
     BOOL SendClientIllegalConnectLogToServer(LPTSTR lpComputerID);
-    BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
+BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
     BOOL SendClientVulDefenseLogToServer(LPTSTR lpComputerID);
+
+    // HTTPS - ¿Í»§¶ËÉÏ±¨×îÐÂÅäÖÃ£¨CMDTYPE=200, CMDID=201, /USM/clientRefresh.do£©
+    // lpConfigJson: CMDContent ¼¶ UTF-8 JSON£¨ÓÉ CClientConfigUploader ¼ÓÔØ£©
+    // ·µ»ØÖµÈýÌ¬£ºCFG_UPLOAD_RET_OK / CFG_UPLOAD_RET_FAIL_REPLY / CFG_UPLOAD_RET_NET_ERROR
+    int SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8);
 };
+
+// ¿Í»§¶ËÅäÖÃÉÏ±¨·µ»ØÖµ£¨SendClientConfigToServer£©
+#define CFG_UPLOAD_RET_OK           0   // pdoPost ³É¹¦ÇÒ»Ø°ü RESULT=SUC
+#define CFG_UPLOAD_RET_FAIL_REPLY   1   // pdoPost ³É¹¦µ«»Ø°ü RESULT=FAIL »ò»Ø°ü½âÎöÊ§°Ü
+#define CFG_UPLOAD_RET_NET_ERROR    2   // pdoPost Ê§°Ü£¨ÍøÂç²»Í¨/³¬Ê±/HTTP ´íÎó£©
 
 

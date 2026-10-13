@@ -14,6 +14,7 @@ client::client(__in CString inClientID, __in CString inClientIP)
 	m_bHasMsgLogSent = FALSE;
 	m_bRegistered = FALSE;
 	m_dwDevID = 0;
+	m_bOnline = FALSE;
 }
 
 client::~client(void) 
@@ -46,6 +47,17 @@ BOOL client::Client_IsRegistered()
 void client::Client_SetRegistered(BOOL bRegistered)
 {
     m_bRegistered = bRegistered;
+    return;
+}
+
+BOOL client::Client_IsOnline()
+{
+    return m_bOnline;
+}
+
+void client::Client_SetOnline(BOOL bOnline)
+{
+    m_bOnline = bOnline;
     return;
 }
 

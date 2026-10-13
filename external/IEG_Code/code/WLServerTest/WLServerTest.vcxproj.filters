@@ -27,6 +27,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+<ClCompile Include="ClientConfigUploader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -98,6 +101,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+<ClInclude Include="ClientConfigUploader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="client.h">
       <Filter>Header Files</Filter>
     </ClInclude>

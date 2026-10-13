@@ -378,8 +378,9 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\WLNetComm\WLHttpsConnection.cpp" />
-    <ClCompile Include="client.cpp" />
-    <ClCompile Include="ProfileConfig.cpp" />
+<ClCompile Include="ClientConfigUploader.cpp" />
+    <ClCompile Include="client.cpp" />
+    <ClCompile Include="ProfileConfig.cpp" />
     <ClCompile Include="SendInfoToServer.cpp" />
     <ClCompile Include="SimulateJson.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -418,8 +419,9 @@
     <ClInclude Include="..\common\WLLogger.h" />
     <ClInclude Include="..\common\WLNetCommApi.h" />
     <ClInclude Include="..\WLNetComm\WLHttpsConnection.h" />
-    <ClInclude Include="client.h" />
-    <ClInclude Include="ProfileConfig.h" />
+<ClInclude Include="ClientConfigUploader.h" />
+    <ClInclude Include="client.h" />
+    <ClInclude Include="ProfileConfig.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SendInfoToServer.h" />
     <ClInclude Include="SimulateJson.h" />
