@@ -2292,12 +2292,12 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-	    strHeartBeat_TitleLine.Format(_T("ï¿½ï¿½ï¿?,50;ï¿½ï¿½Ê¼Ê±ï¿½ï¿½,136;ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½,80;ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½Í¼ï¿½ï¿?(ms),100;ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½(min),0;ï¿½ï¿½Ô¾ï¿½Í»ï¿½ï¿½ï¿½/ï¿½ï¿½Ï¢ï¿½ï¿½Ö¾,130;×´Ì¬,90;ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½/ï¿½Ä¼ï¿½ï¿½ï¿½Ö¾,136;Ê§ï¿½Ü¿Í»ï¿½ï¿½ï¿½ï¿½ï¿½,150"));
+	    strHeartBeat_TitleLine.Format(_T("ÐòºÅ,50;¿ªÊ¼Ê±¼ä,136;¿Í»§¶ËÊý,80;ÐÄÌø/·¢ËÍ¼ä¸ô(ms),100;ÐÄÌøÊ±³¤(min),0;»îÔ¾¿Í»§¶Ë/ÏûÏ¢ÈÕÖ¾,130;×´Ì¬,90;¸üÐÂÊ±¼ä/ÎÄ¼þÈÕÖ¾,136;Ê§°Ü¿Í»§¶ËÊý,150"));
 
 
 
 
-	  strLog_MSGFILE_TitleLine.Format(_T("ï¿½ï¿½ï¿?,50;ï¿½ï¿½Ê¼Ê±ï¿½ï¿½,150;ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½,80; ï¿½ï¿½ï¿½Í¼ï¿½ï¿?(ms),100;ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½(min),0;ï¿½ï¿½Ï¢ï¿½ï¿½Ö¾,130;ï¿½Ä¼ï¿½ï¿½ï¿½Ö¾,100;×´Ì¬,100"));
+	  strLog_MSGFILE_TitleLine.Format(_T("ÐòºÅ,50;¿ªÊ¼Ê±¼ä,150;¿Í»§¶ËÊý,80; ·¢ËÍ¼ä¸ô(ms),100;·¢ËÍÊ±³¤(min),0;ÏûÏ¢ÈÕÖ¾,130;ÎÄ¼þÈÕÖ¾,100;×´Ì¬,100"));
 
 
 
@@ -7714,6 +7714,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 	             WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP returns HEARTBEAT_CMD_BACK!Client index:%d;Socket:%d"),pHeapArgs->iArrClientIndex[i],sock[i]);
+	            g_WLServerTestDlg->OnClientOnlineEdgeDetected(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]]);
 
 
 
@@ -7734,6 +7735,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 				WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP returns HEARTBEAT_CMD_POLCY!Client index:%d;Socket:%d"),pHeapArgs->iArrClientIndex[i],sock[i]);
+	            g_WLServerTestDlg->OnClientOnlineEdgeDetected(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]]);
 
 
 
@@ -7826,6 +7828,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
                     WriteInfo(_T("ST:HB RecvHeartBeatBack_TCP Re RegisterClientToServer Succ!Client index:%d;Socket:%d"),pHeapArgs->iArrClientIndex[i],sock[i]);
+	                g_WLServerTestDlg->OnClientOnlineEdgeDetected(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]], TRUE);
 
 
 
@@ -10016,6 +10019,13 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
+
+		// Fix10b: reset task clients to offline before HB thread starts,
+		// so the first HB ack (online edge) triggers ONE auto config upload.
+		for (int k = 0; k < iThisThread_ClientIndex; k++)
+		{
+			g_vecAllClientObjects[pThreadArgs->iArrClientIndex[k]].Client_SetOnline(FALSE);
+		}
 
 		InterlockedIncrement(&g_nActiveHbThreads); // v16: track thread count
 		AfxBeginThread((AFX_THREADPROC)ThreadFunc_HeartbeatSend_New, (PHB_SENDER_THREAD_ARG)pThreadArgs, THREAD_PRIORITY_NORMAL, 0, 0, NULL); 		
