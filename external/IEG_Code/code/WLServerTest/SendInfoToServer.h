@@ -137,6 +137,7 @@ BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
     BOOL SendClientTrustPathToServer(LPTSTR lpComputerID);
     BOOL SendClientFileProtectExceptionToServer(LPTSTR lpComputerID);
     BOOL SendClientRegProtectExceptionToServer(LPTSTR lpComputerID);
+    BOOL SendClientOSUserToServer(LPTSTR lpComputerID);
 int SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8);
 };
 

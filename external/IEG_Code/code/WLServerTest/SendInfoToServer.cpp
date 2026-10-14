@@ -3147,7 +3147,7 @@ int CSendInfoToServer::SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpCo
 	}
 
 	// 2. 动态替换 ComputerID / ComputerIP（模板优先级低时按终端回填）
-	cmdRoot["ComputerName"] = CStrUtil::UnicodeToUTF8(lpComputerID);
+	// cmdRoot["ComputerName"] = CStrUtil::UnicodeToUTF8(lpComputerID);  // Fix9: do not overwrite ComputerName with ComputerID
 	if (lpComputerIP != NULL && lpComputerIP[0] != _T('\0'))
 	{
 		cmdRoot["ComputerIP"] = CStrUtil::UnicodeToUTF8(lpComputerIP);
@@ -3225,6 +3225,22 @@ int CSendInfoToServer::SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpCo
 // ---------------------------------------------------------------------------
 // Full-spec policy rule upload implementations (aligned with IEG real client)
 // ---------------------------------------------------------------------------
+
+static std::string BuildJsonString_OSUser(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":200,\"CMDID\":171,\"USBKeyAuth\":0,\"OsAuth\":1,\"Safemode\":0,\"DisableLocalUser\":0,\"ContentType\":0,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"UserName\":\"user_%04d\",\"Group\":\"admin\",\"Enable\":1,\"USMCreate\":0,\"Domain\":\"\",\"HardSerialID\":\"\",\"KeyName\":\"\"}", i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
 
 static std::string BuildJsonString_FileProtect(LPTSTR lpComputerID, int nCount)
 {
@@ -3360,6 +3376,19 @@ static std::string BuildJsonString_RegProtectException(LPTSTR lpComputerID, int 
     }
     sJson += "]}]";
     return sJson;
+}
+
+BOOL CSendInfoToServer::SendClientOSUserToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_USER_INFO, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = BuildJsonString_OSUser(lpComputerID, 50);
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] OSUser computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
 }
 
 BOOL CSendInfoToServer::SendClientFileProtectToServer(LPTSTR lpComputerID)
