@@ -127,7 +127,17 @@ BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
     // HTTPS - 客户端上报最新配置（CMDTYPE=200, CMDID=201, /USM/clientRefresh.do）
     // lpConfigJson: CMDContent 级 UTF-8 JSON（由 CClientConfigUploader 加载）
     // 返回值三态：CFG_UPLOAD_RET_OK / CFG_UPLOAD_RET_FAIL_REPLY / CFG_UPLOAD_RET_NET_ERROR
-    int SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8);
+    
+    // Full-spec policy rule upload APIs (aligned with IEG client interfaces)
+    BOOL SendClientFileProtectToServer(LPTSTR lpComputerID);
+    BOOL SendClientRegProtectToServer(LPTSTR lpComputerID);
+    BOOL SendClientProcessAuditToServer(LPTSTR lpComputerID);
+    BOOL SendClientMacSubObjToServer(LPTSTR lpComputerID);
+    BOOL SendClientTrustProcessToServer(LPTSTR lpComputerID);
+    BOOL SendClientTrustPathToServer(LPTSTR lpComputerID);
+    BOOL SendClientFileProtectExceptionToServer(LPTSTR lpComputerID);
+    BOOL SendClientRegProtectExceptionToServer(LPTSTR lpComputerID);
+int SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8);
 };
 
 // 客户端配置上报返回值（SendClientConfigToServer）

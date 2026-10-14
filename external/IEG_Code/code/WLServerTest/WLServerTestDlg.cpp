@@ -13064,8 +13064,27 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 		int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID,
 		                                        (LPTSTR)(LPCTSTR)vecTargets[i].strClientIP,
 		                                        strCfgJson.c_str());
+		// t8: full-spec policy rule upload (aligned with IEG client)
+		BOOL bFP    = snd.SendClientFileProtectToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bReg   = snd.SendClientRegProtectToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bProc  = snd.SendClientProcessAuditToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bMac   = snd.SendClientMacSubObjToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bTP    = snd.SendClientTrustProcessToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bTPath = snd.SendClientTrustPathToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bFPE   = snd.SendClientFileProtectExceptionToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
+		BOOL bRPE   = snd.SendClientRegProtectExceptionToServer((LPTSTR)(LPCTSTR)vecTargets[i].strComputerID);
 		WriteInfo(_T("[CFG-UPLOAD] manual computerID=%s ip=%s ret=%d"), 
 		          vecTargets[i].strComputerID.GetString(), vecTargets[i].strClientIP.GetString(), nRet);
+		if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE)
+		{
+			InterlockedIncrement64(&g_nCfgUploadOk64);
+		}
+		else
+		{
+			// t6: enqueue retry on manual upload failure; final ok/fail counted in retry thread
+			if (!AddCfgUploadRetry(vecTargets[i].strComputerID, vecTargets[i].strClientIP))
+				InterlockedIncrement64(&g_nCfgUploadFail64);
+		}
 		++nBatchCount;
 	}
 
@@ -13129,9 +13148,18 @@ void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
 	int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)strComputerID,
 	                                        (LPTSTR)(LPCTSTR)strClientIP,
 	                                        strCfgJson.c_str());
+	// t8: full-spec policy rule upload (aligned with IEG client)
+	BOOL bFP    = snd.SendClientFileProtectToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bReg   = snd.SendClientRegProtectToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bProc  = snd.SendClientProcessAuditToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bMac   = snd.SendClientMacSubObjToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bTP    = snd.SendClientTrustProcessToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bTPath = snd.SendClientTrustPathToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bFPE   = snd.SendClientFileProtectExceptionToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bRPE   = snd.SendClientRegProtectExceptionToServer((LPTSTR)(LPCTSTR)strComputerID);
 
 	WriteInfo(_T("[CFG-UPLOAD] computerID=%s ip=%s ret=%d"), strComputerID.GetString(), strClientIP.GetString(), nRet);
-	if (nRet == CFG_UPLOAD_RET_OK)
+	if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE)
 	{
 		InterlockedIncrement64(&g_nCfgUploadOk64);
 	}

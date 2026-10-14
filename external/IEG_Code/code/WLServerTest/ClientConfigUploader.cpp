@@ -90,162 +90,13 @@ const char* CClientConfigUploader::GetDefaultTemplate()
   "WpdControlMode": 1,
   "UsbStorageCtrl": 1,
   "WifiWhiteList": 0,
-  "dwPrinterControlMode": 1,
-  "dwCameraControlMode": 1,
-  "dwMicControlMode": 1,
-  "dwPeripheralPolicy": 1,
-  "peripheralWhiteList": [
-    {
-      "devId": "USB\VID_1234&PID_5678",
-      "devName": "SafeUKey",
-      "devType": 1
-    }
-  ],
-  "peripheralBlackList": [
-    {
-      "devId": "USB\VID_9999&PID_0001",
-      "devName": "UnknownDevice",
-      "devType": 9
-    }
-  ],
   "dwSystemCheckStatus": 1,
-  "dwBaselinePolicyId": 1001,
-  "dwBaselineScore": 95,
-  "dwBaselineCheckResult": 1,
-  "baselineItems": [
-    {
-      "itemId": 1001,
-      "itemName": "PasswordPolicy",
-      "checkResult": 1,
-      "riskLevel": 1
-    },
-    {
-      "itemId": 1002,
-      "itemName": "AuditPolicy",
-      "checkResult": 1,
-      "riskLevel": 1
-    },
-    {
-      "itemId": 1003,
-      "itemName": "FirewallStatus",
-      "checkResult": 1,
-      "riskLevel": 1
-    },
-    {
-      "itemId": 1004,
-      "itemName": "RegistryProtection",
-      "checkResult": 1,
-      "riskLevel": 2
-    },
-    {
-      "itemId": 1005,
-      "itemName": "FileProtection",
-      "checkResult": 1,
-      "riskLevel": 2
-    },
-    {
-      "itemId": 1006,
-      "itemName": "DataProtection",
-      "checkResult": 1,
-      "riskLevel": 2
-    },
-    {
-      "itemId": 1007,
-      "itemName": "VirusDefinition",
-      "checkResult": 1,
-      "riskLevel": 1
-    },
-    {
-      "itemId": 1008,
-      "itemName": "BehaviorMonitor",
-      "checkResult": 1,
-      "riskLevel": 2
-    },
-    {
-      "itemId": 1009,
-      "itemName": "BackupStatus",
-      "checkResult": 1,
-      "riskLevel": 3
-    },
-    {
-      "itemId": 1010,
-      "itemName": "MACPolicy",
-      "checkResult": 1,
-      "riskLevel": 3
-    }
-  ],
   "dwRegProtectStatus": 1,
   "dwRegProtectAlarmMode": 1,
-  "dwRegProtectMode": 1,
-  "dwRegAuditMode": 1,
-  "regProtectItems": [
-    {
-      "key": "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
-      "mode": 1
-    },
-    {
-      "key": "HKLM\SYSTEM\CurrentControlSet\Services",
-      "mode": 2
-    }
-  ],
   "dwFilePotectStatus": 1,
   "dwFileProtectAlarmMode": 1,
-  "dwFileProtectMode": 1,
-  "fileProtectPaths": [
-    "C:\Windows\System32",
-    "C:\Program Files\IEG"
-  ],
-  "fileProtectExts": [
-    ".exe",
-    ".dll",
-    ".sys",
-    ".drv"
-  ],
-  "dwFileAutoBackup": 1,
-  "dwFileTrustMode": 0,
-  "dwMACStatus": 0,
-  "dwMACPolicy": 1,
-  "dwMACLevel": 3,
-  "macSubjectList": [
-    {
-      "name": "System",
-      "sid": "S-1-5-18",
-      "level": 3
-    },
-    {
-      "name": "Administrators",
-      "sid": "S-1-5-32-544",
-      "level": 2
-    }
-  ],
-  "macObjectList": [
-    {
-      "path": "C:\Secret",
-      "level": 3,
-      "type": 1
-    },
-    {
-      "path": "C:\Classified",
-      "level": 2,
-      "type": 2
-    }
-  ],
+  "dwMACStatus": 1,
   "dwDataPotectStatus": 1,
-  "dwDataProtectionPolicy": 1,
-  "dwDataEncryptStatus": 1,
-  "dwDataBackupStatus": 0,
-  "dataProtectScopes": [
-    {
-      "scopeName": "Confidential",
-      "scopeType": 1,
-      "encryptAlg": "AES-256"
-    },
-    {
-      "scopeName": "Internal",
-      "scopeType": 2,
-      "encryptAlg": "SM4"
-    }
-  ],
   "dwPasswordComplexity": 1,
   "dwMin_passwd_len": 8,
   "dwPassword_hist_len": 5,
@@ -301,36 +152,10 @@ const char* CClientConfigUploader::GetDefaultTemplate()
   "dwFireWallState": 1,
   "dwIsUpLoadSysLog": 1,
   "dwUpLoadSysLogCycleDay": 1,
+  "dwIsProcessAudit": 1,
   "uploadSpeed": 0,
   "scanControl": 0,
-  "UploadSysWLFile": 1,
-  "LogServerIP": "",
-  "LogServerPort": 0,
-  "dwIsProcessAudit": 1,
-  "dwProcessAuditPolicy": 1,
-  "processAuditItems": [
-    {
-      "procName": "cmd.exe",
-      "auditType": 1,
-      "action": 1
-    },
-    {
-      "procName": "powershell.exe",
-      "auditType": 2,
-      "action": 1
-    },
-    {
-      "procName": "wscript.exe",
-      "auditType": 1,
-      "action": 1
-    }
-  ],
   "loopholeProtect": 1,
-  "dwVulScanResult": 0,
-  "dwVulFixStatus": 1,
-  "vulDbVersion": "20261013.001",
-  "dwVulAutoFix": 1,
-  "dwVulScanScope": 1,
   "SecDetectCheckStatus": 1,
   "SecDetectTimeType": 1,
   "SecDectDay": 1,
@@ -350,126 +175,9 @@ const char* CClientConfigUploader::GetDefaultTemplate()
     }
   ],
   "dwMaintainUkeyStatus": 0,
-  "dwTrustZoneEnabled": 1,
-  "trustZoneList": [
-    {
-      "path": "C:\IEG\Trust",
-      "type": 1,
-      "desc": "internal tools"
-    },
-    {
-      "path": "D:\DevTools",
-      "type": 2,
-      "desc": "development zone"
-    }
-  ],
-  "dwIsolationZoneEnabled": 1,
-  "isolationZonePath": "C:\IEG\Isolation",
-  "isolationZoneCapacity": 10240,
-  "isolationZoneUsage": 512,
-  "isolationZoneItems": [
-    {
-      "fileName": "suspicious.exe",
-      "originPath": "C:\Users\Test\Downloads",
-      "isolateTime": "2026-10-13T14:00:00Z",
-      "threatLevel": 3
-    },
-    {
-      "fileName": "trojan.dll",
-      "originPath": "C:\Users\Test\AppData\Local\Temp",
-      "isolateTime": "2026-10-12T10:30:00Z",
-      "threatLevel": 5
-    }
-  ],
-  "dwVirusRealTimeScan": 1,
-  "dwVirusScheduledScan": 1,
-  "virusEngineVersion": "V2026.10.01.001",
-  "virusDbVersion": "20261013.001",
-  "dwVirusScanScope": 1,
-  "dwVirusHealMode": 1,
-  "dwVirusQuarantineMode": 1,
-  "dwVirusScanResult": 0,
-  "dwBehaviorMonitorPolicy": 1,
-  "dwBehaviorBlockMode": 1,
-  "behaviorMonitorItems": [
-    {
-      "ruleId": 2001,
-      "ruleName": "RansomwareBehavior",
-      "ruleType": 1,
-      "severity": 5,
-      "status": 1
-    },
-    {
-      "ruleId": 2002,
-      "ruleName": "DataExfiltration",
-      "ruleType": 2,
-      "severity": 4,
-      "status": 1
-    },
-    {
-      "ruleId": 2003,
-      "ruleName": "PrivilegeEscalation",
-      "ruleType": 3,
-      "severity": 5,
-      "status": 1
-    },
-    {
-      "ruleId": 2004,
-      "ruleName": "LateralMovement",
-      "ruleType": 4,
-      "severity": 4,
-      "status": 1
-    }
-  ],
-  "dwBackupPolicy": 1,
-  "dwBackupScheduleType": 1,
-  "backupStoragePath": "C:\IEG\Backup",
-  "dwBackupLastTime": 0,
-  "dwBackupStatus": 1,
-  "dwRecoveryStatus": 0,
-  "dwThreatDetectStatus": 1,
-  "dwThreatDetectLevel": 2,
-  "dwHostDefenceStatus": 1,
-  "dwSysProtectStatus": 1,
-  "networkAdapterInfo": [
-    {
-      "name": "Ethernet0",
-      "mac": "00-50-56-C0-00-08",
-      "ip": "192.168.1.100",
-      "type": 1
-    },
-    {
-      "name": "Wi-Fi",
-      "mac": "00-50-56-C0-00-09",
-      "ip": "192.168.1.101",
-      "type": 2
-    }
-  ],
-  "extDevPolicy": 1,
-  "extDevSubTypeMask": 0,
-  "dwSafetyStoreEnabled": 1,
-  "safetyStoreList": [
-    {
-      "storeName": "VaultA",
-      "storePath": "C:\IEG\VaultA",
-      "capacity": 5120,
-      "usage": 1024
-    }
-  ],
-  "dwNwlPolicy": 1,
-  "nwlWhiteList": [
-    {
-      "ip": "10.0.0.0",
-      "mask": "255.0.0.0",
-      "desc": "intranet"
-    }
-  ],
-  "dwOptLogEnabled": 1,
-  "dwOptLogLevel": 2,
-  "dwThtLogEnabled": 1,
-  "dwThtLogLevel": 3,
-  "dwAdminAuditEnabled": 1,
-  "dwAdminPrivilegeLimit": 1
+  "UploadSysWLFile": 1,
+  "LogServerIP": "",
+  "LogServerPort": 0
 }
 })CFGJSON";
 	return s_pDefault;
@@ -512,7 +220,12 @@ BOOL CClientConfigUploader::LoadClientConfigTemplate(std::string& strCmdContentJ
 		Json::Value::Members members = root.getMemberNames();
 		for (size_t i = 0; i < members.size(); ++i)
 		{
-			baseRoot[members[i]] = root[members[i]];
+			// Only override fields that the IEG standard template already has,
+			// ignore unknown/legacy custom fields to keep the payload standard.
+			if (baseRoot.isMember(members[i]))
+			{
+				baseRoot[members[i]] = root[members[i]];
+			}
 		}
 		Json::FastWriter writer;
 		strCmdContentJson = writer.write(baseRoot);
