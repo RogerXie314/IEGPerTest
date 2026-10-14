@@ -477,8 +477,6 @@ ON_BN_CLICKED(IDC_BUTTON_LOG_STOP, &CWLServerTestDlg::OnBnClickedLogStop)
 
 
 ON_BN_CLICKED(IDC_BUTTON_WL_UPLOAD, &CWLServerTestDlg::OnBnClickedWlUpload)
-ON_BN_CLICKED(IDC_BUTTON_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedUploadCfg)
-ON_BN_CLICKED(IDC_CHECK_AUTO_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedChkAutoUploadCfg)
 
 
 
@@ -525,6 +523,20 @@ ON_MESSAGE(WM_APP+100, &CWLServerTestDlg::OnAppendLogOutput)
 
 
 END_MESSAGE_MAP()
+namespace {
+	void DebugTrace(const char* szMsg) {
+		HANDLE hFile = CreateFileA("C:\WLTest_Debug.txt", GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			DWORD dwWritten = 0;
+			SetFilePointer(hFile, 0, NULL, FILE_END);
+			WriteFile(hFile, szMsg, (DWORD)strlen(szMsg), &dwWritten, NULL);
+			const char szNewLine[2] = { 13, 10 };
+			WriteFile(hFile, szNewLine, 2, &dwWritten, NULL);
+			CloseHandle(hFile);
+		}
+	}
+}
+
 
 
 
@@ -1396,6 +1408,16 @@ ON_BN_CLICKED(IDC_BUTTON_LOG_STOP, &CWLServerTestDlg::OnBnClickedLogStop)
 
 
 ON_BN_CLICKED(IDC_BUTTON_WL_UPLOAD, &CWLServerTestDlg::OnBnClickedWlUpload)
+
+
+
+
+ON_BN_CLICKED(IDC_BUTTON_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedUploadCfg)
+
+
+
+
+ON_BN_CLICKED(IDC_CHECK_AUTO_UPLOAD_CFG, &CWLServerTestDlg::OnBnClickedChkAutoUploadCfg)
 
 
 
@@ -13005,9 +13027,11 @@ void CWLServerTestDlg::OnBnClickedWlUpload()
 
 void CWLServerTestDlg::OnBnClickedUploadCfg()
 {
+	DebugTrace("OnBnClickedUploadCfg entered");
 	// t5: ?????????????????????????????????¦²????????????????
 	// ???????????????????? -> ???????? (CSingleLock) ????????????????×® -> ????????
 	// ?? ?????????·Ú??????? -> GetTickCount64 ????????? -> ?§Ø????? -> ???????????
+	DebugTrace("checking empty clients");
 	if (g_vecAllClientObjects.empty())
 	{
 		AfxMessageBox(_T("Please register clients first"));
@@ -13019,6 +13043,7 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 	if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
 	{
 		WriteError(_T("[CFG-UPLOAD] load template failed: %s"), strErrMsg.GetString());
+		DebugTrace("load template failed");
 		AfxMessageBox(strErrMsg.IsEmpty() ? _T("Load config template failed") : strErrMsg);
 		return;
 	}
@@ -13044,6 +13069,7 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 		}
 	}
 
+	DebugTrace("no registered targets");
 	if (vecTargets.empty())
 	{
 		AfxMessageBox(_T("No registered clients to upload config"));
@@ -13052,7 +13078,9 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 
 	ULONGLONG ullBatchStart = GetTickCount64();   // t5: ????????????
 	int nBatchCount = 0;
+	DebugTrace("batch loop starting");
 	WriteInfo(_T("[CFG-UPLOAD] manual batch start, target=%d"), (int)vecTargets.size());
+
 
 	// ?????????????§Ò?????????????????????? -------------------------------
 	CString strIdPre = m_strEditCtrl_ToRegisterClient_ClientIDPrefix;

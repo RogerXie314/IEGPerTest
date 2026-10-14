@@ -3230,7 +3230,7 @@ static std::string BuildJsonString_FileProtect(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":241,\"Enable\":1,\"alarmMode\":1,\"addOrFull\":1,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":241,\"Enable\":1,\"alarmMode\":1,\"addOrFull\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[256];
@@ -3246,7 +3246,7 @@ static std::string BuildJsonString_RegProtect(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":240,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":240,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[512];
@@ -3262,7 +3262,7 @@ static std::string BuildJsonString_ProcessAudit(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":243,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":243,\"Enable\":1,\"KeepOldAuditSwitch\":0,\"JustReload\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[256];
@@ -3276,7 +3276,7 @@ static std::string BuildJsonString_ProcessAudit(LPTSTR lpComputerID, int nCount)
 
 static std::string BuildJsonString_MacSubObj(LPTSTR lpComputerID, int nUserCount, int nFileCount)
 {
-    std::string sJson = "{\"ComputerID\":\"";
+    std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
     sJson += "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"CMDContent_1\":[";
     for (int i = 0; i < nUserCount; ++i)
@@ -3294,13 +3294,13 @@ static std::string BuildJsonString_MacSubObj(LPTSTR lpComputerID, int nUserCount
         if (i > 0) sJson += ",";
         sJson += buf;
     }
-    sJson += "]}";
+    sJson += "]}]";
     return sJson;
 }
 
 static std::string BuildJsonString_TrustProcess(LPTSTR lpComputerID, int nCount)
 {
-    std::string sJson = "{\"CMDID\":247,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"";
+    std::string sJson = "[{\"CMDID\":247,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
     sJson += "\",\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
@@ -3310,13 +3310,13 @@ static std::string BuildJsonString_TrustProcess(LPTSTR lpComputerID, int nCount)
         if (i > 0) sJson += ",";
         sJson += buf;
     }
-    sJson += "]}";
+    sJson += "]}]";
     return sJson;
 }
 
 static std::string BuildJsonString_TrustPath(LPTSTR lpComputerID, int nCount)
 {
-    std::string sJson = "{\"CMDID\":248,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"";
+    std::string sJson = "[{\"CMDID\":248,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
     sJson += "\",\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
@@ -3326,7 +3326,7 @@ static std::string BuildJsonString_TrustPath(LPTSTR lpComputerID, int nCount)
         if (i > 0) sJson += ",";
         sJson += buf;
     }
-    sJson += "]}";
+    sJson += "]}]";
     return sJson;
 }
 
@@ -3334,7 +3334,7 @@ static std::string BuildJsonString_FileProtectException(LPTSTR lpComputerID, int
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":242,\"addOrFull\":1,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":242,\"addOrFull\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[256];
@@ -3350,7 +3350,7 @@ static std::string BuildJsonString_RegProtectException(LPTSTR lpComputerID, int 
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":121,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":121,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[512];
