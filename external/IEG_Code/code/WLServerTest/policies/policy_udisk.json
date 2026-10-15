@@ -12,301 +12,551 @@
       "SerialNumber": "UDISK-SN-0000",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0000",
+      "VolumeName": "Volume_0000"
     },
     {
       "SerialNumber": "UDISK-SN-0001",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0001",
+      "VolumeName": "Volume_0001"
     },
     {
       "SerialNumber": "UDISK-SN-0002",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0002",
+      "VolumeName": "Volume_0002"
     },
     {
       "SerialNumber": "UDISK-SN-0003",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0003",
+      "VolumeName": "Volume_0003"
     },
     {
       "SerialNumber": "UDISK-SN-0004",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0004",
+      "VolumeName": "Volume_0004"
     },
     {
       "SerialNumber": "UDISK-SN-0005",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0005",
+      "VolumeName": "Volume_0005"
     },
     {
       "SerialNumber": "UDISK-SN-0006",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0006",
+      "VolumeName": "Volume_0006"
     },
     {
       "SerialNumber": "UDISK-SN-0007",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0007",
+      "VolumeName": "Volume_0007"
     },
     {
       "SerialNumber": "UDISK-SN-0008",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0008",
+      "VolumeName": "Volume_0008"
     },
     {
       "SerialNumber": "UDISK-SN-0009",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0009",
+      "VolumeName": "Volume_0009"
     },
     {
       "SerialNumber": "UDISK-SN-0010",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0010",
+      "VolumeName": "Volume_0010"
     },
     {
       "SerialNumber": "UDISK-SN-0011",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0011",
+      "VolumeName": "Volume_0011"
     },
     {
       "SerialNumber": "UDISK-SN-0012",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0012",
+      "VolumeName": "Volume_0012"
     },
     {
       "SerialNumber": "UDISK-SN-0013",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0013",
+      "VolumeName": "Volume_0013"
     },
     {
       "SerialNumber": "UDISK-SN-0014",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0014",
+      "VolumeName": "Volume_0014"
     },
     {
       "SerialNumber": "UDISK-SN-0015",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0015",
+      "VolumeName": "Volume_0015"
     },
     {
       "SerialNumber": "UDISK-SN-0016",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0016",
+      "VolumeName": "Volume_0016"
     },
     {
       "SerialNumber": "UDISK-SN-0017",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0017",
+      "VolumeName": "Volume_0017"
     },
     {
       "SerialNumber": "UDISK-SN-0018",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0018",
+      "VolumeName": "Volume_0018"
     },
     {
       "SerialNumber": "UDISK-SN-0019",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0019",
+      "VolumeName": "Volume_0019"
     },
     {
       "SerialNumber": "UDISK-SN-0020",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0020",
+      "VolumeName": "Volume_0020"
     },
     {
       "SerialNumber": "UDISK-SN-0021",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0021",
+      "VolumeName": "Volume_0021"
     },
     {
       "SerialNumber": "UDISK-SN-0022",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0022",
+      "VolumeName": "Volume_0022"
     },
     {
       "SerialNumber": "UDISK-SN-0023",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0023",
+      "VolumeName": "Volume_0023"
     },
     {
       "SerialNumber": "UDISK-SN-0024",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0024",
+      "VolumeName": "Volume_0024"
     },
     {
       "SerialNumber": "UDISK-SN-0025",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0025",
+      "VolumeName": "Volume_0025"
     },
     {
       "SerialNumber": "UDISK-SN-0026",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0026",
+      "VolumeName": "Volume_0026"
     },
     {
       "SerialNumber": "UDISK-SN-0027",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0027",
+      "VolumeName": "Volume_0027"
     },
     {
       "SerialNumber": "UDISK-SN-0028",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0028",
+      "VolumeName": "Volume_0028"
     },
     {
       "SerialNumber": "UDISK-SN-0029",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0029",
+      "VolumeName": "Volume_0029"
     },
     {
       "SerialNumber": "UDISK-SN-0030",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0030",
+      "VolumeName": "Volume_0030"
     },
     {
       "SerialNumber": "UDISK-SN-0031",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0031",
+      "VolumeName": "Volume_0031"
     },
     {
       "SerialNumber": "UDISK-SN-0032",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0032",
+      "VolumeName": "Volume_0032"
     },
     {
       "SerialNumber": "UDISK-SN-0033",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0033",
+      "VolumeName": "Volume_0033"
     },
     {
       "SerialNumber": "UDISK-SN-0034",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0034",
+      "VolumeName": "Volume_0034"
     },
     {
       "SerialNumber": "UDISK-SN-0035",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0035",
+      "VolumeName": "Volume_0035"
     },
     {
       "SerialNumber": "UDISK-SN-0036",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0036",
+      "VolumeName": "Volume_0036"
     },
     {
       "SerialNumber": "UDISK-SN-0037",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0037",
+      "VolumeName": "Volume_0037"
     },
     {
       "SerialNumber": "UDISK-SN-0038",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0038",
+      "VolumeName": "Volume_0038"
     },
     {
       "SerialNumber": "UDISK-SN-0039",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0039",
+      "VolumeName": "Volume_0039"
     },
     {
       "SerialNumber": "UDISK-SN-0040",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0040",
+      "VolumeName": "Volume_0040"
     },
     {
       "SerialNumber": "UDISK-SN-0041",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0041",
+      "VolumeName": "Volume_0041"
     },
     {
       "SerialNumber": "UDISK-SN-0042",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0042",
+      "VolumeName": "Volume_0042"
     },
     {
       "SerialNumber": "UDISK-SN-0043",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0043",
+      "VolumeName": "Volume_0043"
     },
     {
       "SerialNumber": "UDISK-SN-0044",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0044",
+      "VolumeName": "Volume_0044"
     },
     {
       "SerialNumber": "UDISK-SN-0045",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0045",
+      "VolumeName": "Volume_0045"
     },
     {
       "SerialNumber": "UDISK-SN-0046",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0046",
+      "VolumeName": "Volume_0046"
     },
     {
       "SerialNumber": "UDISK-SN-0047",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 3,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0047",
+      "VolumeName": "Volume_0047"
     },
     {
       "SerialNumber": "UDISK-SN-0048",
       "RegStatus": 1,
       "ReadOnly": 0,
-      "Encrypt": 1
+      "Encrypt": 1,
+      "UDiskType": 1,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0048",
+      "VolumeName": "Volume_0048"
     },
     {
       "SerialNumber": "UDISK-SN-0049",
       "RegStatus": 1,
       "ReadOnly": 1,
-      "Encrypt": 0
+      "Encrypt": 0,
+      "UDiskType": 2,
+      "Authority": 7,
+      "RegisterTime": "2026-01-01 10:00:00",
+      "Describe": "U盘描述 0049",
+      "VolumeName": "Volume_0049"
     }
   ]
 }

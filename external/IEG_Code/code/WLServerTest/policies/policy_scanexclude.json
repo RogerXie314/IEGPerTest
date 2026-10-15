@@ -14,7 +14,37 @@
       "FILEPROTECT": 1,
       "DEP": 1,
       "IPSEC": 1,
-      "PROCESSAUDIT": 1
+      "PROCESSAUDIT": 1,
+      "Paths": [
+        {
+          "Type": 0,
+          "Path": "C:\\Windows\\Temp"
+        },
+        {
+          "Type": 0,
+          "Path": "C:\\Users\\Default\\AppData\\Local\\Temp"
+        },
+        {
+          "Type": 0,
+          "Path": "C:\\Program Files\\Common Files"
+        },
+        {
+          "Type": 1,
+          "Path": "C:\\Test\\Exclude\\file_0001.txt"
+        },
+        {
+          "Type": 1,
+          "Path": "C:\\Test\\Exclude\\file_0002.txt"
+        },
+        {
+          "Type": 2,
+          "Path": "HKLM\\SOFTWARE\\Demo\\ExcludeKey1"
+        },
+        {
+          "Type": 2,
+          "Path": "HKLM\\SOFTWARE\\Demo\\ExcludeKey2"
+        }
+      ]
     }
   ]
 }

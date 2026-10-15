@@ -15,7 +15,11 @@
       "Protocol": 6,
       "LocalPort": 1000,
       "RemoteIP": "192.168.0.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 80,
+      "LocalIP": "10.0.0.0",
+      "FullPath": "C:\\Test\\Firewall\\app_0000.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0001",
@@ -24,7 +28,11 @@
       "Protocol": 6,
       "LocalPort": 1001,
       "RemoteIP": "192.168.1.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 81,
+      "LocalIP": "10.0.0.1",
+      "FullPath": "C:\\Test\\Firewall\\app_0001.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0002",
@@ -33,7 +41,11 @@
       "Protocol": 6,
       "LocalPort": 1002,
       "RemoteIP": "192.168.2.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 82,
+      "LocalIP": "10.0.0.2",
+      "FullPath": "C:\\Test\\Firewall\\app_0002.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0003",
@@ -42,7 +54,11 @@
       "Protocol": 6,
       "LocalPort": 1003,
       "RemoteIP": "192.168.3.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 83,
+      "LocalIP": "10.0.0.3",
+      "FullPath": "C:\\Test\\Firewall\\app_0003.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0004",
@@ -51,7 +67,11 @@
       "Protocol": 6,
       "LocalPort": 1004,
       "RemoteIP": "192.168.4.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 84,
+      "LocalIP": "10.0.0.4",
+      "FullPath": "C:\\Test\\Firewall\\app_0004.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0005",
@@ -60,7 +80,11 @@
       "Protocol": 6,
       "LocalPort": 1005,
       "RemoteIP": "192.168.5.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 85,
+      "LocalIP": "10.0.0.5",
+      "FullPath": "C:\\Test\\Firewall\\app_0005.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0006",
@@ -69,7 +93,11 @@
       "Protocol": 6,
       "LocalPort": 1006,
       "RemoteIP": "192.168.6.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 86,
+      "LocalIP": "10.0.0.6",
+      "FullPath": "C:\\Test\\Firewall\\app_0006.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0007",
@@ -78,7 +106,11 @@
       "Protocol": 6,
       "LocalPort": 1007,
       "RemoteIP": "192.168.7.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 87,
+      "LocalIP": "10.0.0.7",
+      "FullPath": "C:\\Test\\Firewall\\app_0007.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0008",
@@ -87,7 +119,11 @@
       "Protocol": 6,
       "LocalPort": 1008,
       "RemoteIP": "192.168.8.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 88,
+      "LocalIP": "10.0.0.8",
+      "FullPath": "C:\\Test\\Firewall\\app_0008.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0009",
@@ -96,7 +132,11 @@
       "Protocol": 6,
       "LocalPort": 1009,
       "RemoteIP": "192.168.9.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 89,
+      "LocalIP": "10.0.0.9",
+      "FullPath": "C:\\Test\\Firewall\\app_0009.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0010",
@@ -105,7 +145,11 @@
       "Protocol": 6,
       "LocalPort": 1010,
       "RemoteIP": "192.168.10.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 90,
+      "LocalIP": "10.0.0.10",
+      "FullPath": "C:\\Test\\Firewall\\app_0010.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0011",
@@ -114,7 +158,11 @@
       "Protocol": 6,
       "LocalPort": 1011,
       "RemoteIP": "192.168.11.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 91,
+      "LocalIP": "10.0.0.11",
+      "FullPath": "C:\\Test\\Firewall\\app_0011.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0012",
@@ -123,7 +171,11 @@
       "Protocol": 6,
       "LocalPort": 1012,
       "RemoteIP": "192.168.12.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 92,
+      "LocalIP": "10.0.0.12",
+      "FullPath": "C:\\Test\\Firewall\\app_0012.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0013",
@@ -132,7 +184,11 @@
       "Protocol": 6,
       "LocalPort": 1013,
       "RemoteIP": "192.168.13.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 93,
+      "LocalIP": "10.0.0.13",
+      "FullPath": "C:\\Test\\Firewall\\app_0013.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0014",
@@ -141,7 +197,11 @@
       "Protocol": 6,
       "LocalPort": 1014,
       "RemoteIP": "192.168.14.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 94,
+      "LocalIP": "10.0.0.14",
+      "FullPath": "C:\\Test\\Firewall\\app_0014.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0015",
@@ -150,7 +210,11 @@
       "Protocol": 6,
       "LocalPort": 1015,
       "RemoteIP": "192.168.15.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 95,
+      "LocalIP": "10.0.0.15",
+      "FullPath": "C:\\Test\\Firewall\\app_0015.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0016",
@@ -159,7 +223,11 @@
       "Protocol": 6,
       "LocalPort": 1016,
       "RemoteIP": "192.168.16.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 96,
+      "LocalIP": "10.0.0.16",
+      "FullPath": "C:\\Test\\Firewall\\app_0016.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0017",
@@ -168,7 +236,11 @@
       "Protocol": 6,
       "LocalPort": 1017,
       "RemoteIP": "192.168.17.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 97,
+      "LocalIP": "10.0.0.17",
+      "FullPath": "C:\\Test\\Firewall\\app_0017.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0018",
@@ -177,7 +249,11 @@
       "Protocol": 6,
       "LocalPort": 1018,
       "RemoteIP": "192.168.18.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 98,
+      "LocalIP": "10.0.0.18",
+      "FullPath": "C:\\Test\\Firewall\\app_0018.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0019",
@@ -186,7 +262,11 @@
       "Protocol": 6,
       "LocalPort": 1019,
       "RemoteIP": "192.168.19.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 99,
+      "LocalIP": "10.0.0.19",
+      "FullPath": "C:\\Test\\Firewall\\app_0019.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0020",
@@ -195,7 +275,11 @@
       "Protocol": 6,
       "LocalPort": 1020,
       "RemoteIP": "192.168.20.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 100,
+      "LocalIP": "10.0.0.20",
+      "FullPath": "C:\\Test\\Firewall\\app_0020.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0021",
@@ -204,7 +288,11 @@
       "Protocol": 6,
       "LocalPort": 1021,
       "RemoteIP": "192.168.21.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 101,
+      "LocalIP": "10.0.0.21",
+      "FullPath": "C:\\Test\\Firewall\\app_0021.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0022",
@@ -213,7 +301,11 @@
       "Protocol": 6,
       "LocalPort": 1022,
       "RemoteIP": "192.168.22.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 102,
+      "LocalIP": "10.0.0.22",
+      "FullPath": "C:\\Test\\Firewall\\app_0022.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0023",
@@ -222,7 +314,11 @@
       "Protocol": 6,
       "LocalPort": 1023,
       "RemoteIP": "192.168.23.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 103,
+      "LocalIP": "10.0.0.23",
+      "FullPath": "C:\\Test\\Firewall\\app_0023.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0024",
@@ -231,7 +327,11 @@
       "Protocol": 6,
       "LocalPort": 1024,
       "RemoteIP": "192.168.24.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 104,
+      "LocalIP": "10.0.0.24",
+      "FullPath": "C:\\Test\\Firewall\\app_0024.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0025",
@@ -240,7 +340,11 @@
       "Protocol": 6,
       "LocalPort": 1025,
       "RemoteIP": "192.168.25.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 105,
+      "LocalIP": "10.0.0.25",
+      "FullPath": "C:\\Test\\Firewall\\app_0025.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0026",
@@ -249,7 +353,11 @@
       "Protocol": 6,
       "LocalPort": 1026,
       "RemoteIP": "192.168.26.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 106,
+      "LocalIP": "10.0.0.26",
+      "FullPath": "C:\\Test\\Firewall\\app_0026.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0027",
@@ -258,7 +366,11 @@
       "Protocol": 6,
       "LocalPort": 1027,
       "RemoteIP": "192.168.27.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 107,
+      "LocalIP": "10.0.0.27",
+      "FullPath": "C:\\Test\\Firewall\\app_0027.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0028",
@@ -267,7 +379,11 @@
       "Protocol": 6,
       "LocalPort": 1028,
       "RemoteIP": "192.168.28.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 108,
+      "LocalIP": "10.0.0.28",
+      "FullPath": "C:\\Test\\Firewall\\app_0028.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0029",
@@ -276,7 +392,11 @@
       "Protocol": 6,
       "LocalPort": 1029,
       "RemoteIP": "192.168.29.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 109,
+      "LocalIP": "10.0.0.29",
+      "FullPath": "C:\\Test\\Firewall\\app_0029.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0030",
@@ -285,7 +405,11 @@
       "Protocol": 6,
       "LocalPort": 1030,
       "RemoteIP": "192.168.30.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 110,
+      "LocalIP": "10.0.0.30",
+      "FullPath": "C:\\Test\\Firewall\\app_0030.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0031",
@@ -294,7 +418,11 @@
       "Protocol": 6,
       "LocalPort": 1031,
       "RemoteIP": "192.168.31.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 111,
+      "LocalIP": "10.0.0.31",
+      "FullPath": "C:\\Test\\Firewall\\app_0031.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0032",
@@ -303,7 +431,11 @@
       "Protocol": 6,
       "LocalPort": 1032,
       "RemoteIP": "192.168.32.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 112,
+      "LocalIP": "10.0.0.32",
+      "FullPath": "C:\\Test\\Firewall\\app_0032.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0033",
@@ -312,7 +444,11 @@
       "Protocol": 6,
       "LocalPort": 1033,
       "RemoteIP": "192.168.33.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 113,
+      "LocalIP": "10.0.0.33",
+      "FullPath": "C:\\Test\\Firewall\\app_0033.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0034",
@@ -321,7 +457,11 @@
       "Protocol": 6,
       "LocalPort": 1034,
       "RemoteIP": "192.168.34.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 114,
+      "LocalIP": "10.0.0.34",
+      "FullPath": "C:\\Test\\Firewall\\app_0034.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0035",
@@ -330,7 +470,11 @@
       "Protocol": 6,
       "LocalPort": 1035,
       "RemoteIP": "192.168.35.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 115,
+      "LocalIP": "10.0.0.35",
+      "FullPath": "C:\\Test\\Firewall\\app_0035.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0036",
@@ -339,7 +483,11 @@
       "Protocol": 6,
       "LocalPort": 1036,
       "RemoteIP": "192.168.36.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 116,
+      "LocalIP": "10.0.0.36",
+      "FullPath": "C:\\Test\\Firewall\\app_0036.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0037",
@@ -348,7 +496,11 @@
       "Protocol": 6,
       "LocalPort": 1037,
       "RemoteIP": "192.168.37.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 117,
+      "LocalIP": "10.0.0.37",
+      "FullPath": "C:\\Test\\Firewall\\app_0037.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0038",
@@ -357,7 +509,11 @@
       "Protocol": 6,
       "LocalPort": 1038,
       "RemoteIP": "192.168.38.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 118,
+      "LocalIP": "10.0.0.38",
+      "FullPath": "C:\\Test\\Firewall\\app_0038.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0039",
@@ -366,7 +522,11 @@
       "Protocol": 6,
       "LocalPort": 1039,
       "RemoteIP": "192.168.39.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 119,
+      "LocalIP": "10.0.0.39",
+      "FullPath": "C:\\Test\\Firewall\\app_0039.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0040",
@@ -375,7 +535,11 @@
       "Protocol": 6,
       "LocalPort": 1040,
       "RemoteIP": "192.168.40.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 120,
+      "LocalIP": "10.0.0.40",
+      "FullPath": "C:\\Test\\Firewall\\app_0040.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0041",
@@ -384,7 +548,11 @@
       "Protocol": 6,
       "LocalPort": 1041,
       "RemoteIP": "192.168.41.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 121,
+      "LocalIP": "10.0.0.41",
+      "FullPath": "C:\\Test\\Firewall\\app_0041.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0042",
@@ -393,7 +561,11 @@
       "Protocol": 6,
       "LocalPort": 1042,
       "RemoteIP": "192.168.42.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 122,
+      "LocalIP": "10.0.0.42",
+      "FullPath": "C:\\Test\\Firewall\\app_0042.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0043",
@@ -402,7 +574,11 @@
       "Protocol": 6,
       "LocalPort": 1043,
       "RemoteIP": "192.168.43.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 123,
+      "LocalIP": "10.0.0.43",
+      "FullPath": "C:\\Test\\Firewall\\app_0043.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0044",
@@ -411,7 +587,11 @@
       "Protocol": 6,
       "LocalPort": 1044,
       "RemoteIP": "192.168.44.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 124,
+      "LocalIP": "10.0.0.44",
+      "FullPath": "C:\\Test\\Firewall\\app_0044.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0045",
@@ -420,7 +600,11 @@
       "Protocol": 6,
       "LocalPort": 1045,
       "RemoteIP": "192.168.45.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 125,
+      "LocalIP": "10.0.0.45",
+      "FullPath": "C:\\Test\\Firewall\\app_0045.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0046",
@@ -429,7 +613,11 @@
       "Protocol": 6,
       "LocalPort": 1046,
       "RemoteIP": "192.168.46.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 126,
+      "LocalIP": "10.0.0.46",
+      "FullPath": "C:\\Test\\Firewall\\app_0046.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0047",
@@ -438,7 +626,11 @@
       "Protocol": 6,
       "LocalPort": 1047,
       "RemoteIP": "192.168.47.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 127,
+      "LocalIP": "10.0.0.47",
+      "FullPath": "C:\\Test\\Firewall\\app_0047.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0048",
@@ -447,7 +639,11 @@
       "Protocol": 6,
       "LocalPort": 1048,
       "RemoteIP": "192.168.48.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 128,
+      "LocalIP": "10.0.0.48",
+      "FullPath": "C:\\Test\\Firewall\\app_0048.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0049",
@@ -456,7 +652,11 @@
       "Protocol": 6,
       "LocalPort": 1049,
       "RemoteIP": "192.168.49.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 129,
+      "LocalIP": "10.0.0.49",
+      "FullPath": "C:\\Test\\Firewall\\app_0049.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0050",
@@ -465,7 +665,11 @@
       "Protocol": 6,
       "LocalPort": 1050,
       "RemoteIP": "192.168.50.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 130,
+      "LocalIP": "10.0.0.50",
+      "FullPath": "C:\\Test\\Firewall\\app_0050.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0051",
@@ -474,7 +678,11 @@
       "Protocol": 6,
       "LocalPort": 1051,
       "RemoteIP": "192.168.51.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 131,
+      "LocalIP": "10.0.0.51",
+      "FullPath": "C:\\Test\\Firewall\\app_0051.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0052",
@@ -483,7 +691,11 @@
       "Protocol": 6,
       "LocalPort": 1052,
       "RemoteIP": "192.168.52.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 132,
+      "LocalIP": "10.0.0.52",
+      "FullPath": "C:\\Test\\Firewall\\app_0052.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0053",
@@ -492,7 +704,11 @@
       "Protocol": 6,
       "LocalPort": 1053,
       "RemoteIP": "192.168.53.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 133,
+      "LocalIP": "10.0.0.53",
+      "FullPath": "C:\\Test\\Firewall\\app_0053.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0054",
@@ -501,7 +717,11 @@
       "Protocol": 6,
       "LocalPort": 1054,
       "RemoteIP": "192.168.54.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 134,
+      "LocalIP": "10.0.0.54",
+      "FullPath": "C:\\Test\\Firewall\\app_0054.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0055",
@@ -510,7 +730,11 @@
       "Protocol": 6,
       "LocalPort": 1055,
       "RemoteIP": "192.168.55.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 135,
+      "LocalIP": "10.0.0.55",
+      "FullPath": "C:\\Test\\Firewall\\app_0055.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0056",
@@ -519,7 +743,11 @@
       "Protocol": 6,
       "LocalPort": 1056,
       "RemoteIP": "192.168.56.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 136,
+      "LocalIP": "10.0.0.56",
+      "FullPath": "C:\\Test\\Firewall\\app_0056.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0057",
@@ -528,7 +756,11 @@
       "Protocol": 6,
       "LocalPort": 1057,
       "RemoteIP": "192.168.57.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 137,
+      "LocalIP": "10.0.0.57",
+      "FullPath": "C:\\Test\\Firewall\\app_0057.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0058",
@@ -537,7 +769,11 @@
       "Protocol": 6,
       "LocalPort": 1058,
       "RemoteIP": "192.168.58.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 138,
+      "LocalIP": "10.0.0.58",
+      "FullPath": "C:\\Test\\Firewall\\app_0058.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0059",
@@ -546,7 +782,11 @@
       "Protocol": 6,
       "LocalPort": 1059,
       "RemoteIP": "192.168.59.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 139,
+      "LocalIP": "10.0.0.59",
+      "FullPath": "C:\\Test\\Firewall\\app_0059.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0060",
@@ -555,7 +795,11 @@
       "Protocol": 6,
       "LocalPort": 1060,
       "RemoteIP": "192.168.60.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 140,
+      "LocalIP": "10.0.0.60",
+      "FullPath": "C:\\Test\\Firewall\\app_0060.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0061",
@@ -564,7 +808,11 @@
       "Protocol": 6,
       "LocalPort": 1061,
       "RemoteIP": "192.168.61.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 141,
+      "LocalIP": "10.0.0.61",
+      "FullPath": "C:\\Test\\Firewall\\app_0061.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0062",
@@ -573,7 +821,11 @@
       "Protocol": 6,
       "LocalPort": 1062,
       "RemoteIP": "192.168.62.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 142,
+      "LocalIP": "10.0.0.62",
+      "FullPath": "C:\\Test\\Firewall\\app_0062.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0063",
@@ -582,7 +834,11 @@
       "Protocol": 6,
       "LocalPort": 1063,
       "RemoteIP": "192.168.63.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 143,
+      "LocalIP": "10.0.0.63",
+      "FullPath": "C:\\Test\\Firewall\\app_0063.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0064",
@@ -591,7 +847,11 @@
       "Protocol": 6,
       "LocalPort": 1064,
       "RemoteIP": "192.168.64.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 144,
+      "LocalIP": "10.0.0.64",
+      "FullPath": "C:\\Test\\Firewall\\app_0064.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0065",
@@ -600,7 +860,11 @@
       "Protocol": 6,
       "LocalPort": 1065,
       "RemoteIP": "192.168.65.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 145,
+      "LocalIP": "10.0.0.65",
+      "FullPath": "C:\\Test\\Firewall\\app_0065.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0066",
@@ -609,7 +873,11 @@
       "Protocol": 6,
       "LocalPort": 1066,
       "RemoteIP": "192.168.66.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 146,
+      "LocalIP": "10.0.0.66",
+      "FullPath": "C:\\Test\\Firewall\\app_0066.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0067",
@@ -618,7 +886,11 @@
       "Protocol": 6,
       "LocalPort": 1067,
       "RemoteIP": "192.168.67.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 147,
+      "LocalIP": "10.0.0.67",
+      "FullPath": "C:\\Test\\Firewall\\app_0067.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0068",
@@ -627,7 +899,11 @@
       "Protocol": 6,
       "LocalPort": 1068,
       "RemoteIP": "192.168.68.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 148,
+      "LocalIP": "10.0.0.68",
+      "FullPath": "C:\\Test\\Firewall\\app_0068.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0069",
@@ -636,7 +912,11 @@
       "Protocol": 6,
       "LocalPort": 1069,
       "RemoteIP": "192.168.69.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 149,
+      "LocalIP": "10.0.0.69",
+      "FullPath": "C:\\Test\\Firewall\\app_0069.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0070",
@@ -645,7 +925,11 @@
       "Protocol": 6,
       "LocalPort": 1070,
       "RemoteIP": "192.168.70.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 150,
+      "LocalIP": "10.0.0.70",
+      "FullPath": "C:\\Test\\Firewall\\app_0070.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0071",
@@ -654,7 +938,11 @@
       "Protocol": 6,
       "LocalPort": 1071,
       "RemoteIP": "192.168.71.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 151,
+      "LocalIP": "10.0.0.71",
+      "FullPath": "C:\\Test\\Firewall\\app_0071.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0072",
@@ -663,7 +951,11 @@
       "Protocol": 6,
       "LocalPort": 1072,
       "RemoteIP": "192.168.72.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 152,
+      "LocalIP": "10.0.0.72",
+      "FullPath": "C:\\Test\\Firewall\\app_0072.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0073",
@@ -672,7 +964,11 @@
       "Protocol": 6,
       "LocalPort": 1073,
       "RemoteIP": "192.168.73.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 153,
+      "LocalIP": "10.0.0.73",
+      "FullPath": "C:\\Test\\Firewall\\app_0073.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0074",
@@ -681,7 +977,11 @@
       "Protocol": 6,
       "LocalPort": 1074,
       "RemoteIP": "192.168.74.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 154,
+      "LocalIP": "10.0.0.74",
+      "FullPath": "C:\\Test\\Firewall\\app_0074.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0075",
@@ -690,7 +990,11 @@
       "Protocol": 6,
       "LocalPort": 1075,
       "RemoteIP": "192.168.75.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 155,
+      "LocalIP": "10.0.0.75",
+      "FullPath": "C:\\Test\\Firewall\\app_0075.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0076",
@@ -699,7 +1003,11 @@
       "Protocol": 6,
       "LocalPort": 1076,
       "RemoteIP": "192.168.76.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 156,
+      "LocalIP": "10.0.0.76",
+      "FullPath": "C:\\Test\\Firewall\\app_0076.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0077",
@@ -708,7 +1016,11 @@
       "Protocol": 6,
       "LocalPort": 1077,
       "RemoteIP": "192.168.77.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 157,
+      "LocalIP": "10.0.0.77",
+      "FullPath": "C:\\Test\\Firewall\\app_0077.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0078",
@@ -717,7 +1029,11 @@
       "Protocol": 6,
       "LocalPort": 1078,
       "RemoteIP": "192.168.78.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 158,
+      "LocalIP": "10.0.0.78",
+      "FullPath": "C:\\Test\\Firewall\\app_0078.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0079",
@@ -726,7 +1042,11 @@
       "Protocol": 6,
       "LocalPort": 1079,
       "RemoteIP": "192.168.79.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 159,
+      "LocalIP": "10.0.0.79",
+      "FullPath": "C:\\Test\\Firewall\\app_0079.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0080",
@@ -735,7 +1055,11 @@
       "Protocol": 6,
       "LocalPort": 1080,
       "RemoteIP": "192.168.80.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 160,
+      "LocalIP": "10.0.0.80",
+      "FullPath": "C:\\Test\\Firewall\\app_0080.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0081",
@@ -744,7 +1068,11 @@
       "Protocol": 6,
       "LocalPort": 1081,
       "RemoteIP": "192.168.81.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 161,
+      "LocalIP": "10.0.0.81",
+      "FullPath": "C:\\Test\\Firewall\\app_0081.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0082",
@@ -753,7 +1081,11 @@
       "Protocol": 6,
       "LocalPort": 1082,
       "RemoteIP": "192.168.82.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 162,
+      "LocalIP": "10.0.0.82",
+      "FullPath": "C:\\Test\\Firewall\\app_0082.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0083",
@@ -762,7 +1094,11 @@
       "Protocol": 6,
       "LocalPort": 1083,
       "RemoteIP": "192.168.83.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 163,
+      "LocalIP": "10.0.0.83",
+      "FullPath": "C:\\Test\\Firewall\\app_0083.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0084",
@@ -771,7 +1107,11 @@
       "Protocol": 6,
       "LocalPort": 1084,
       "RemoteIP": "192.168.84.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 164,
+      "LocalIP": "10.0.0.84",
+      "FullPath": "C:\\Test\\Firewall\\app_0084.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0085",
@@ -780,7 +1120,11 @@
       "Protocol": 6,
       "LocalPort": 1085,
       "RemoteIP": "192.168.85.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 165,
+      "LocalIP": "10.0.0.85",
+      "FullPath": "C:\\Test\\Firewall\\app_0085.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0086",
@@ -789,7 +1133,11 @@
       "Protocol": 6,
       "LocalPort": 1086,
       "RemoteIP": "192.168.86.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 166,
+      "LocalIP": "10.0.0.86",
+      "FullPath": "C:\\Test\\Firewall\\app_0086.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0087",
@@ -798,7 +1146,11 @@
       "Protocol": 6,
       "LocalPort": 1087,
       "RemoteIP": "192.168.87.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 167,
+      "LocalIP": "10.0.0.87",
+      "FullPath": "C:\\Test\\Firewall\\app_0087.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0088",
@@ -807,7 +1159,11 @@
       "Protocol": 6,
       "LocalPort": 1088,
       "RemoteIP": "192.168.88.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 168,
+      "LocalIP": "10.0.0.88",
+      "FullPath": "C:\\Test\\Firewall\\app_0088.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0089",
@@ -816,7 +1172,11 @@
       "Protocol": 6,
       "LocalPort": 1089,
       "RemoteIP": "192.168.89.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 169,
+      "LocalIP": "10.0.0.89",
+      "FullPath": "C:\\Test\\Firewall\\app_0089.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0090",
@@ -825,7 +1185,11 @@
       "Protocol": 6,
       "LocalPort": 1090,
       "RemoteIP": "192.168.90.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 170,
+      "LocalIP": "10.0.0.90",
+      "FullPath": "C:\\Test\\Firewall\\app_0090.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0091",
@@ -834,7 +1198,11 @@
       "Protocol": 6,
       "LocalPort": 1091,
       "RemoteIP": "192.168.91.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 171,
+      "LocalIP": "10.0.0.91",
+      "FullPath": "C:\\Test\\Firewall\\app_0091.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0092",
@@ -843,7 +1211,11 @@
       "Protocol": 6,
       "LocalPort": 1092,
       "RemoteIP": "192.168.92.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 172,
+      "LocalIP": "10.0.0.92",
+      "FullPath": "C:\\Test\\Firewall\\app_0092.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0093",
@@ -852,7 +1224,11 @@
       "Protocol": 6,
       "LocalPort": 1093,
       "RemoteIP": "192.168.93.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 173,
+      "LocalIP": "10.0.0.93",
+      "FullPath": "C:\\Test\\Firewall\\app_0093.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0094",
@@ -861,7 +1237,11 @@
       "Protocol": 6,
       "LocalPort": 1094,
       "RemoteIP": "192.168.94.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 174,
+      "LocalIP": "10.0.0.94",
+      "FullPath": "C:\\Test\\Firewall\\app_0094.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0095",
@@ -870,7 +1250,11 @@
       "Protocol": 6,
       "LocalPort": 1095,
       "RemoteIP": "192.168.95.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 175,
+      "LocalIP": "10.0.0.95",
+      "FullPath": "C:\\Test\\Firewall\\app_0095.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0096",
@@ -879,7 +1263,11 @@
       "Protocol": 6,
       "LocalPort": 1096,
       "RemoteIP": "192.168.96.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 176,
+      "LocalIP": "10.0.0.96",
+      "FullPath": "C:\\Test\\Firewall\\app_0096.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0097",
@@ -888,7 +1276,11 @@
       "Protocol": 6,
       "LocalPort": 1097,
       "RemoteIP": "192.168.97.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 177,
+      "LocalIP": "10.0.0.97",
+      "FullPath": "C:\\Test\\Firewall\\app_0097.exe",
+      "PortType": 2
     },
     {
       "RuleName": "Rule-0098",
@@ -897,7 +1289,11 @@
       "Protocol": 6,
       "LocalPort": 1098,
       "RemoteIP": "192.168.98.0",
-      "Action": 0
+      "Action": 0,
+      "RemotePort": 178,
+      "LocalIP": "10.0.0.98",
+      "FullPath": "C:\\Test\\Firewall\\app_0098.exe",
+      "PortType": 1
     },
     {
       "RuleName": "Rule-0099",
@@ -906,7 +1302,11 @@
       "Protocol": 6,
       "LocalPort": 1099,
       "RemoteIP": "192.168.99.0",
-      "Action": 1
+      "Action": 1,
+      "RemotePort": 179,
+      "LocalIP": "10.0.0.99",
+      "FullPath": "C:\\Test\\Firewall\\app_0099.exe",
+      "PortType": 2
     }
   ]
 }

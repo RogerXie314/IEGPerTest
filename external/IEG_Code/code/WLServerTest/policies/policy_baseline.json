@@ -9,17 +9,30 @@
   },
   "items": [
     {
-      "dwPasswordComplexity": "0,1",
-      "dwMin_passwd_len": "0,8",
-      "dwPassword_hist_len": "0,5",
-      "dwMax_passwd_age": "0,90",
-      "dwLockout_threshold": "0,5",
-      "dwDisable_guest": "0,1",
-      "dwAuditCategoryLogon": "0,1",
-      "dwAuditCategoryAccountManagement": "0,1",
-      "dwClearPageShutDown": "0,1",
-      "dwDontDisplayLastUserName": "0,1",
-      "dwRestrictAnonymous": "0,1"
+      "dwPasswordComplexity": 1,
+      "dwMin_passwd_len": 8,
+      "dwPassword_hist_len": 5,
+      "dwMax_passwd_age": 90,
+      "dwLockout_threshold": 5,
+      "dwDisable_guest": 1,
+      "dwAuditCategoryLogon": 1,
+      "dwAuditCategoryAccountManagement": 1,
+      "dwClearPageShutDown": 1,
+      "dwDontDisplayLastUserName": 1,
+      "dwRestrictAnonymous": 1,
+      "dwAuditCategorySystem": 1,
+      "dwAuditCategoryObjectAccess": 1,
+      "dwAuditCategoryPrivilegeUse": 2,
+      "dwAuditCategoryDetailedTracking": 4,
+      "dwAuditCategoryPolicyChange": 1,
+      "dwAuditCategoryDirectoryServiceAccess": 2,
+      "dwAuditCategoryAccountLogon": 1,
+      "dwUsrmod3_lockout_duration": 30,
+      "dwUsrmod3_lockout_observation_window": 30,
+      "dwDisableCAD": 1,
+      "dwRestrictAnonymousSam": 1,
+      "dwAutoRun": 0,
+      "dwShare": 0
     }
   ]
 }
