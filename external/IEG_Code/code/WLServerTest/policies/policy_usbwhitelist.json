@@ -5,908 +5,908 @@
     "cmdid": 122,
     "cmdtype": 100,
     "max_count": 100,
-    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+    "usage": "items 数组元素作为 CMDContent 上报，字段与 IEG DeviceControl_UsbWhiteList_ToUSM_GetJson 对齐（PID/VID 为 %04X 不带0x，厂家字段 VendorDesc）。修改后下次配置上传生效。"
   },
   "items": [
     {
-      "PID": "0x1234",
-      "VID": "0x5678",
-      "ProductDesc": "USB-Dev-0000",
+      "PID": "1234",
+      "VID": "5678",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0000",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0000",
-      "Vendor": "Kingston",
-      "Manufacturer": "Kingston"
+      "plugState": 1,
+      "description": "USB device 0000 (Kingston)"
     },
     {
-      "PID": "0x1235",
-      "VID": "0x5679",
-      "ProductDesc": "USB-Dev-0001",
+      "PID": "1235",
+      "VID": "5679",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0001",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0001",
-      "Vendor": "SanDisk",
-      "Manufacturer": "SanDisk"
+      "plugState": 1,
+      "description": "USB device 0001 (SanDisk)"
     },
     {
-      "PID": "0x1236",
-      "VID": "0x567A",
-      "ProductDesc": "USB-Dev-0002",
+      "PID": "1236",
+      "VID": "567A",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0002",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0002",
-      "Vendor": "Samsung",
-      "Manufacturer": "Samsung"
+      "plugState": 1,
+      "description": "USB device 0002 (Samsung)"
     },
     {
-      "PID": "0x1237",
-      "VID": "0x567B",
-      "ProductDesc": "USB-Dev-0003",
+      "PID": "1237",
+      "VID": "567B",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0003",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0003",
-      "Vendor": "Toshiba",
-      "Manufacturer": "Toshiba"
+      "plugState": 1,
+      "description": "USB device 0003 (Sony)"
     },
     {
-      "PID": "0x1238",
-      "VID": "0x567C",
-      "ProductDesc": "USB-Dev-0004",
+      "PID": "1238",
+      "VID": "567C",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0004",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0004",
-      "Vendor": "Sony",
-      "Manufacturer": "Sony"
+      "plugState": 1,
+      "description": "USB device 0004 (Transcend)"
     },
     {
-      "PID": "0x1239",
-      "VID": "0x567D",
-      "ProductDesc": "USB-Dev-0005",
+      "PID": "1239",
+      "VID": "567D",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0005",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0005",
-      "Vendor": "Transcend",
-      "Manufacturer": "Transcend"
+      "plugState": 1,
+      "description": "USB device 0005 (Lenovo)"
     },
     {
-      "PID": "0x123A",
-      "VID": "0x567E",
-      "ProductDesc": "USB-Dev-0006",
+      "PID": "123A",
+      "VID": "567E",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0006",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0006",
-      "Vendor": "ADATA",
-      "Manufacturer": "ADATA"
+      "plugState": 1,
+      "description": "USB device 0006 (Hikvision)"
     },
     {
-      "PID": "0x123B",
-      "VID": "0x567F",
-      "ProductDesc": "USB-Dev-0007",
+      "PID": "123B",
+      "VID": "567F",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0007",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0007",
-      "Vendor": "Lexar",
-      "Manufacturer": "Lexar"
+      "plugState": 1,
+      "description": "USB device 0007 (Verbatim)"
     },
     {
-      "PID": "0x123C",
-      "VID": "0x5680",
-      "ProductDesc": "USB-Dev-0008",
+      "PID": "123C",
+      "VID": "5678",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0008",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0008",
-      "Vendor": "PNY",
-      "Manufacturer": "PNY"
+      "plugState": 1,
+      "description": "USB device 0008 (Netac)"
     },
     {
-      "PID": "0x123D",
-      "VID": "0x5681",
-      "ProductDesc": "USB-Dev-0009",
+      "PID": "123D",
+      "VID": "5679",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0009",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0009",
-      "Vendor": "HP",
-      "Manufacturer": "HP"
+      "plugState": 1,
+      "description": "USB device 0009 (aigo)"
     },
     {
-      "PID": "0x123E",
-      "VID": "0x5682",
-      "ProductDesc": "USB-Dev-0010",
+      "PID": "123E",
+      "VID": "567A",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0010",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0010",
-      "Vendor": "Dell",
-      "Manufacturer": "Dell"
+      "plugState": 1,
+      "description": "USB device 0010 (Kingston)"
     },
     {
-      "PID": "0x123F",
-      "VID": "0x5683",
-      "ProductDesc": "USB-Dev-0011",
+      "PID": "123F",
+      "VID": "567B",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0011",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0011",
-      "Vendor": "Lenovo",
-      "Manufacturer": "Lenovo"
+      "plugState": 1,
+      "description": "USB device 0011 (SanDisk)"
     },
     {
-      "PID": "0x1240",
-      "VID": "0x5684",
-      "ProductDesc": "USB-Dev-0012",
+      "PID": "1240",
+      "VID": "567C",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0012",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0012",
-      "Vendor": "Asus",
-      "Manufacturer": "Asus"
+      "plugState": 1,
+      "description": "USB device 0012 (Samsung)"
     },
     {
-      "PID": "0x1241",
-      "VID": "0x5685",
-      "ProductDesc": "USB-Dev-0013",
+      "PID": "1241",
+      "VID": "567D",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0013",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0013",
-      "Vendor": "Acer",
-      "Manufacturer": "Acer"
+      "plugState": 1,
+      "description": "USB device 0013 (Sony)"
     },
     {
-      "PID": "0x1242",
-      "VID": "0x5686",
-      "ProductDesc": "USB-Dev-0014",
+      "PID": "1242",
+      "VID": "567E",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0014",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0014",
-      "Vendor": "Intel",
-      "Manufacturer": "Intel"
+      "plugState": 1,
+      "description": "USB device 0014 (Transcend)"
     },
     {
-      "PID": "0x1243",
-      "VID": "0x5687",
-      "ProductDesc": "USB-Dev-0015",
+      "PID": "1243",
+      "VID": "567F",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0015",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0015",
-      "Vendor": "AMD",
-      "Manufacturer": "AMD"
+      "plugState": 1,
+      "description": "USB device 0015 (Lenovo)"
     },
     {
-      "PID": "0x1244",
-      "VID": "0x5688",
-      "ProductDesc": "USB-Dev-0016",
+      "PID": "1244",
+      "VID": "5678",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0016",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0016",
-      "Vendor": "NVIDIA",
-      "Manufacturer": "NVIDIA"
+      "plugState": 1,
+      "description": "USB device 0016 (Hikvision)"
     },
     {
-      "PID": "0x1245",
-      "VID": "0x5689",
-      "ProductDesc": "USB-Dev-0017",
+      "PID": "1245",
+      "VID": "5679",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0017",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0017",
-      "Vendor": "Realtek",
-      "Manufacturer": "Realtek"
+      "plugState": 1,
+      "description": "USB device 0017 (Verbatim)"
     },
     {
-      "PID": "0x1246",
-      "VID": "0x568A",
-      "ProductDesc": "USB-Dev-0018",
+      "PID": "1246",
+      "VID": "567A",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0018",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0018",
-      "Vendor": "Broadcom",
-      "Manufacturer": "Broadcom"
+      "plugState": 1,
+      "description": "USB device 0018 (Netac)"
     },
     {
-      "PID": "0x1247",
-      "VID": "0x568B",
-      "ProductDesc": "USB-Dev-0019",
+      "PID": "1247",
+      "VID": "567B",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0019",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0019",
-      "Vendor": "Qualcomm",
-      "Manufacturer": "Qualcomm"
+      "plugState": 1,
+      "description": "USB device 0019 (aigo)"
     },
     {
-      "PID": "0x1248",
-      "VID": "0x568C",
-      "ProductDesc": "USB-Dev-0020",
+      "PID": "1248",
+      "VID": "567C",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0020",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0020",
-      "Vendor": "Kingston",
-      "Manufacturer": "Kingston"
+      "plugState": 1,
+      "description": "USB device 0020 (Kingston)"
     },
     {
-      "PID": "0x1249",
-      "VID": "0x568D",
-      "ProductDesc": "USB-Dev-0021",
+      "PID": "1249",
+      "VID": "567D",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0021",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0021",
-      "Vendor": "SanDisk",
-      "Manufacturer": "SanDisk"
+      "plugState": 1,
+      "description": "USB device 0021 (SanDisk)"
     },
     {
-      "PID": "0x124A",
-      "VID": "0x568E",
-      "ProductDesc": "USB-Dev-0022",
+      "PID": "124A",
+      "VID": "567E",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0022",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0022",
-      "Vendor": "Samsung",
-      "Manufacturer": "Samsung"
+      "plugState": 1,
+      "description": "USB device 0022 (Samsung)"
     },
     {
-      "PID": "0x124B",
-      "VID": "0x568F",
-      "ProductDesc": "USB-Dev-0023",
+      "PID": "124B",
+      "VID": "567F",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0023",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0023",
-      "Vendor": "Toshiba",
-      "Manufacturer": "Toshiba"
+      "plugState": 1,
+      "description": "USB device 0023 (Sony)"
     },
     {
-      "PID": "0x124C",
-      "VID": "0x5690",
-      "ProductDesc": "USB-Dev-0024",
+      "PID": "124C",
+      "VID": "5678",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0024",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0024",
-      "Vendor": "Sony",
-      "Manufacturer": "Sony"
+      "plugState": 1,
+      "description": "USB device 0024 (Transcend)"
     },
     {
-      "PID": "0x124D",
-      "VID": "0x5691",
-      "ProductDesc": "USB-Dev-0025",
+      "PID": "124D",
+      "VID": "5679",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0025",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0025",
-      "Vendor": "Transcend",
-      "Manufacturer": "Transcend"
+      "plugState": 1,
+      "description": "USB device 0025 (Lenovo)"
     },
     {
-      "PID": "0x124E",
-      "VID": "0x5692",
-      "ProductDesc": "USB-Dev-0026",
+      "PID": "124E",
+      "VID": "567A",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0026",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0026",
-      "Vendor": "ADATA",
-      "Manufacturer": "ADATA"
+      "plugState": 1,
+      "description": "USB device 0026 (Hikvision)"
     },
     {
-      "PID": "0x124F",
-      "VID": "0x5693",
-      "ProductDesc": "USB-Dev-0027",
+      "PID": "124F",
+      "VID": "567B",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0027",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0027",
-      "Vendor": "Lexar",
-      "Manufacturer": "Lexar"
+      "plugState": 1,
+      "description": "USB device 0027 (Verbatim)"
     },
     {
-      "PID": "0x1250",
-      "VID": "0x5694",
-      "ProductDesc": "USB-Dev-0028",
+      "PID": "1250",
+      "VID": "567C",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0028",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0028",
-      "Vendor": "PNY",
-      "Manufacturer": "PNY"
+      "plugState": 1,
+      "description": "USB device 0028 (Netac)"
     },
     {
-      "PID": "0x1251",
-      "VID": "0x5695",
-      "ProductDesc": "USB-Dev-0029",
+      "PID": "1251",
+      "VID": "567D",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0029",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0029",
-      "Vendor": "HP",
-      "Manufacturer": "HP"
+      "plugState": 1,
+      "description": "USB device 0029 (aigo)"
     },
     {
-      "PID": "0x1252",
-      "VID": "0x5696",
-      "ProductDesc": "USB-Dev-0030",
+      "PID": "1252",
+      "VID": "567E",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0030",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0030",
-      "Vendor": "Dell",
-      "Manufacturer": "Dell"
+      "plugState": 1,
+      "description": "USB device 0030 (Kingston)"
     },
     {
-      "PID": "0x1253",
-      "VID": "0x5697",
-      "ProductDesc": "USB-Dev-0031",
+      "PID": "1253",
+      "VID": "567F",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0031",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0031",
-      "Vendor": "Lenovo",
-      "Manufacturer": "Lenovo"
+      "plugState": 1,
+      "description": "USB device 0031 (SanDisk)"
     },
     {
-      "PID": "0x1254",
-      "VID": "0x5698",
-      "ProductDesc": "USB-Dev-0032",
+      "PID": "1254",
+      "VID": "5678",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0032",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0032",
-      "Vendor": "Asus",
-      "Manufacturer": "Asus"
+      "plugState": 1,
+      "description": "USB device 0032 (Samsung)"
     },
     {
-      "PID": "0x1255",
-      "VID": "0x5699",
-      "ProductDesc": "USB-Dev-0033",
+      "PID": "1255",
+      "VID": "5679",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0033",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0033",
-      "Vendor": "Acer",
-      "Manufacturer": "Acer"
+      "plugState": 1,
+      "description": "USB device 0033 (Sony)"
     },
     {
-      "PID": "0x1256",
-      "VID": "0x569A",
-      "ProductDesc": "USB-Dev-0034",
+      "PID": "1256",
+      "VID": "567A",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0034",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0034",
-      "Vendor": "Intel",
-      "Manufacturer": "Intel"
+      "plugState": 1,
+      "description": "USB device 0034 (Transcend)"
     },
     {
-      "PID": "0x1257",
-      "VID": "0x569B",
-      "ProductDesc": "USB-Dev-0035",
+      "PID": "1257",
+      "VID": "567B",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0035",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0035",
-      "Vendor": "AMD",
-      "Manufacturer": "AMD"
+      "plugState": 1,
+      "description": "USB device 0035 (Lenovo)"
     },
     {
-      "PID": "0x1258",
-      "VID": "0x569C",
-      "ProductDesc": "USB-Dev-0036",
+      "PID": "1258",
+      "VID": "567C",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0036",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0036",
-      "Vendor": "NVIDIA",
-      "Manufacturer": "NVIDIA"
+      "plugState": 1,
+      "description": "USB device 0036 (Hikvision)"
     },
     {
-      "PID": "0x1259",
-      "VID": "0x569D",
-      "ProductDesc": "USB-Dev-0037",
+      "PID": "1259",
+      "VID": "567D",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0037",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0037",
-      "Vendor": "Realtek",
-      "Manufacturer": "Realtek"
+      "plugState": 1,
+      "description": "USB device 0037 (Verbatim)"
     },
     {
-      "PID": "0x125A",
-      "VID": "0x569E",
-      "ProductDesc": "USB-Dev-0038",
+      "PID": "125A",
+      "VID": "567E",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0038",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0038",
-      "Vendor": "Broadcom",
-      "Manufacturer": "Broadcom"
+      "plugState": 1,
+      "description": "USB device 0038 (Netac)"
     },
     {
-      "PID": "0x125B",
-      "VID": "0x569F",
-      "ProductDesc": "USB-Dev-0039",
+      "PID": "125B",
+      "VID": "567F",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0039",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0039",
-      "Vendor": "Qualcomm",
-      "Manufacturer": "Qualcomm"
+      "plugState": 1,
+      "description": "USB device 0039 (aigo)"
     },
     {
-      "PID": "0x125C",
-      "VID": "0x56A0",
-      "ProductDesc": "USB-Dev-0040",
+      "PID": "125C",
+      "VID": "5678",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0040",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0040",
-      "Vendor": "Kingston",
-      "Manufacturer": "Kingston"
+      "plugState": 1,
+      "description": "USB device 0040 (Kingston)"
     },
     {
-      "PID": "0x125D",
-      "VID": "0x56A1",
-      "ProductDesc": "USB-Dev-0041",
+      "PID": "125D",
+      "VID": "5679",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0041",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0041",
-      "Vendor": "SanDisk",
-      "Manufacturer": "SanDisk"
+      "plugState": 1,
+      "description": "USB device 0041 (SanDisk)"
     },
     {
-      "PID": "0x125E",
-      "VID": "0x56A2",
-      "ProductDesc": "USB-Dev-0042",
+      "PID": "125E",
+      "VID": "567A",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0042",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0042",
-      "Vendor": "Samsung",
-      "Manufacturer": "Samsung"
+      "plugState": 1,
+      "description": "USB device 0042 (Samsung)"
     },
     {
-      "PID": "0x125F",
-      "VID": "0x56A3",
-      "ProductDesc": "USB-Dev-0043",
+      "PID": "125F",
+      "VID": "567B",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0043",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0043",
-      "Vendor": "Toshiba",
-      "Manufacturer": "Toshiba"
+      "plugState": 1,
+      "description": "USB device 0043 (Sony)"
     },
     {
-      "PID": "0x1260",
-      "VID": "0x56A4",
-      "ProductDesc": "USB-Dev-0044",
+      "PID": "1260",
+      "VID": "567C",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0044",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0044",
-      "Vendor": "Sony",
-      "Manufacturer": "Sony"
+      "plugState": 1,
+      "description": "USB device 0044 (Transcend)"
     },
     {
-      "PID": "0x1261",
-      "VID": "0x56A5",
-      "ProductDesc": "USB-Dev-0045",
+      "PID": "1261",
+      "VID": "567D",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0045",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0045",
-      "Vendor": "Transcend",
-      "Manufacturer": "Transcend"
+      "plugState": 1,
+      "description": "USB device 0045 (Lenovo)"
     },
     {
-      "PID": "0x1262",
-      "VID": "0x56A6",
-      "ProductDesc": "USB-Dev-0046",
+      "PID": "1262",
+      "VID": "567E",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0046",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0046",
-      "Vendor": "ADATA",
-      "Manufacturer": "ADATA"
+      "plugState": 1,
+      "description": "USB device 0046 (Hikvision)"
     },
     {
-      "PID": "0x1263",
-      "VID": "0x56A7",
-      "ProductDesc": "USB-Dev-0047",
+      "PID": "1263",
+      "VID": "567F",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0047",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0047",
-      "Vendor": "Lexar",
-      "Manufacturer": "Lexar"
+      "plugState": 1,
+      "description": "USB device 0047 (Verbatim)"
     },
     {
-      "PID": "0x1264",
-      "VID": "0x56A8",
-      "ProductDesc": "USB-Dev-0048",
+      "PID": "1264",
+      "VID": "5678",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0048",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0048",
-      "Vendor": "PNY",
-      "Manufacturer": "PNY"
+      "plugState": 1,
+      "description": "USB device 0048 (Netac)"
     },
     {
-      "PID": "0x1265",
-      "VID": "0x56A9",
-      "ProductDesc": "USB-Dev-0049",
+      "PID": "1265",
+      "VID": "5679",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0049",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0049",
-      "Vendor": "HP",
-      "Manufacturer": "HP"
+      "plugState": 1,
+      "description": "USB device 0049 (aigo)"
     },
     {
-      "PID": "0x1266",
-      "VID": "0x56AA",
-      "ProductDesc": "USB-Dev-0050",
+      "PID": "1266",
+      "VID": "567A",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0050",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0050",
-      "Vendor": "Dell",
-      "Manufacturer": "Dell"
+      "plugState": 1,
+      "description": "USB device 0050 (Kingston)"
     },
     {
-      "PID": "0x1267",
-      "VID": "0x56AB",
-      "ProductDesc": "USB-Dev-0051",
+      "PID": "1267",
+      "VID": "567B",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0051",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0051",
-      "Vendor": "Lenovo",
-      "Manufacturer": "Lenovo"
+      "plugState": 1,
+      "description": "USB device 0051 (SanDisk)"
     },
     {
-      "PID": "0x1268",
-      "VID": "0x56AC",
-      "ProductDesc": "USB-Dev-0052",
+      "PID": "1268",
+      "VID": "567C",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0052",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0052",
-      "Vendor": "Asus",
-      "Manufacturer": "Asus"
+      "plugState": 1,
+      "description": "USB device 0052 (Samsung)"
     },
     {
-      "PID": "0x1269",
-      "VID": "0x56AD",
-      "ProductDesc": "USB-Dev-0053",
+      "PID": "1269",
+      "VID": "567D",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0053",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0053",
-      "Vendor": "Acer",
-      "Manufacturer": "Acer"
+      "plugState": 1,
+      "description": "USB device 0053 (Sony)"
     },
     {
-      "PID": "0x126A",
-      "VID": "0x56AE",
-      "ProductDesc": "USB-Dev-0054",
+      "PID": "126A",
+      "VID": "567E",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0054",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0054",
-      "Vendor": "Intel",
-      "Manufacturer": "Intel"
+      "plugState": 1,
+      "description": "USB device 0054 (Transcend)"
     },
     {
-      "PID": "0x126B",
-      "VID": "0x56AF",
-      "ProductDesc": "USB-Dev-0055",
+      "PID": "126B",
+      "VID": "567F",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0055",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0055",
-      "Vendor": "AMD",
-      "Manufacturer": "AMD"
+      "plugState": 1,
+      "description": "USB device 0055 (Lenovo)"
     },
     {
-      "PID": "0x126C",
-      "VID": "0x56B0",
-      "ProductDesc": "USB-Dev-0056",
+      "PID": "126C",
+      "VID": "5678",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0056",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0056",
-      "Vendor": "NVIDIA",
-      "Manufacturer": "NVIDIA"
+      "plugState": 1,
+      "description": "USB device 0056 (Hikvision)"
     },
     {
-      "PID": "0x126D",
-      "VID": "0x56B1",
-      "ProductDesc": "USB-Dev-0057",
+      "PID": "126D",
+      "VID": "5679",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0057",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0057",
-      "Vendor": "Realtek",
-      "Manufacturer": "Realtek"
+      "plugState": 1,
+      "description": "USB device 0057 (Verbatim)"
     },
     {
-      "PID": "0x126E",
-      "VID": "0x56B2",
-      "ProductDesc": "USB-Dev-0058",
+      "PID": "126E",
+      "VID": "567A",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0058",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0058",
-      "Vendor": "Broadcom",
-      "Manufacturer": "Broadcom"
+      "plugState": 1,
+      "description": "USB device 0058 (Netac)"
     },
     {
-      "PID": "0x126F",
-      "VID": "0x56B3",
-      "ProductDesc": "USB-Dev-0059",
+      "PID": "126F",
+      "VID": "567B",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0059",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0059",
-      "Vendor": "Qualcomm",
-      "Manufacturer": "Qualcomm"
+      "plugState": 1,
+      "description": "USB device 0059 (aigo)"
     },
     {
-      "PID": "0x1270",
-      "VID": "0x56B4",
-      "ProductDesc": "USB-Dev-0060",
+      "PID": "1270",
+      "VID": "567C",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0060",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0060",
-      "Vendor": "Kingston",
-      "Manufacturer": "Kingston"
+      "plugState": 1,
+      "description": "USB device 0060 (Kingston)"
     },
     {
-      "PID": "0x1271",
-      "VID": "0x56B5",
-      "ProductDesc": "USB-Dev-0061",
+      "PID": "1271",
+      "VID": "567D",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0061",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0061",
-      "Vendor": "SanDisk",
-      "Manufacturer": "SanDisk"
+      "plugState": 1,
+      "description": "USB device 0061 (SanDisk)"
     },
     {
-      "PID": "0x1272",
-      "VID": "0x56B6",
-      "ProductDesc": "USB-Dev-0062",
+      "PID": "1272",
+      "VID": "567E",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0062",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0062",
-      "Vendor": "Samsung",
-      "Manufacturer": "Samsung"
+      "plugState": 1,
+      "description": "USB device 0062 (Samsung)"
     },
     {
-      "PID": "0x1273",
-      "VID": "0x56B7",
-      "ProductDesc": "USB-Dev-0063",
+      "PID": "1273",
+      "VID": "567F",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0063",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0063",
-      "Vendor": "Toshiba",
-      "Manufacturer": "Toshiba"
+      "plugState": 1,
+      "description": "USB device 0063 (Sony)"
     },
     {
-      "PID": "0x1274",
-      "VID": "0x56B8",
-      "ProductDesc": "USB-Dev-0064",
+      "PID": "1274",
+      "VID": "5678",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0064",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0064",
-      "Vendor": "Sony",
-      "Manufacturer": "Sony"
+      "plugState": 1,
+      "description": "USB device 0064 (Transcend)"
     },
     {
-      "PID": "0x1275",
-      "VID": "0x56B9",
-      "ProductDesc": "USB-Dev-0065",
+      "PID": "1275",
+      "VID": "5679",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0065",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0065",
-      "Vendor": "Transcend",
-      "Manufacturer": "Transcend"
+      "plugState": 1,
+      "description": "USB device 0065 (Lenovo)"
     },
     {
-      "PID": "0x1276",
-      "VID": "0x56BA",
-      "ProductDesc": "USB-Dev-0066",
+      "PID": "1276",
+      "VID": "567A",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0066",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0066",
-      "Vendor": "ADATA",
-      "Manufacturer": "ADATA"
+      "plugState": 1,
+      "description": "USB device 0066 (Hikvision)"
     },
     {
-      "PID": "0x1277",
-      "VID": "0x56BB",
-      "ProductDesc": "USB-Dev-0067",
+      "PID": "1277",
+      "VID": "567B",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0067",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0067",
-      "Vendor": "Lexar",
-      "Manufacturer": "Lexar"
+      "plugState": 1,
+      "description": "USB device 0067 (Verbatim)"
     },
     {
-      "PID": "0x1278",
-      "VID": "0x56BC",
-      "ProductDesc": "USB-Dev-0068",
+      "PID": "1278",
+      "VID": "567C",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0068",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0068",
-      "Vendor": "PNY",
-      "Manufacturer": "PNY"
+      "plugState": 1,
+      "description": "USB device 0068 (Netac)"
     },
     {
-      "PID": "0x1279",
-      "VID": "0x56BD",
-      "ProductDesc": "USB-Dev-0069",
+      "PID": "1279",
+      "VID": "567D",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0069",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0069",
-      "Vendor": "HP",
-      "Manufacturer": "HP"
+      "plugState": 1,
+      "description": "USB device 0069 (aigo)"
     },
     {
-      "PID": "0x127A",
-      "VID": "0x56BE",
-      "ProductDesc": "USB-Dev-0070",
+      "PID": "127A",
+      "VID": "567E",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0070",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0070",
-      "Vendor": "Dell",
-      "Manufacturer": "Dell"
+      "plugState": 1,
+      "description": "USB device 0070 (Kingston)"
     },
     {
-      "PID": "0x127B",
-      "VID": "0x56BF",
-      "ProductDesc": "USB-Dev-0071",
+      "PID": "127B",
+      "VID": "567F",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0071",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0071",
-      "Vendor": "Lenovo",
-      "Manufacturer": "Lenovo"
+      "plugState": 1,
+      "description": "USB device 0071 (SanDisk)"
     },
     {
-      "PID": "0x127C",
-      "VID": "0x56C0",
-      "ProductDesc": "USB-Dev-0072",
+      "PID": "127C",
+      "VID": "5678",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0072",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0072",
-      "Vendor": "Asus",
-      "Manufacturer": "Asus"
+      "plugState": 1,
+      "description": "USB device 0072 (Samsung)"
     },
     {
-      "PID": "0x127D",
-      "VID": "0x56C1",
-      "ProductDesc": "USB-Dev-0073",
+      "PID": "127D",
+      "VID": "5679",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0073",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0073",
-      "Vendor": "Acer",
-      "Manufacturer": "Acer"
+      "plugState": 1,
+      "description": "USB device 0073 (Sony)"
     },
     {
-      "PID": "0x127E",
-      "VID": "0x56C2",
-      "ProductDesc": "USB-Dev-0074",
+      "PID": "127E",
+      "VID": "567A",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0074",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0074",
-      "Vendor": "Intel",
-      "Manufacturer": "Intel"
+      "plugState": 1,
+      "description": "USB device 0074 (Transcend)"
     },
     {
-      "PID": "0x127F",
-      "VID": "0x56C3",
-      "ProductDesc": "USB-Dev-0075",
+      "PID": "127F",
+      "VID": "567B",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0075",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0075",
-      "Vendor": "AMD",
-      "Manufacturer": "AMD"
+      "plugState": 1,
+      "description": "USB device 0075 (Lenovo)"
     },
     {
-      "PID": "0x1280",
-      "VID": "0x56C4",
-      "ProductDesc": "USB-Dev-0076",
+      "PID": "1280",
+      "VID": "567C",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0076",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0076",
-      "Vendor": "NVIDIA",
-      "Manufacturer": "NVIDIA"
+      "plugState": 1,
+      "description": "USB device 0076 (Hikvision)"
     },
     {
-      "PID": "0x1281",
-      "VID": "0x56C5",
-      "ProductDesc": "USB-Dev-0077",
+      "PID": "1281",
+      "VID": "567D",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0077",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0077",
-      "Vendor": "Realtek",
-      "Manufacturer": "Realtek"
+      "plugState": 1,
+      "description": "USB device 0077 (Verbatim)"
     },
     {
-      "PID": "0x1282",
-      "VID": "0x56C6",
-      "ProductDesc": "USB-Dev-0078",
+      "PID": "1282",
+      "VID": "567E",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0078",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0078",
-      "Vendor": "Broadcom",
-      "Manufacturer": "Broadcom"
+      "plugState": 1,
+      "description": "USB device 0078 (Netac)"
     },
     {
-      "PID": "0x1283",
-      "VID": "0x56C7",
-      "ProductDesc": "USB-Dev-0079",
+      "PID": "1283",
+      "VID": "567F",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0079",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0079",
-      "Vendor": "Qualcomm",
-      "Manufacturer": "Qualcomm"
+      "plugState": 1,
+      "description": "USB device 0079 (aigo)"
     },
     {
-      "PID": "0x1284",
-      "VID": "0x56C8",
-      "ProductDesc": "USB-Dev-0080",
+      "PID": "1284",
+      "VID": "5678",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0080",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0080",
-      "Vendor": "Kingston",
-      "Manufacturer": "Kingston"
+      "plugState": 1,
+      "description": "USB device 0080 (Kingston)"
     },
     {
-      "PID": "0x1285",
-      "VID": "0x56C9",
-      "ProductDesc": "USB-Dev-0081",
+      "PID": "1285",
+      "VID": "5679",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0081",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0081",
-      "Vendor": "SanDisk",
-      "Manufacturer": "SanDisk"
+      "plugState": 1,
+      "description": "USB device 0081 (SanDisk)"
     },
     {
-      "PID": "0x1286",
-      "VID": "0x56CA",
-      "ProductDesc": "USB-Dev-0082",
+      "PID": "1286",
+      "VID": "567A",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0082",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0082",
-      "Vendor": "Samsung",
-      "Manufacturer": "Samsung"
+      "plugState": 1,
+      "description": "USB device 0082 (Samsung)"
     },
     {
-      "PID": "0x1287",
-      "VID": "0x56CB",
-      "ProductDesc": "USB-Dev-0083",
+      "PID": "1287",
+      "VID": "567B",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0083",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0083",
-      "Vendor": "Toshiba",
-      "Manufacturer": "Toshiba"
+      "plugState": 1,
+      "description": "USB device 0083 (Sony)"
     },
     {
-      "PID": "0x1288",
-      "VID": "0x56CC",
-      "ProductDesc": "USB-Dev-0084",
+      "PID": "1288",
+      "VID": "567C",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0084",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0084",
-      "Vendor": "Sony",
-      "Manufacturer": "Sony"
+      "plugState": 1,
+      "description": "USB device 0084 (Transcend)"
     },
     {
-      "PID": "0x1289",
-      "VID": "0x56CD",
-      "ProductDesc": "USB-Dev-0085",
+      "PID": "1289",
+      "VID": "567D",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0085",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0085",
-      "Vendor": "Transcend",
-      "Manufacturer": "Transcend"
+      "plugState": 1,
+      "description": "USB device 0085 (Lenovo)"
     },
     {
-      "PID": "0x128A",
-      "VID": "0x56CE",
-      "ProductDesc": "USB-Dev-0086",
+      "PID": "128A",
+      "VID": "567E",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0086",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0086",
-      "Vendor": "ADATA",
-      "Manufacturer": "ADATA"
+      "plugState": 1,
+      "description": "USB device 0086 (Hikvision)"
     },
     {
-      "PID": "0x128B",
-      "VID": "0x56CF",
-      "ProductDesc": "USB-Dev-0087",
+      "PID": "128B",
+      "VID": "567F",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0087",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0087",
-      "Vendor": "Lexar",
-      "Manufacturer": "Lexar"
+      "plugState": 1,
+      "description": "USB device 0087 (Verbatim)"
     },
     {
-      "PID": "0x128C",
-      "VID": "0x56D0",
-      "ProductDesc": "USB-Dev-0088",
+      "PID": "128C",
+      "VID": "5678",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0088",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0088",
-      "Vendor": "PNY",
-      "Manufacturer": "PNY"
+      "plugState": 1,
+      "description": "USB device 0088 (Netac)"
     },
     {
-      "PID": "0x128D",
-      "VID": "0x56D1",
-      "ProductDesc": "USB-Dev-0089",
+      "PID": "128D",
+      "VID": "5679",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0089",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0089",
-      "Vendor": "HP",
-      "Manufacturer": "HP"
+      "plugState": 1,
+      "description": "USB device 0089 (aigo)"
     },
     {
-      "PID": "0x128E",
-      "VID": "0x56D2",
-      "ProductDesc": "USB-Dev-0090",
+      "PID": "128E",
+      "VID": "567A",
+      "ProductDesc": "Kingston DataTraveler 3.0 USB-Dev-0090",
+      "VendorDesc": "Kingston",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0090",
-      "Vendor": "Dell",
-      "Manufacturer": "Dell"
+      "plugState": 1,
+      "description": "USB device 0090 (Kingston)"
     },
     {
-      "PID": "0x128F",
-      "VID": "0x56D3",
-      "ProductDesc": "USB-Dev-0091",
+      "PID": "128F",
+      "VID": "567B",
+      "ProductDesc": "SanDisk Ultra USB 3.0 USB-Dev-0091",
+      "VendorDesc": "SanDisk",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0091",
-      "Vendor": "Lenovo",
-      "Manufacturer": "Lenovo"
+      "plugState": 1,
+      "description": "USB device 0091 (SanDisk)"
     },
     {
-      "PID": "0x1290",
-      "VID": "0x56D4",
-      "ProductDesc": "USB-Dev-0092",
+      "PID": "1290",
+      "VID": "567C",
+      "ProductDesc": "Samsung BAR Plus USB-Dev-0092",
+      "VendorDesc": "Samsung",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0092",
-      "Vendor": "Asus",
-      "Manufacturer": "Asus"
+      "plugState": 1,
+      "description": "USB device 0092 (Samsung)"
     },
     {
-      "PID": "0x1291",
-      "VID": "0x56D5",
-      "ProductDesc": "USB-Dev-0093",
+      "PID": "1291",
+      "VID": "567D",
+      "ProductDesc": "Sony Micro Vault USB-Dev-0093",
+      "VendorDesc": "Sony",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0093",
-      "Vendor": "Acer",
-      "Manufacturer": "Acer"
+      "plugState": 1,
+      "description": "USB device 0093 (Sony)"
     },
     {
-      "PID": "0x1292",
-      "VID": "0x56D6",
-      "ProductDesc": "USB-Dev-0094",
+      "PID": "1292",
+      "VID": "567E",
+      "ProductDesc": "Transcend JetFlash 700 USB-Dev-0094",
+      "VendorDesc": "Transcend",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0094",
-      "Vendor": "Intel",
-      "Manufacturer": "Intel"
+      "plugState": 1,
+      "description": "USB device 0094 (Transcend)"
     },
     {
-      "PID": "0x1293",
-      "VID": "0x56D7",
-      "ProductDesc": "USB-Dev-0095",
+      "PID": "1293",
+      "VID": "567F",
+      "ProductDesc": "Lenovo F309 USB Disk USB-Dev-0095",
+      "VendorDesc": "Lenovo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0095",
-      "Vendor": "AMD",
-      "Manufacturer": "AMD"
+      "plugState": 1,
+      "description": "USB device 0095 (Lenovo)"
     },
     {
-      "PID": "0x1294",
-      "VID": "0x56D8",
-      "ProductDesc": "USB-Dev-0096",
+      "PID": "1294",
+      "VID": "5678",
+      "ProductDesc": "Hikvision Secure USB USB-Dev-0096",
+      "VendorDesc": "Hikvision",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0096",
-      "Vendor": "NVIDIA",
-      "Manufacturer": "NVIDIA"
+      "plugState": 1,
+      "description": "USB device 0096 (Hikvision)"
     },
     {
-      "PID": "0x1295",
-      "VID": "0x56D9",
-      "ProductDesc": "USB-Dev-0097",
+      "PID": "1295",
+      "VID": "5679",
+      "ProductDesc": "Verbatim Store n Go USB-Dev-0097",
+      "VendorDesc": "Verbatim",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0097",
-      "Vendor": "Realtek",
-      "Manufacturer": "Realtek"
+      "plugState": 1,
+      "description": "USB device 0097 (Verbatim)"
     },
     {
-      "PID": "0x1296",
-      "VID": "0x56DA",
-      "ProductDesc": "USB-Dev-0098",
+      "PID": "1296",
+      "VID": "567A",
+      "ProductDesc": "Netac U208 USB Flash Drive USB-Dev-0098",
+      "VendorDesc": "Netac",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0098",
-      "Vendor": "Broadcom",
-      "Manufacturer": "Broadcom"
+      "plugState": 1,
+      "description": "USB device 0098 (Netac)"
     },
     {
-      "PID": "0x1297",
-      "VID": "0x56DB",
-      "ProductDesc": "USB-Dev-0099",
+      "PID": "1297",
+      "VID": "567B",
+      "ProductDesc": "aigo U330 USB Flash Drive USB-Dev-0099",
+      "VendorDesc": "aigo",
       "IsWhiteList": 1,
-      "SerialNumber": "SN-0099",
-      "Vendor": "Qualcomm",
-      "Manufacturer": "Qualcomm"
+      "plugState": 1,
+      "description": "USB device 0099 (aigo)"
     }
   ]
 }

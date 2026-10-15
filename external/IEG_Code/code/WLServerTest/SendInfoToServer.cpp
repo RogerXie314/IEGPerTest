@@ -3359,7 +3359,7 @@ static std::string BuildJsonString_ProcessAudit(LPTSTR lpComputerID, int nCount)
     for (int i = 0; i < nCount; ++i)
     {
         char buf[256];
-        sprintf_s(buf, sizeof(buf), "{\"FileName\":\"proc_audit_%04d.exe\"}", i);
+        sprintf_s(buf, sizeof(buf), "{\"FileName\":\"C:\\\\Test\\\\Audit\\\\proc_audit_%04d.exe\"}", i);
         if (i > 0) sJson += ",";
         sJson += buf;
     }
@@ -3371,7 +3371,7 @@ static std::string BuildJsonString_MacSubObj(LPTSTR lpComputerID, int nUserCount
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"CMDContent_1\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"Operation\":1,\"CMDContent_1\":[";
     for (int i = 0; i < nUserCount; ++i)
     {
         char buf[512];
@@ -3523,7 +3523,7 @@ BOOL CSendInfoToServer::SendClientMacSubObjToServer(LPTSTR lpComputerID)
     std::string sJson1, sJson2;
     std::string sJson = LoadPolicyJsonFromFileDual(lpComputerID, L"policy_macsubobj.json", sJson1, sJson2);
     if (sJson.empty()) sJson = BuildJsonString_MacSubObj(lpComputerID, 5000, 5000);
-    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"CMDContent_1\":" + sJson1 + ",\"CMDContent_2\":" + sJson2 + "}]"; sJson = wrap; }
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"Operation\":1,\"CMDContent_1\":" + sJson1 + ",\"CMDContent_2\":" + sJson2 + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] MAC_SubObj computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3664,6 +3664,15 @@ static std::string BuildJsonString_ScanExclude(LPTSTR lpComputerID, int nCount)
     sJson += (LPCSTR)CStringA(lpComputerID);
     sJson += "\",\"CMDTYPE\":150,\"CMDID\":140,\"CMDContent\":[{";
     sJson += "\"EXCLUDESCANFOLDER\":1,\"REGPROTECT\":1,\"FILEPROTECT\":1,\"DEP\":1,\"IPSEC\":1,\"PROCESSAUDIT\":1";
+    sJson += ",\"Paths\":[";
+    sJson += "{\"Type\":0,\"Path\":\"C:\\\\Windows\\\\Temp\"}";
+    sJson += ",{\"Type\":0,\"Path\":\"C:\\\\Users\\\\Default\\\\AppData\\\\Local\\\\Temp\"}";
+    sJson += ",{\"Type\":0,\"Path\":\"C:\\\\Program Files\\\\Common Files\"}";
+    sJson += ",{\"Type\":1,\"Path\":\"C:\\\\Test\\\\Exclude\\\\file_0001.txt\"}";
+    sJson += ",{\"Type\":1,\"Path\":\"C:\\\\Test\\\\Exclude\\\\file_0002.txt\"}";
+    sJson += ",{\"Type\":2,\"Path\":\"HKLM\\\\SOFTWARE\\\\Demo\\\\ExcludeKey1\"}";
+    sJson += ",{\"Type\":2,\"Path\":\"HKLM\\\\SOFTWARE\\\\Demo\\\\ExcludeKey2\"}";
+    sJson += "]";
     sJson += "}]}]";
     return sJson;
 }
@@ -3690,7 +3699,7 @@ static std::string BuildJsonString_UsbWhitelist(LPTSTR lpComputerID, int nCount)
     for (int i = 0; i < nCount; ++i)
     {
         char buf[512];
-        sprintf_s(buf, sizeof(buf), "{\"PID\":\"0x%04X\",\"VID\":\"0x%04X\",\"ProductDesc\":\"USB-Dev-%04d\",\"IsWhiteList\":1,\"SerialNumber\":\"SN-%04d\"}", i+0x1234, i+0x5678, i, i);
+        sprintf_s(buf, sizeof(buf), "{\"PID\":\"%04X\",\"VID\":\"%04X\",\"ProductDesc\":\"USB-Dev-%04d\",\"VendorDesc\":\"Vendor-%04d\",\"IsWhiteList\":1,\"plugState\":1,\"description\":\"USB device %04d (Vendor-%04d)\"}", i+0x1234, 0x5678+(i%8), i, (i%8)+1, i, (i%8)+1);
         if (i > 0) sJson += ",";
         sJson += buf;
     }
@@ -3719,8 +3728,11 @@ static std::string BuildJsonString_UDisk(LPTSTR lpComputerID, int nCount)
     sJson += "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
-        char buf[512];
-        sprintf_s(buf, sizeof(buf), "{\"SerialNumber\":\"UDISK-SN-%04d\",\"RegStatus\":1,\"ReadOnly\":%d,\"Encrypt\":%d}", i, i%2, (i+1)%2);
+        char buf[1024];
+        if (i % 3 == 0)
+            sprintf_s(buf, sizeof(buf), "{\"type\":1,\"USBClass\":8,\"plugState\":1,\"serialID\":\"UDISK-SN-%04d\",\"registerStatus\":1,\"time\":\"2026-01-01 10:00:00\",\"description\":\"UDisk Desc %04d\",\"UDiskType\":%d,\"RegisterVersion\":0,\"DiskDriverLetter\":[\"E:\\\\\"],\"VolumeName\":[\"Safe%04d\",\"Pub%04d\"],\"RegAuthority\":%d,\"ComKillVirusSign\":1,\"PubliceAreaKillVirusSign\":0,\"secureAreaKillVirusSign\":0}", i, i, (i%3)+1, i, i, (i%2)?5:7);
+        else
+            sprintf_s(buf, sizeof(buf), "{\"type\":1,\"USBClass\":8,\"plugState\":1,\"serialID\":\"UDISK-SN-%04d\",\"registerStatus\":1,\"time\":\"2026-01-01 10:00:00\",\"description\":\"UDisk Desc %04d\",\"UDiskType\":%d,\"RegisterVersion\":0,\"DiskDriverLetter\":[\"E:\\\\\"],\"VolumeName\":[\"UData%04d\"],\"RegAuthority\":%d,\"ComKillVirusSign\":1,\"PubliceAreaKillVirusSign\":0,\"secureAreaKillVirusSign\":0}", i, i, (i%3)+1, i, (i%2)?5:7);
         if (i > 0) sJson += ",";
         sJson += buf;
     }
@@ -3806,11 +3818,11 @@ static std::string BuildJsonString_Firewall(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"Default_IN\":0,\"Default_OUT\":0,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"FWDefaultIn\":0,\"FWDefaultOut\":0,\"FwItems\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[1024];
-        sprintf_s(buf, sizeof(buf), "{\"RuleName\":\"Rule-%04d\",\"Operation\":1,\"Direction\":%d,\"Protocol\":6,\"LocalPort\":%d,\"RemoteIP\":\"192.168.%d.%d\",\"Action\":%d}", i, (i%2)+1, 1000+i, i%256, i/256, i%2);
+        sprintf_s(buf, sizeof(buf), "{\"RuleName\":\"Rule-%04d\",\"FullPath\":\"C:\\\\Test\\\\Firewall\\\\app_%04d.exe\",\"LocalIP\":\"10.0.0.%d\",\"RemoteIP\":\"192.168.%d.%d\",\"LocalPort\":\"%d\",\"RemotePort\":\"%d\",\"ProtocalType\":%d,\"Operation\":1,\"Direction\":%d}", i, i, i, i, i+1, 1000+i, 80+i, (i%2)?17:6, (i%2)+1);
         if (i > 0) sJson += ",";
         sJson += buf;
     }
@@ -3824,7 +3836,7 @@ BOOL CSendInfoToServer::SendClientFirewallToServer(LPTSTR lpComputerID)
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_NW_PLY_REPORT, m_strServerIP, _ttoi(m_strServerPort));
     std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_firewall.json");
     if (sJson.empty()) sJson = BuildJsonString_Firewall(lpComputerID, 100);
-    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"Default_IN\":0,\"Default_OUT\":0,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"FWDefaultIn\":0,\"FWDefaultOut\":0,\"FwItems\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] Firewall computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3836,9 +3848,16 @@ static std::string BuildJsonString_BaseLine(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":[{";
-    sJson += "\"dwPasswordComplexity\":\"0,1\",\"dwMin_passwd_len\":\"0,8\",\"dwPassword_hist_len\":\"0,5\",\"dwMax_passwd_age\":\"0,90\",\"dwLockout_threshold\":\"0,5\",\"dwDisable_guest\":\"0,1\",\"dwAuditCategoryLogon\":\"0,1\",\"dwAuditCategoryAccountManagement\":\"0,1\",\"dwClearPageShutDown\":\"0,1\",\"dwDontDisplayLastUserName\":\"0,1\",\"dwRestrictAnonymous\":\"0,1\"";
-    sJson += "}]}]";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":{";
+    sJson += "\"dwPasswordComplexity\":1,\"dwMin_passwd_len\":8,\"dwPassword_hist_len\":5,\"dwMax_passwd_age\":90,\"dwLockout_threshold\":5,\"dwDisable_guest\":1";
+    sJson += ",\"dwUsrmod3_lockout_observation_window\":30,\"dwUsrmod3_lockout_duration\":30";
+    sJson += ",\"dwAuditCategoryLogon\":1,\"dwAuditCategoryAccountManagement\":1,\"dwAuditCategoryAccountLogon\":1,\"dwAuditCategoryObjectAccess\":1,\"dwAuditCategoryPolicyChange\":1,\"dwAuditCategoryPrivilegeUse\":1,\"dwAuditCategorySystem\":1,\"dwAuditCategoryDetailedTracking\":1,\"dwAuditCategoryDirectoryServiceAccess\":1";
+    sJson += ",\"dwClearPageShutDown\":1,\"dwDontDisplayLastUserName\":1,\"dwDisableCAD\":1,\"dwRestrictAnonymousSam\":1,\"dwRestrictAnonymous\":1,\"dwAutoRun\":0,\"dwShare\":0";
+    sJson += ",\"dwApplicationLog\":1,\"dwSeclog\":1,\"dwSystemLog\":1,\"dwCachedLogonsCount\":10,\"dwDisableDomainCreds\":1,\"dwEnableUac\":1";
+    sJson += ",\"dwForbidAutoLogin\":1,\"dwForbidAutoReboot\":1,\"dwForbidAutoShutdown\":1,\"dwForbidChangeIp\":1,\"dwForbidChangeName\":1,\"dwForbidConsoleAutoLogin\":1,\"dwForbidFloppyCopy\":1,\"dwForbidGethelp\":1,\"dwForcedLogoff\":1";
+    sJson += ",\"dwRdpRortNum\":1,\"dwDepIn\":1,\"dwDepOut\":1,\"dwDeleteIpForwardEntry\":1,\"dwRemoteHostRDP\":1,\"dwRemoteLoginTime\":1,\"dwScrnSave\":1";
+    sJson += ",\"dwForbidAdminToTurnOff\":1,\"dwSynAttackDetectionDesign\":1,\"dwPasswordExpiryWarning\":1,\"dwForbidDefaultOPTUser\":1";
+    sJson += "}}]";
     return sJson;
 }
 BOOL CSendInfoToServer::SendClientBaseLineToServer(LPTSTR lpComputerID)
@@ -3846,7 +3865,7 @@ BOOL CSendInfoToServer::SendClientBaseLineToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SECB_REPORT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_baseline.json");
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_baseline.json");
     if (sJson.empty()) sJson = BuildJsonString_BaseLine(lpComputerID, 1);
     else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;

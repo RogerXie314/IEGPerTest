@@ -1,562 +1,1079 @@
 {
   "_meta": {
-    "desc": "U盘接入管控列表（cdrom/无线/串口等接口开关 + 已注册U盘）",
+    "desc": "U盘接入管控列表（CDROM/无线/串口等接口开关 + 已注册U盘）",
     "url": "/USM/hotplugDev.do",
     "cmdid": 120,
     "cmdtype": 150,
     "max_count": 50,
-    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+    "usage": "items 数组元素作为 CMDContent 上报，字段与 IEG DeviceControl_RegUDiskInfo_GetJson 对齐（serialID/registerStatus/time/description/RegAuthority 等）。修改后下次配置上传生效。"
   },
   "items": [
     {
-      "SerialNumber": "UDISK-SN-0000",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0000",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0000",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0000",
-      "VolumeName": "Volume_0000"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0000",
+        "Pub0000"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0001",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0001",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0001",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0001",
-      "VolumeName": "Volume_0001"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0001"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0002",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0002",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0002",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0002",
-      "VolumeName": "Volume_0002"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0002"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0003",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0003",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0003",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0003",
-      "VolumeName": "Volume_0003"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0003",
+        "Pub0003"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0004",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0004",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0004",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0004",
-      "VolumeName": "Volume_0004"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0004"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0005",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0005",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0005",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0005",
-      "VolumeName": "Volume_0005"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0005"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0006",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0006",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0006",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0006",
-      "VolumeName": "Volume_0006"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0006",
+        "Pub0006"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0007",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0007",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0007",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0007",
-      "VolumeName": "Volume_0007"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0007"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0008",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0008",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0008",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0008",
-      "VolumeName": "Volume_0008"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0008"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0009",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0009",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0009",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0009",
-      "VolumeName": "Volume_0009"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0009",
+        "Pub0009"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0010",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0010",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0010",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0010",
-      "VolumeName": "Volume_0010"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0010"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0011",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0011",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0011",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0011",
-      "VolumeName": "Volume_0011"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0011"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0012",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0012",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0012",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0012",
-      "VolumeName": "Volume_0012"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0012",
+        "Pub0012"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0013",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0013",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0013",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0013",
-      "VolumeName": "Volume_0013"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0013"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0014",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0014",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0014",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0014",
-      "VolumeName": "Volume_0014"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0014"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0015",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0015",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0015",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0015",
-      "VolumeName": "Volume_0015"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0015",
+        "Pub0015"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0016",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0016",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0016",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0016",
-      "VolumeName": "Volume_0016"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0016"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0017",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0017",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0017",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0017",
-      "VolumeName": "Volume_0017"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0017"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0018",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0018",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0018",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0018",
-      "VolumeName": "Volume_0018"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0018",
+        "Pub0018"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0019",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0019",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0019",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0019",
-      "VolumeName": "Volume_0019"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0019"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0020",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0020",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0020",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0020",
-      "VolumeName": "Volume_0020"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0020"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0021",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0021",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0021",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0021",
-      "VolumeName": "Volume_0021"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0021",
+        "Pub0021"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0022",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0022",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0022",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0022",
-      "VolumeName": "Volume_0022"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0022"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0023",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0023",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0023",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0023",
-      "VolumeName": "Volume_0023"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0023"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0024",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0024",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0024",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0024",
-      "VolumeName": "Volume_0024"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0024",
+        "Pub0024"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0025",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0025",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0025",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0025",
-      "VolumeName": "Volume_0025"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0025"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0026",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0026",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0026",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0026",
-      "VolumeName": "Volume_0026"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0026"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0027",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0027",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0027",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0027",
-      "VolumeName": "Volume_0027"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0027",
+        "Pub0027"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0028",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0028",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0028",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0028",
-      "VolumeName": "Volume_0028"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0028"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0029",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0029",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0029",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0029",
-      "VolumeName": "Volume_0029"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0029"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0030",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0030",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0030",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0030",
-      "VolumeName": "Volume_0030"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0030",
+        "Pub0030"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0031",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0031",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0031",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0031",
-      "VolumeName": "Volume_0031"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0031"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0032",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0032",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0032",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0032",
-      "VolumeName": "Volume_0032"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0032"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0033",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0033",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0033",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0033",
-      "VolumeName": "Volume_0033"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0033",
+        "Pub0033"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0034",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0034",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0034",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0034",
-      "VolumeName": "Volume_0034"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0034"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0035",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0035",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0035",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0035",
-      "VolumeName": "Volume_0035"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0035"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0036",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0036",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0036",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0036",
-      "VolumeName": "Volume_0036"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0036",
+        "Pub0036"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0037",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0037",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0037",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0037",
-      "VolumeName": "Volume_0037"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0037"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0038",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0038",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0038",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0038",
-      "VolumeName": "Volume_0038"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0038"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0039",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0039",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0039",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0039",
-      "VolumeName": "Volume_0039"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0039",
+        "Pub0039"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0040",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0040",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0040",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0040",
-      "VolumeName": "Volume_0040"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0040"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0041",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0041",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0041",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0041",
-      "VolumeName": "Volume_0041"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0041"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0042",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0042",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0042",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0042",
-      "VolumeName": "Volume_0042"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0042",
+        "Pub0042"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0043",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0043",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0043",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0043",
-      "VolumeName": "Volume_0043"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0043"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0044",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0044",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0044",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0044",
-      "VolumeName": "Volume_0044"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0044"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0045",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0045",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0045",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0045",
-      "VolumeName": "Volume_0045"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "Safe0045",
+        "Pub0045"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0046",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0046",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0046",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0046",
-      "VolumeName": "Volume_0046"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "UData0046"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0047",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0047",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0047",
       "UDiskType": 3,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0047",
-      "VolumeName": "Volume_0047"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0047"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0048",
-      "RegStatus": 1,
-      "ReadOnly": 0,
-      "Encrypt": 1,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0048",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0048",
       "UDiskType": 1,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0048",
-      "VolumeName": "Volume_0048"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "E:\\"
+      ],
+      "VolumeName": [
+        "Safe0048",
+        "Pub0048"
+      ],
+      "RegAuthority": 7,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     },
     {
-      "SerialNumber": "UDISK-SN-0049",
-      "RegStatus": 1,
-      "ReadOnly": 1,
-      "Encrypt": 0,
+      "type": 1,
+      "USBClass": 8,
+      "plugState": 1,
+      "serialID": "UDISK-SN-0049",
+      "registerStatus": 1,
+      "time": "2026-01-01 10:00:00",
+      "description": "U盘描述 0049",
       "UDiskType": 2,
-      "Authority": 7,
-      "RegisterTime": "2026-01-01 10:00:00",
-      "Describe": "U盘描述 0049",
-      "VolumeName": "Volume_0049"
+      "RegisterVersion": 0,
+      "DiskDriverLetter": [
+        "F:\\"
+      ],
+      "VolumeName": [
+        "UData0049"
+      ],
+      "RegAuthority": 5,
+      "ComKillVirusSign": 1,
+      "PubliceAreaKillVirusSign": 0,
+      "secureAreaKillVirusSign": 0
     }
   ]
 }
