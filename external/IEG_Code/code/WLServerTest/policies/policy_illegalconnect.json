@@ -1,0 +1,262 @@
+{
+  "_meta": {
+    "desc": "违规外联管控（禁止访问的目标主机列表）",
+    "url": "/USM/illegalConnectConfig.do",
+    "cmdid": 169,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "host": "blocked-0000.example.com",
+      "desc": "block-0000",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0001.example.com",
+      "desc": "block-0001",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0002.example.com",
+      "desc": "block-0002",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0003.example.com",
+      "desc": "block-0003",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0004.example.com",
+      "desc": "block-0004",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0005.example.com",
+      "desc": "block-0005",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0006.example.com",
+      "desc": "block-0006",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0007.example.com",
+      "desc": "block-0007",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0008.example.com",
+      "desc": "block-0008",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0009.example.com",
+      "desc": "block-0009",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0010.example.com",
+      "desc": "block-0010",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0011.example.com",
+      "desc": "block-0011",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0012.example.com",
+      "desc": "block-0012",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0013.example.com",
+      "desc": "block-0013",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0014.example.com",
+      "desc": "block-0014",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0015.example.com",
+      "desc": "block-0015",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0016.example.com",
+      "desc": "block-0016",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0017.example.com",
+      "desc": "block-0017",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0018.example.com",
+      "desc": "block-0018",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0019.example.com",
+      "desc": "block-0019",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0020.example.com",
+      "desc": "block-0020",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0021.example.com",
+      "desc": "block-0021",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0022.example.com",
+      "desc": "block-0022",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0023.example.com",
+      "desc": "block-0023",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0024.example.com",
+      "desc": "block-0024",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0025.example.com",
+      "desc": "block-0025",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0026.example.com",
+      "desc": "block-0026",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0027.example.com",
+      "desc": "block-0027",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0028.example.com",
+      "desc": "block-0028",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0029.example.com",
+      "desc": "block-0029",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0030.example.com",
+      "desc": "block-0030",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0031.example.com",
+      "desc": "block-0031",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0032.example.com",
+      "desc": "block-0032",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0033.example.com",
+      "desc": "block-0033",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0034.example.com",
+      "desc": "block-0034",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0035.example.com",
+      "desc": "block-0035",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0036.example.com",
+      "desc": "block-0036",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0037.example.com",
+      "desc": "block-0037",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0038.example.com",
+      "desc": "block-0038",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0039.example.com",
+      "desc": "block-0039",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0040.example.com",
+      "desc": "block-0040",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0041.example.com",
+      "desc": "block-0041",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0042.example.com",
+      "desc": "block-0042",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0043.example.com",
+      "desc": "block-0043",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0044.example.com",
+      "desc": "block-0044",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0045.example.com",
+      "desc": "block-0045",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0046.example.com",
+      "desc": "block-0046",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0047.example.com",
+      "desc": "block-0047",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0048.example.com",
+      "desc": "block-0048",
+      "Enable": 1
+    },
+    {
+      "host": "blocked-0049.example.com",
+      "desc": "block-0049",
+      "Enable": 1
+    }
+  ]
+}

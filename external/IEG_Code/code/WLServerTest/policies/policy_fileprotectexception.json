@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "desc": "文件保护例外（不被文件保护拦截的路径列表）",
+    "url": "/USM/FileProtectException.do",
+    "cmdid": 242,
+    "cmdtype": 150,
+    "max_count": 1000,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0000.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0001.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0002.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0003.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0004.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0005.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0006.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0007.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0008.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0009.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0010.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0011.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0012.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0013.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0014.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0015.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0016.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0017.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0018.txt"
+    },
+    {
+      "FullPath": "C:\\Test\\FileProtectExc\\path_0019.txt"
+    }
+  ]
+}

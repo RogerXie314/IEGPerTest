@@ -1,0 +1,194 @@
+{
+  "_meta": {
+    "desc": "强制访问控制（主体/客体列表：CMDContent_1=进程/用户主体，CMDContent_2=文件客体）",
+    "url": "/USM/AccessControlConfig.do",
+    "cmdid": 181,
+    "cmdtype": 150,
+    "max_count": 5000,
+    "usage": "items1 作为 CMDContent_1（主体 ProcessName/UserName/DomainID），items2 作为 CMDContent_2（客体 Filename/DomainID）。修改后下一次配置上传即生效。"
+  },
+  "items1": [
+    {
+      "ProcessName": "mac_proc_0000.exe",
+      "UserName": "User_0000",
+      "DomainID": 1
+    },
+    {
+      "ProcessName": "mac_proc_0001.exe",
+      "UserName": "User_0001",
+      "DomainID": 2
+    },
+    {
+      "ProcessName": "mac_proc_0002.exe",
+      "UserName": "User_0002",
+      "DomainID": 3
+    },
+    {
+      "ProcessName": "mac_proc_0003.exe",
+      "UserName": "User_0003",
+      "DomainID": 4
+    },
+    {
+      "ProcessName": "mac_proc_0004.exe",
+      "UserName": "User_0004",
+      "DomainID": 5
+    },
+    {
+      "ProcessName": "mac_proc_0005.exe",
+      "UserName": "User_0005",
+      "DomainID": 1
+    },
+    {
+      "ProcessName": "mac_proc_0006.exe",
+      "UserName": "User_0006",
+      "DomainID": 2
+    },
+    {
+      "ProcessName": "mac_proc_0007.exe",
+      "UserName": "User_0007",
+      "DomainID": 3
+    },
+    {
+      "ProcessName": "mac_proc_0008.exe",
+      "UserName": "User_0008",
+      "DomainID": 4
+    },
+    {
+      "ProcessName": "mac_proc_0009.exe",
+      "UserName": "User_0009",
+      "DomainID": 5
+    },
+    {
+      "ProcessName": "mac_proc_0010.exe",
+      "UserName": "User_0010",
+      "DomainID": 1
+    },
+    {
+      "ProcessName": "mac_proc_0011.exe",
+      "UserName": "User_0011",
+      "DomainID": 2
+    },
+    {
+      "ProcessName": "mac_proc_0012.exe",
+      "UserName": "User_0012",
+      "DomainID": 3
+    },
+    {
+      "ProcessName": "mac_proc_0013.exe",
+      "UserName": "User_0013",
+      "DomainID": 4
+    },
+    {
+      "ProcessName": "mac_proc_0014.exe",
+      "UserName": "User_0014",
+      "DomainID": 5
+    },
+    {
+      "ProcessName": "mac_proc_0015.exe",
+      "UserName": "User_0015",
+      "DomainID": 1
+    },
+    {
+      "ProcessName": "mac_proc_0016.exe",
+      "UserName": "User_0016",
+      "DomainID": 2
+    },
+    {
+      "ProcessName": "mac_proc_0017.exe",
+      "UserName": "User_0017",
+      "DomainID": 3
+    },
+    {
+      "ProcessName": "mac_proc_0018.exe",
+      "UserName": "User_0018",
+      "DomainID": 4
+    },
+    {
+      "ProcessName": "mac_proc_0019.exe",
+      "UserName": "User_0019",
+      "DomainID": 5
+    }
+  ],
+  "items2": [
+    {
+      "Filename": "C:\\Test\\MAC\\file_0000.txt",
+      "DomainID": 1
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0001.txt",
+      "DomainID": 2
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0002.txt",
+      "DomainID": 3
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0003.txt",
+      "DomainID": 4
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0004.txt",
+      "DomainID": 5
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0005.txt",
+      "DomainID": 1
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0006.txt",
+      "DomainID": 2
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0007.txt",
+      "DomainID": 3
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0008.txt",
+      "DomainID": 4
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0009.txt",
+      "DomainID": 5
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0010.txt",
+      "DomainID": 1
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0011.txt",
+      "DomainID": 2
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0012.txt",
+      "DomainID": 3
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0013.txt",
+      "DomainID": 4
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0014.txt",
+      "DomainID": 5
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0015.txt",
+      "DomainID": 1
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0016.txt",
+      "DomainID": 2
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0017.txt",
+      "DomainID": 3
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0018.txt",
+      "DomainID": 4
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\file_0019.txt",
+      "DomainID": 5
+    }
+  ]
+}

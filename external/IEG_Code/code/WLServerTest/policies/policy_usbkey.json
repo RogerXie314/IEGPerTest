@@ -1,0 +1,412 @@
+{
+  "_meta": {
+    "desc": "双因子认证用户列表（USBKey绑定关系）",
+    "url": "/USM/USBKeyConfig.do",
+    "cmdid": 171,
+    "cmdtype": 200,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "KeySerialID": "UK-SN-0000",
+      "KeyName": "USBKey-0000",
+      "ProductId": "PID-0000",
+      "UserName": "user0000",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0001",
+      "KeyName": "USBKey-0001",
+      "ProductId": "PID-0001",
+      "UserName": "user0001",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0002",
+      "KeyName": "USBKey-0002",
+      "ProductId": "PID-0002",
+      "UserName": "user0002",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0003",
+      "KeyName": "USBKey-0003",
+      "ProductId": "PID-0003",
+      "UserName": "user0003",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0004",
+      "KeyName": "USBKey-0004",
+      "ProductId": "PID-0004",
+      "UserName": "user0004",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0005",
+      "KeyName": "USBKey-0005",
+      "ProductId": "PID-0005",
+      "UserName": "user0005",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0006",
+      "KeyName": "USBKey-0006",
+      "ProductId": "PID-0006",
+      "UserName": "user0006",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0007",
+      "KeyName": "USBKey-0007",
+      "ProductId": "PID-0007",
+      "UserName": "user0007",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0008",
+      "KeyName": "USBKey-0008",
+      "ProductId": "PID-0008",
+      "UserName": "user0008",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0009",
+      "KeyName": "USBKey-0009",
+      "ProductId": "PID-0009",
+      "UserName": "user0009",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0010",
+      "KeyName": "USBKey-0010",
+      "ProductId": "PID-0010",
+      "UserName": "user0010",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0011",
+      "KeyName": "USBKey-0011",
+      "ProductId": "PID-0011",
+      "UserName": "user0011",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0012",
+      "KeyName": "USBKey-0012",
+      "ProductId": "PID-0012",
+      "UserName": "user0012",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0013",
+      "KeyName": "USBKey-0013",
+      "ProductId": "PID-0013",
+      "UserName": "user0013",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0014",
+      "KeyName": "USBKey-0014",
+      "ProductId": "PID-0014",
+      "UserName": "user0014",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0015",
+      "KeyName": "USBKey-0015",
+      "ProductId": "PID-0015",
+      "UserName": "user0015",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0016",
+      "KeyName": "USBKey-0016",
+      "ProductId": "PID-0016",
+      "UserName": "user0016",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0017",
+      "KeyName": "USBKey-0017",
+      "ProductId": "PID-0017",
+      "UserName": "user0017",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0018",
+      "KeyName": "USBKey-0018",
+      "ProductId": "PID-0018",
+      "UserName": "user0018",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0019",
+      "KeyName": "USBKey-0019",
+      "ProductId": "PID-0019",
+      "UserName": "user0019",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0020",
+      "KeyName": "USBKey-0020",
+      "ProductId": "PID-0020",
+      "UserName": "user0020",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0021",
+      "KeyName": "USBKey-0021",
+      "ProductId": "PID-0021",
+      "UserName": "user0021",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0022",
+      "KeyName": "USBKey-0022",
+      "ProductId": "PID-0022",
+      "UserName": "user0022",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0023",
+      "KeyName": "USBKey-0023",
+      "ProductId": "PID-0023",
+      "UserName": "user0023",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0024",
+      "KeyName": "USBKey-0024",
+      "ProductId": "PID-0024",
+      "UserName": "user0024",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0025",
+      "KeyName": "USBKey-0025",
+      "ProductId": "PID-0025",
+      "UserName": "user0025",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0026",
+      "KeyName": "USBKey-0026",
+      "ProductId": "PID-0026",
+      "UserName": "user0026",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0027",
+      "KeyName": "USBKey-0027",
+      "ProductId": "PID-0027",
+      "UserName": "user0027",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0028",
+      "KeyName": "USBKey-0028",
+      "ProductId": "PID-0028",
+      "UserName": "user0028",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0029",
+      "KeyName": "USBKey-0029",
+      "ProductId": "PID-0029",
+      "UserName": "user0029",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0030",
+      "KeyName": "USBKey-0030",
+      "ProductId": "PID-0030",
+      "UserName": "user0030",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0031",
+      "KeyName": "USBKey-0031",
+      "ProductId": "PID-0031",
+      "UserName": "user0031",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0032",
+      "KeyName": "USBKey-0032",
+      "ProductId": "PID-0032",
+      "UserName": "user0032",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0033",
+      "KeyName": "USBKey-0033",
+      "ProductId": "PID-0033",
+      "UserName": "user0033",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0034",
+      "KeyName": "USBKey-0034",
+      "ProductId": "PID-0034",
+      "UserName": "user0034",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0035",
+      "KeyName": "USBKey-0035",
+      "ProductId": "PID-0035",
+      "UserName": "user0035",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0036",
+      "KeyName": "USBKey-0036",
+      "ProductId": "PID-0036",
+      "UserName": "user0036",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0037",
+      "KeyName": "USBKey-0037",
+      "ProductId": "PID-0037",
+      "UserName": "user0037",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0038",
+      "KeyName": "USBKey-0038",
+      "ProductId": "PID-0038",
+      "UserName": "user0038",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0039",
+      "KeyName": "USBKey-0039",
+      "ProductId": "PID-0039",
+      "UserName": "user0039",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0040",
+      "KeyName": "USBKey-0040",
+      "ProductId": "PID-0040",
+      "UserName": "user0040",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0041",
+      "KeyName": "USBKey-0041",
+      "ProductId": "PID-0041",
+      "UserName": "user0041",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0042",
+      "KeyName": "USBKey-0042",
+      "ProductId": "PID-0042",
+      "UserName": "user0042",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0043",
+      "KeyName": "USBKey-0043",
+      "ProductId": "PID-0043",
+      "UserName": "user0043",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0044",
+      "KeyName": "USBKey-0044",
+      "ProductId": "PID-0044",
+      "UserName": "user0044",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0045",
+      "KeyName": "USBKey-0045",
+      "ProductId": "PID-0045",
+      "UserName": "user0045",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0046",
+      "KeyName": "USBKey-0046",
+      "ProductId": "PID-0046",
+      "UserName": "user0046",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0047",
+      "KeyName": "USBKey-0047",
+      "ProductId": "PID-0047",
+      "UserName": "user0047",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0048",
+      "KeyName": "USBKey-0048",
+      "ProductId": "PID-0048",
+      "UserName": "user0048",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    },
+    {
+      "KeySerialID": "UK-SN-0049",
+      "KeyName": "USBKey-0049",
+      "ProductId": "PID-0049",
+      "UserName": "user0049",
+      "Domain": "CORP",
+      "BoundleTime": "2026-01-01 10:00:00"
+    }
+  ]
+}

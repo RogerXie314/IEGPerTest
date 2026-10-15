@@ -1,0 +1,152 @@
+{
+  "_meta": {
+    "desc": "强制访问控制例外（例外主体/客体规则）",
+    "url": "/USM/AccessControlObjectRule.do",
+    "cmdid": 183,
+    "cmdtype": 150,
+    "max_count": 500,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0000.txt",
+      "UserName": "User_0000",
+      "process": "proc_0000.exe",
+      "DomainID": 1,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0001.txt",
+      "UserName": "User_0001",
+      "process": "proc_0001.exe",
+      "DomainID": 2,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0002.txt",
+      "UserName": "User_0002",
+      "process": "proc_0002.exe",
+      "DomainID": 3,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0003.txt",
+      "UserName": "User_0003",
+      "process": "proc_0003.exe",
+      "DomainID": 4,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0004.txt",
+      "UserName": "User_0004",
+      "process": "proc_0004.exe",
+      "DomainID": 5,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0005.txt",
+      "UserName": "User_0005",
+      "process": "proc_0005.exe",
+      "DomainID": 1,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0006.txt",
+      "UserName": "User_0006",
+      "process": "proc_0006.exe",
+      "DomainID": 2,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0007.txt",
+      "UserName": "User_0007",
+      "process": "proc_0007.exe",
+      "DomainID": 3,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0008.txt",
+      "UserName": "User_0008",
+      "process": "proc_0008.exe",
+      "DomainID": 4,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0009.txt",
+      "UserName": "User_0009",
+      "process": "proc_0009.exe",
+      "DomainID": 5,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0010.txt",
+      "UserName": "User_0010",
+      "process": "proc_0010.exe",
+      "DomainID": 1,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0011.txt",
+      "UserName": "User_0011",
+      "process": "proc_0011.exe",
+      "DomainID": 2,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0012.txt",
+      "UserName": "User_0012",
+      "process": "proc_0012.exe",
+      "DomainID": 3,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0013.txt",
+      "UserName": "User_0013",
+      "process": "proc_0013.exe",
+      "DomainID": 4,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0014.txt",
+      "UserName": "User_0014",
+      "process": "proc_0014.exe",
+      "DomainID": 5,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0015.txt",
+      "UserName": "User_0015",
+      "process": "proc_0015.exe",
+      "DomainID": 1,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0016.txt",
+      "UserName": "User_0016",
+      "process": "proc_0016.exe",
+      "DomainID": 2,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0017.txt",
+      "UserName": "User_0017",
+      "process": "proc_0017.exe",
+      "DomainID": 3,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0018.txt",
+      "UserName": "User_0018",
+      "process": "proc_0018.exe",
+      "DomainID": 4,
+      "Action": 0
+    },
+    {
+      "Filename": "C:\\Test\\MAC\\exc_0019.txt",
+      "UserName": "User_0019",
+      "process": "proc_0019.exe",
+      "DomainID": 5,
+      "Action": 0
+    }
+  ]
+}

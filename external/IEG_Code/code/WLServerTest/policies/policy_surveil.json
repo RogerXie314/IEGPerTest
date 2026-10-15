@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "desc": "监视/勒索病毒行为检测配置",
+    "url": "/USM/ieg/ransonwareDetect",
+    "cmdid": 501,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 为单个配置对象（enable/static_trap/dynamic_trap/behavior_analysis/ignore_trust_state/deal_mode），整体作为 CMDContent 上报。"
+  },
+  "items": {
+    "enable": 1,
+    "static_trap": 1,
+    "dynamic_trap": 1,
+    "behavior_analysis": 1,
+    "ignore_trust_state": 0,
+    "deal_mode": 0
+  }
+}

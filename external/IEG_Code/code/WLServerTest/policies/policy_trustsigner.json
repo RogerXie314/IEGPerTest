@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "desc": "信任签名（软件厂商签名白名单）",
+    "url": "/USM/TrustSigner.do",
+    "cmdid": 296,
+    "cmdtype": 150,
+    "max_count": 128,
+    "usage": "items 为 trust_cert 证书数组（vendor/description）。修改后下一次配置上传即生效。"
+  },
+  "items": [
+    {
+      "vendor": "Vendor0000",
+      "description": "Trust signer 0000"
+    },
+    {
+      "vendor": "Vendor0001",
+      "description": "Trust signer 0001"
+    },
+    {
+      "vendor": "Vendor0002",
+      "description": "Trust signer 0002"
+    },
+    {
+      "vendor": "Vendor0003",
+      "description": "Trust signer 0003"
+    },
+    {
+      "vendor": "Vendor0004",
+      "description": "Trust signer 0004"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "desc": "进程审计（需要审计的进程/程序列表）",
+    "url": "/USM/ProcessAuditConfig.do",
+    "cmdid": 243,
+    "cmdtype": 150,
+    "max_count": 1000,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "FileName": "proc_audit_0000.exe"
+    },
+    {
+      "FileName": "proc_audit_0001.exe"
+    },
+    {
+      "FileName": "proc_audit_0002.exe"
+    },
+    {
+      "FileName": "proc_audit_0003.exe"
+    },
+    {
+      "FileName": "proc_audit_0004.exe"
+    },
+    {
+      "FileName": "proc_audit_0005.exe"
+    },
+    {
+      "FileName": "proc_audit_0006.exe"
+    },
+    {
+      "FileName": "proc_audit_0007.exe"
+    },
+    {
+      "FileName": "proc_audit_0008.exe"
+    },
+    {
+      "FileName": "proc_audit_0009.exe"
+    },
+    {
+      "FileName": "proc_audit_0010.exe"
+    },
+    {
+      "FileName": "proc_audit_0011.exe"
+    },
+    {
+      "FileName": "proc_audit_0012.exe"
+    },
+    {
+      "FileName": "proc_audit_0013.exe"
+    },
+    {
+      "FileName": "proc_audit_0014.exe"
+    },
+    {
+      "FileName": "proc_audit_0015.exe"
+    },
+    {
+      "FileName": "proc_audit_0016.exe"
+    },
+    {
+      "FileName": "proc_audit_0017.exe"
+    },
+    {
+      "FileName": "proc_audit_0018.exe"
+    },
+    {
+      "FileName": "proc_audit_0019.exe"
+    }
+  ]
+}

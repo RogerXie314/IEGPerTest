@@ -1,0 +1,412 @@
+{
+  "_meta": {
+    "desc": "安全运维工单配置（工单信息与下发文件清单）",
+    "url": "/USM/ReportWorkSheet.do",
+    "cmdid": 174,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "FileName": "file_0000.exe",
+      "HashValue": "hash0000",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0001.exe",
+      "HashValue": "hash0001",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0002.exe",
+      "HashValue": "hash0002",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0003.exe",
+      "HashValue": "hash0003",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0004.exe",
+      "HashValue": "hash0004",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0005.exe",
+      "HashValue": "hash0005",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0006.exe",
+      "HashValue": "hash0006",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0007.exe",
+      "HashValue": "hash0007",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0008.exe",
+      "HashValue": "hash0008",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0009.exe",
+      "HashValue": "hash0009",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0010.exe",
+      "HashValue": "hash0010",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0011.exe",
+      "HashValue": "hash0011",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0012.exe",
+      "HashValue": "hash0012",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0013.exe",
+      "HashValue": "hash0013",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0014.exe",
+      "HashValue": "hash0014",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0015.exe",
+      "HashValue": "hash0015",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0016.exe",
+      "HashValue": "hash0016",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0017.exe",
+      "HashValue": "hash0017",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0018.exe",
+      "HashValue": "hash0018",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0019.exe",
+      "HashValue": "hash0019",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0020.exe",
+      "HashValue": "hash0020",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0021.exe",
+      "HashValue": "hash0021",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0022.exe",
+      "HashValue": "hash0022",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0023.exe",
+      "HashValue": "hash0023",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0024.exe",
+      "HashValue": "hash0024",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0025.exe",
+      "HashValue": "hash0025",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0026.exe",
+      "HashValue": "hash0026",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0027.exe",
+      "HashValue": "hash0027",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0028.exe",
+      "HashValue": "hash0028",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0029.exe",
+      "HashValue": "hash0029",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0030.exe",
+      "HashValue": "hash0030",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0031.exe",
+      "HashValue": "hash0031",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0032.exe",
+      "HashValue": "hash0032",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0033.exe",
+      "HashValue": "hash0033",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0034.exe",
+      "HashValue": "hash0034",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0035.exe",
+      "HashValue": "hash0035",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0036.exe",
+      "HashValue": "hash0036",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0037.exe",
+      "HashValue": "hash0037",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0038.exe",
+      "HashValue": "hash0038",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0039.exe",
+      "HashValue": "hash0039",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0040.exe",
+      "HashValue": "hash0040",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0041.exe",
+      "HashValue": "hash0041",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0042.exe",
+      "HashValue": "hash0042",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0043.exe",
+      "HashValue": "hash0043",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0044.exe",
+      "HashValue": "hash0044",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0045.exe",
+      "HashValue": "hash0045",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0046.exe",
+      "HashValue": "hash0046",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0047.exe",
+      "HashValue": "hash0047",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0048.exe",
+      "HashValue": "hash0048",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    },
+    {
+      "FileName": "file_0049.exe",
+      "HashValue": "hash0049",
+      "executable": 1,
+      "UpdateTime": "2026-01-01 10:00:00",
+      "ActionType": 1,
+      "State": 1
+    }
+  ]
+}

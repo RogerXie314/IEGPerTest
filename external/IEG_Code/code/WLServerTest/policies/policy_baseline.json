@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "desc": "安全基线（口令复杂度/锁定阈值/审计类别等）",
+    "url": "/USM/BaseLineConfig.do",
+    "cmdid": 167,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "dwPasswordComplexity": "0,1",
+      "dwMin_passwd_len": "0,8",
+      "dwPassword_hist_len": "0,5",
+      "dwMax_passwd_age": "0,90",
+      "dwLockout_threshold": "0,5",
+      "dwDisable_guest": "0,1",
+      "dwAuditCategoryLogon": "0,1",
+      "dwAuditCategoryAccountManagement": "0,1",
+      "dwClearPageShutDown": "0,1",
+      "dwDontDisplayLastUserName": "0,1",
+      "dwRestrictAnonymous": "0,1"
+    }
+  ]
+}

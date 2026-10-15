@@ -1,0 +1,312 @@
+{
+  "_meta": {
+    "desc": "U盘接入管控列表（cdrom/无线/串口等接口开关 + 已注册U盘）",
+    "url": "/USM/hotplugDev.do",
+    "cmdid": 120,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "SerialNumber": "UDISK-SN-0000",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0001",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0002",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0003",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0004",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0005",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0006",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0007",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0008",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0009",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0010",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0011",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0012",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0013",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0014",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0015",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0016",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0017",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0018",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0019",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0020",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0021",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0022",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0023",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0024",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0025",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0026",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0027",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0028",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0029",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0030",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0031",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0032",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0033",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0034",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0035",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0036",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0037",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0038",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0039",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0040",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0041",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0042",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0043",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0044",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0045",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0046",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0047",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    },
+    {
+      "SerialNumber": "UDISK-SN-0048",
+      "RegStatus": 1,
+      "ReadOnly": 0,
+      "Encrypt": 1
+    },
+    {
+      "SerialNumber": "UDISK-SN-0049",
+      "RegStatus": 1,
+      "ReadOnly": 1,
+      "Encrypt": 0
+    }
+  ]
+}

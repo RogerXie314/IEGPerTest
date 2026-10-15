@@ -1,0 +1,92 @@
+{
+  "_meta": {
+    "desc": "注册表保护例外（不被注册表保护拦截的注册表项列表）",
+    "url": "/USM/RegProtectException.do",
+    "cmdid": 121,
+    "cmdtype": 150,
+    "max_count": 255,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0000",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0001",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0002",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0003",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0004",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0005",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0006",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0007",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0008",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0009",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0010",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0011",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0012",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0013",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0014",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0015",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0016",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0017",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0018",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegExc_0019",
+      "RegType": 1
+    }
+  ]
+}

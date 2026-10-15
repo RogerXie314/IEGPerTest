@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "desc": "信任进程（白名单进程列表）",
+    "url": "/USM/TrustProcess.do",
+    "cmdid": 247,
+    "cmdtype": 150,
+    "max_count": 256,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0000.exe",
+      "id": 1
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0001.exe",
+      "id": 2
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0002.exe",
+      "id": 3
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0003.exe",
+      "id": 4
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0004.exe",
+      "id": 5
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0005.exe",
+      "id": 6
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0006.exe",
+      "id": 7
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0007.exe",
+      "id": 8
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0008.exe",
+      "id": 9
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0009.exe",
+      "id": 10
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0010.exe",
+      "id": 11
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0011.exe",
+      "id": 12
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0012.exe",
+      "id": 13
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0013.exe",
+      "id": 14
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0014.exe",
+      "id": 15
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0015.exe",
+      "id": 16
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0016.exe",
+      "id": 17
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0017.exe",
+      "id": 18
+    },
+    {
+      "TrustChild": 0,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0018.exe",
+      "id": 19
+    },
+    {
+      "TrustChild": 1,
+      "FileName": "C:\\Test\\Trust\\trust_proc_0019.exe",
+      "id": 20
+    }
+  ]
+}

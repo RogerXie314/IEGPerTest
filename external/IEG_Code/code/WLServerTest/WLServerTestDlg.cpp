@@ -13138,9 +13138,31 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 				BOOL bFPE   = snd.SendClientFileProtectExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
 				BOOL bRPE   = snd.SendClientRegProtectExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
 				BOOL bUser  = snd.SendClientOSUserToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				// Fix11: additional policy modules
+				BOOL bOSRes = snd.SendClientOSResourceToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bScan  = snd.SendClientScanExcludeToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bUSBWL = snd.SendClientUsbWhitelistToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bUDisk = snd.SendClientUDiskToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bWiFi  = snd.SendClientWiFiToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bIll   = snd.SendClientIllegalConnectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bFW    = snd.SendClientFirewallToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bBase  = snd.SendClientBaseLineToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bUK    = snd.SendClientUSBKeyToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bMacDom= snd.SendClientMacDomainToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bThreat= snd.SendClientThreatDetectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bWS    = snd.SendClientWorkSheetToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bWSR   = snd.SendClientWorkSheetResultToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				// Fix11b: additional policy modules (MAC exception / trust signer / virus upgrade / surveil / data guard / backup)
+				BOOL bMacExc= snd.SendClientMacExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bTrSgn = snd.SendClientTrustSignerToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bVUpg  = snd.SendClientVirusUpgradeToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bSurv  = snd.SendClientSurveilToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bDGuard= snd.SendClientDataGuardToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+				BOOL bBackup= snd.SendClientBackupToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
+
 				WriteInfo(_T("[CFG-UPLOAD] manual computerID=%s ret=%d"),
 				          pArg->vecTargets[i].first.GetString(), nRet);
-				if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser)
+				if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser && bOSRes && bScan && bUSBWL && bUDisk && bWiFi && bIll && bFW && bBase && bUK && bMacDom && bThreat && bWS && bWSR && bMacExc && bTrSgn && bVUpg && bSurv && bDGuard && bBackup)
 					InterlockedIncrement64(&g_nCfgUploadOk64);
 				else
 					if (!pDlg->AddCfgUploadRetry(pArg->vecTargets[i].first, pArg->vecTargets[i].second))
@@ -13222,9 +13244,31 @@ void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
 	BOOL bFPE   = snd.SendClientFileProtectExceptionToServer((LPTSTR)(LPCTSTR)strComputerID);
 	BOOL bRPE   = snd.SendClientRegProtectExceptionToServer((LPTSTR)(LPCTSTR)strComputerID);
 	BOOL bUser  = snd.SendClientOSUserToServer((LPTSTR)(LPCTSTR)strComputerID);
+	// Fix11: additional policy modules
+	BOOL bOSRes = snd.SendClientOSResourceToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bScan  = snd.SendClientScanExcludeToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bUSBWL = snd.SendClientUsbWhitelistToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bUDisk = snd.SendClientUDiskToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bWiFi  = snd.SendClientWiFiToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bIll   = snd.SendClientIllegalConnectToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bFW    = snd.SendClientFirewallToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bBase  = snd.SendClientBaseLineToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bUK    = snd.SendClientUSBKeyToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bMacDom= snd.SendClientMacDomainToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bThreat= snd.SendClientThreatDetectToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bWS    = snd.SendClientWorkSheetToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bWSR   = snd.SendClientWorkSheetResultToServer((LPTSTR)(LPCTSTR)strComputerID);
+	// Fix11b: additional policy modules (MAC exception / trust signer / virus upgrade / surveil / data guard / backup)
+	BOOL bMacExc= snd.SendClientMacExceptionToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bTrSgn = snd.SendClientTrustSignerToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bVUpg  = snd.SendClientVirusUpgradeToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bSurv  = snd.SendClientSurveilToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bDGuard= snd.SendClientDataGuardToServer((LPTSTR)(LPCTSTR)strComputerID);
+	BOOL bBackup= snd.SendClientBackupToServer((LPTSTR)(LPCTSTR)strComputerID);
+
 
 	WriteInfo(_T("[CFG-UPLOAD] computerID=%s ip=%s ret=%d"), strComputerID.GetString(), strClientIP.GetString(), nRet);
-	if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser)
+	if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser && bOSRes && bScan && bUSBWL && bUDisk && bWiFi && bIll && bFW && bBase && bUK && bMacDom && bThreat && bWS && bWSR && bMacExc && bTrSgn && bVUpg && bSurv && bDGuard && bBackup)
 	{
 		InterlockedIncrement64(&g_nCfgUploadOk64);
 	}

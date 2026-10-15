@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "desc": "信任路径（白名单目录列表）",
+    "url": "/USM/TrustPath.do",
+    "cmdid": 248,
+    "cmdtype": 150,
+    "max_count": 64,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0000"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0001"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0002"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0003"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0004"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0005"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0006"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0007"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0008"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0009"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0010"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0011"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0012"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0013"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0014"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0015"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0016"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0017"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0018"
+    },
+    {
+      "Path": "C:\\Test\\TrustPath\\path_0019"
+    }
+  ]
+}

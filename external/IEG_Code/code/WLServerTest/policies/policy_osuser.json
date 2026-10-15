@@ -1,0 +1,212 @@
+{
+  "_meta": {
+    "desc": "用户列表（客户端本机用户/账号信息）",
+    "url": "/USM/Userinfo.do",
+    "cmdid": 185,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0000",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0001",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0002",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0003",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0004",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0005",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0006",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0007",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0008",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0009",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0010",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0011",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0012",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0013",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0014",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0015",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0016",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0017",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0018",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    },
+    {
+      "Time": "2026-10-15 10:00:00",
+      "UserName": "user_0019",
+      "Password": "",
+      "RoleID": 1,
+      "authority": 62,
+      "IsDefault": 0,
+      "IsFirstLogin": 0,
+      "PwdUpdateTime": 1760000000
+    }
+  ]
+}

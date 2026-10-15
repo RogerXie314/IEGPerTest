@@ -1,0 +1,28 @@
+{
+  "_meta": {
+    "desc": "数据保护（受保护文件类型与处置方式）",
+    "url": "/USM/ieg/dataProtect",
+    "cmdid": 502,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 为单个配置对象（enable/deal_mode/exts:name/description），整体作为 CMDContent 上报。"
+  },
+  "items": {
+    "enable": 1,
+    "deal_mode": 0,
+    "exts": [
+      {
+        "name": "doc",
+        "description": "Word"
+      },
+      {
+        "name": "pdf",
+        "description": "PDF"
+      },
+      {
+        "name": "xls",
+        "description": "Excel"
+      }
+    ]
+  }
+}

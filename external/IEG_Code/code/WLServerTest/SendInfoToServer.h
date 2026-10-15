@@ -139,6 +139,28 @@ BOOL SendClientHostDefenceLogToServer(LPTSTR lpComputerID, int logType);
     BOOL SendClientRegProtectExceptionToServer(LPTSTR lpComputerID);
     BOOL SendClientOSUserToServer(LPTSTR lpComputerID);
 int SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpComputerIP, LPCSTR lpConfigJsonUtf8);
+    // Fix11: missing policy rule upload APIs
+    BOOL SendClientOSResourceToServer(LPTSTR lpComputerID);
+    BOOL SendClientScanExcludeToServer(LPTSTR lpComputerID);
+    BOOL SendClientUsbWhitelistToServer(LPTSTR lpComputerID);
+    BOOL SendClientUDiskToServer(LPTSTR lpComputerID);
+    BOOL SendClientWiFiToServer(LPTSTR lpComputerID);
+    BOOL SendClientIllegalConnectToServer(LPTSTR lpComputerID);
+    BOOL SendClientFirewallToServer(LPTSTR lpComputerID);
+    BOOL SendClientBaseLineToServer(LPTSTR lpComputerID);
+    BOOL SendClientUSBKeyToServer(LPTSTR lpComputerID);
+    BOOL SendClientMacDomainToServer(LPTSTR lpComputerID);
+    BOOL SendClientThreatDetectToServer(LPTSTR lpComputerID);
+    BOOL SendClientWorkSheetToServer(LPTSTR lpComputerID);
+    BOOL SendClientWorkSheetResultToServer(LPTSTR lpComputerID);
+    BOOL SendClientMacExceptionToServer(LPTSTR lpComputerID);
+    BOOL SendClientTrustSignerToServer(LPTSTR lpComputerID);
+    BOOL SendClientVirusUpgradeToServer(LPTSTR lpComputerID);
+    BOOL SendClientSurveilToServer(LPTSTR lpComputerID);
+    BOOL SendClientDataGuardToServer(LPTSTR lpComputerID);
+    BOOL SendClientBackupToServer(LPTSTR lpComputerID);
+
+
 };
 
 // 客户端配置上报返回值（SendClientConfigToServer）

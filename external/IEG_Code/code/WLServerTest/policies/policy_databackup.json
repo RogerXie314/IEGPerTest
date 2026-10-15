@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "desc": "数据备份配置（备份目录/空间/周期/文件类型）",
+    "url": "/USM/ieg/dataBackup",
+    "cmdid": 503,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 为单个配置对象（enable/path/max_disk_space/max_times/trusted_process_backup/expiration_period/max_file_size/file_types:ext/description），整体作为 CMDContent 上报。"
+  },
+  "items": {
+    "enable": 1,
+    "path": "D:\\backup",
+    "max_disk_space": 1024,
+    "max_times": 10,
+    "trusted_process_backup": 1,
+    "expiration_period": 30,
+    "max_file_size": 100,
+    "file_types": [
+      {
+        "ext": "doc",
+        "description": "Word"
+      },
+      {
+        "ext": "pdf",
+        "description": "PDF"
+      }
+    ]
+  }
+}

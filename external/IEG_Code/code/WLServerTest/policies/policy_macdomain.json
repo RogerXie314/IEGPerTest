@@ -1,0 +1,612 @@
+{
+  "_meta": {
+    "desc": "域用户信息/全局域访问控制规则",
+    "url": "/USM/AccessControlDomainRule.do",
+    "cmdid": 182,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "DomainID": 1,
+      "DomainName": "Domain-00",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 2,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 2,
+      "DomainName": "Domain-01",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 3,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 3,
+      "DomainName": "Domain-02",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 4,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 4,
+      "DomainName": "Domain-03",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 5,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 5,
+      "DomainName": "Domain-04",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 6,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 6,
+      "DomainName": "Domain-05",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 7,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 7,
+      "DomainName": "Domain-06",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 8,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 8,
+      "DomainName": "Domain-07",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 9,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 9,
+      "DomainName": "Domain-08",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 10,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 10,
+      "DomainName": "Domain-09",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 11,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 11,
+      "DomainName": "Domain-10",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 12,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 12,
+      "DomainName": "Domain-11",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 13,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 13,
+      "DomainName": "Domain-12",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 14,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 14,
+      "DomainName": "Domain-13",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 15,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 15,
+      "DomainName": "Domain-14",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 16,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 16,
+      "DomainName": "Domain-15",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 17,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 17,
+      "DomainName": "Domain-16",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 18,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 18,
+      "DomainName": "Domain-17",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 19,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 19,
+      "DomainName": "Domain-18",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 20,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 20,
+      "DomainName": "Domain-19",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 21,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 21,
+      "DomainName": "Domain-20",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 22,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 22,
+      "DomainName": "Domain-21",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 23,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 23,
+      "DomainName": "Domain-22",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 24,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 24,
+      "DomainName": "Domain-23",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 25,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 25,
+      "DomainName": "Domain-24",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 26,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 26,
+      "DomainName": "Domain-25",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 27,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 27,
+      "DomainName": "Domain-26",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 28,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 28,
+      "DomainName": "Domain-27",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 29,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 29,
+      "DomainName": "Domain-28",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 30,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 30,
+      "DomainName": "Domain-29",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 31,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 31,
+      "DomainName": "Domain-30",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 32,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 32,
+      "DomainName": "Domain-31",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 33,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 33,
+      "DomainName": "Domain-32",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 34,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 34,
+      "DomainName": "Domain-33",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 35,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 35,
+      "DomainName": "Domain-34",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 36,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 36,
+      "DomainName": "Domain-35",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 37,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 37,
+      "DomainName": "Domain-36",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 38,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 38,
+      "DomainName": "Domain-37",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 39,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 39,
+      "DomainName": "Domain-38",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 40,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 40,
+      "DomainName": "Domain-39",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 41,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 41,
+      "DomainName": "Domain-40",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 42,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 42,
+      "DomainName": "Domain-41",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 43,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 43,
+      "DomainName": "Domain-42",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 44,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 44,
+      "DomainName": "Domain-43",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 45,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 45,
+      "DomainName": "Domain-44",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 46,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 46,
+      "DomainName": "Domain-45",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 47,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 47,
+      "DomainName": "Domain-46",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 48,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 48,
+      "DomainName": "Domain-47",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 49,
+          "Action": 1
+        }
+      ]
+    },
+    {
+      "DomainID": 49,
+      "DomainName": "Domain-48",
+      "InDomainAction": 0,
+      "ExDomainAction": 1,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 50,
+          "Action": 0
+        }
+      ]
+    },
+    {
+      "DomainID": 50,
+      "DomainName": "Domain-49",
+      "InDomainAction": 1,
+      "ExDomainAction": 0,
+      "ExceptionDomainRule": [
+        {
+          "exDomainID": 51,
+          "Action": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "desc": "操作系统资源告警策略（CPU/内存/磁盘阈值与告警间隔）",
+    "url": "/USM/resourceMessage.do",
+    "cmdid": 361,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "Enable": 1,
+      "CpuThreshold": 80,
+      "MemoryThreshold": 85,
+      "DiskThreshold": 90,
+      "AlertInterval": 300
+    }
+  ]
+}

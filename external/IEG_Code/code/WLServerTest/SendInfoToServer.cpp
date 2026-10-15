@@ -3226,15 +3226,92 @@ int CSendInfoToServer::SendClientConfigToServer(LPTSTR lpComputerID, LPTSTR lpCo
 // Full-spec policy rule upload implementations (aligned with IEG real client)
 // ---------------------------------------------------------------------------
 
+// Fix11b helper: read policy JSON "items" (array OR object) from exe_dir\policies\<fname>.json
+static std::string LoadPolicyJsonFromFileFlex(LPCTSTR lpComputerID, const wchar_t* wszFileName)
+{
+    TCHAR szPath[MAX_PATH] = {0};
+    DWORD dwLen = ::GetModuleFileName(NULL, szPath, MAX_PATH - 1);
+    if (dwLen == 0) return "";
+    std::wstring strFull(szPath);
+    size_t nPos = strFull.find_last_of(L"\\/");
+    if (nPos == std::wstring::npos) return "";
+    std::wstring strDir = strFull.substr(0, nPos);
+    std::wstring strJsonPath = strDir + L"\\policies\\" + wszFileName;
+    HANDLE hFile = ::CreateFileW(strJsonPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return "";
+    DWORD dwSize = ::GetFileSize(hFile, NULL);
+    if (dwSize == 0 || dwSize > 16*1024*1024) { ::CloseHandle(hFile); return ""; }
+    std::string sBuf(dwSize, 0);
+    DWORD dwRead = 0;
+    BOOL bOk = ::ReadFile(hFile, &sBuf[0], dwSize, &dwRead, NULL);
+    ::CloseHandle(hFile);
+    if (!bOk || dwRead != dwSize) return "";
+    if (sBuf.size() >= 3 && (unsigned char)sBuf[0] == 0xEF && (unsigned char)sBuf[1] == 0xBB && (unsigned char)sBuf[2] == 0xBF)
+        sBuf = sBuf.substr(3);
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(sBuf, root) || !root.isObject()) return "";
+    if (!root.isMember("items")) return "";
+    const Json::Value& val = root["items"];
+    if (!val.isArray() && !val.isObject()) return "";
+    Json::FastWriter writer;
+    std::string sOut = writer.write(val);
+    std::string::size_type nEnd = sOut.find_last_not_of("\r\n");
+    if (nEnd == std::string::npos) sOut.clear();
+    else sOut.erase(nEnd + 1);
+    return sOut;
+}
+
+// Fix11b helper: read dual array fields items1/items2 (MAC subject/object module)
+static std::string LoadPolicyJsonFromFileDual(LPCTSTR lpComputerID, const wchar_t* wszFileName, std::string& sJson1, std::string& sJson2)
+{
+    TCHAR szPath[MAX_PATH] = {0};
+    DWORD dwLen = ::GetModuleFileName(NULL, szPath, MAX_PATH - 1);
+    if (dwLen == 0) return "";
+    std::wstring strFull(szPath);
+    size_t nPos = strFull.find_last_of(L"\\/");
+    if (nPos == std::wstring::npos) return "";
+    std::wstring strDir = strFull.substr(0, nPos);
+    std::wstring strJsonPath = strDir + L"\\policies\\" + wszFileName;
+    HANDLE hFile = ::CreateFileW(strJsonPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return "";
+    DWORD dwSize = ::GetFileSize(hFile, NULL);
+    if (dwSize == 0 || dwSize > 16*1024*1024) { ::CloseHandle(hFile); return ""; }
+    std::string sBuf(dwSize, 0);
+    DWORD dwRead = 0;
+    BOOL bOk = ::ReadFile(hFile, &sBuf[0], dwSize, &dwRead, NULL);
+    ::CloseHandle(hFile);
+    if (!bOk || dwRead != dwSize) return "";
+    if (sBuf.size() >= 3 && (unsigned char)sBuf[0] == 0xEF && (unsigned char)sBuf[1] == 0xBB && (unsigned char)sBuf[2] == 0xBF)
+        sBuf = sBuf.substr(3);
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(sBuf, root) || !root.isObject()) return "";
+    if (!root.isMember("items1") || !root["items1"].isArray()) return "";
+    if (!root.isMember("items2") || !root["items2"].isArray()) return "";
+    const Json::Value& arr1 = root["items1"];
+    const Json::Value& arr2 = root["items2"];
+    Json::FastWriter writer;
+    std::string sOut1 = writer.write(arr1);
+    std::string sOut2 = writer.write(arr2);
+    std::string::size_type nEnd1 = sOut1.find_last_not_of("\r\n");
+    if (nEnd1 == std::string::npos) sOut1.clear(); else sOut1.erase(nEnd1 + 1);
+    std::string::size_type nEnd2 = sOut2.find_last_not_of("\r\n");
+    if (nEnd2 == std::string::npos) sOut2.clear(); else sOut2.erase(nEnd2 + 1);
+    sJson1 = sOut1;
+    sJson2 = sOut2;
+    return "OK";
+}
+
 static std::string BuildJsonString_OSUser(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":200,\"CMDID\":171,\"USBKeyAuth\":0,\"OsAuth\":1,\"Safemode\":0,\"DisableLocalUser\":0,\"ContentType\":0,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":185,\"operateType\":5,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[512];
-        sprintf_s(buf, sizeof(buf), "{\"UserName\":\"user_%04d\",\"Group\":\"admin\",\"Enable\":1,\"USMCreate\":0,\"Domain\":\"\",\"HardSerialID\":\"\",\"KeyName\":\"\"}", i);
+        sprintf_s(buf, sizeof(buf), "{\"Time\":\"2026-10-15 10:00:00\",\"UserName\":\"user_%04d\",\"Password\":\"\",\"RoleID\":1,\"authority\":62,\"IsDefault\":0,\"IsFirstLogin\":0,\"PwdUpdateTime\":1760000000}", i);
         if (i > 0) sJson += ",";
         sJson += buf;
     }
@@ -3383,7 +3460,9 @@ BOOL CSendInfoToServer::SendClientOSUserToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_USER_INFO, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_OSUser(lpComputerID, 50);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_osuser.json");
+    if (sJson.empty()) sJson = BuildJsonString_OSUser(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":185,\"operateType\":5,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] OSUser computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3396,7 +3475,9 @@ BOOL CSendInfoToServer::SendClientFileProtectToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_FILEPROTECT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_FileProtect(lpComputerID, 1000);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_fileprotect.json");
+    if (sJson.empty()) sJson = BuildJsonString_FileProtect(lpComputerID, 1000);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":241,\"Enable\":1,\"alarmMode\":1,\"addOrFull\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] FileProtect computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3409,7 +3490,9 @@ BOOL CSendInfoToServer::SendClientRegProtectToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_REGPROTECT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_RegProtect(lpComputerID, 1000);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_regprotect.json");
+    if (sJson.empty()) sJson = BuildJsonString_RegProtect(lpComputerID, 1000);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":240,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] RegProtect computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3422,7 +3505,9 @@ BOOL CSendInfoToServer::SendClientProcessAuditToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_PROCESSAUDIT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_ProcessAudit(lpComputerID, 1000);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_processaudit.json");
+    if (sJson.empty()) sJson = BuildJsonString_ProcessAudit(lpComputerID, 1000);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":243,\"Enable\":1,\"KeepOldAuditSwitch\":0,\"JustReload\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] ProcessAudit computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3435,7 +3520,10 @@ BOOL CSendInfoToServer::SendClientMacSubObjToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HOSTREINFORCE_MAC_REPORT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_MacSubObj(lpComputerID, 5000, 5000);
+    std::string sJson1, sJson2;
+    std::string sJson = LoadPolicyJsonFromFileDual(lpComputerID, L"policy_macsubobj.json", sJson1, sJson2);
+    if (sJson.empty()) sJson = BuildJsonString_MacSubObj(lpComputerID, 5000, 5000);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":181,\"Flag\":1,\"Enable\":1,\"CMDContent_1\":" + sJson1 + ",\"CMDContent_2\":" + sJson2 + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] MAC_SubObj computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3448,7 +3536,9 @@ BOOL CSendInfoToServer::SendClientTrustProcessToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_TRUSTPROCESS_REPORT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_TrustProcess(lpComputerID, 256);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_trustprocess.json");
+    if (sJson.empty()) sJson = BuildJsonString_TrustProcess(lpComputerID, 256);
+    else { std::string wrap = "[{\"CMDID\":247,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] TrustProcess computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3461,7 +3551,9 @@ BOOL CSendInfoToServer::SendClientTrustPathToServer(LPTSTR lpComputerID)
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_TRUSTPATH_REPORT, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_TrustPath(lpComputerID, 64);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_trustpath.json");
+    if (sJson.empty()) sJson = BuildJsonString_TrustPath(lpComputerID, 64);
+    else { std::string wrap = "[{\"CMDID\":248,\"CMDTYPE\":150,\"CMDVER\":1,\"Operation\":\"replace\",\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] TrustPath computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3473,7 +3565,9 @@ BOOL CSendInfoToServer::SendClientFileProtectExceptionToServer(LPTSTR lpComputer
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_FILEPROTECT_EXCEPTION, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_FileProtectException(lpComputerID, 1000);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_fileprotectexception.json");
+    if (sJson.empty()) sJson = BuildJsonString_FileProtectException(lpComputerID, 1000);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":242,\"addOrFull\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] FileProtectException computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3486,10 +3580,577 @@ BOOL CSendInfoToServer::SendClientRegProtectExceptionToServer(LPTSTR lpComputerI
     BOOL bRet = FALSE;
     WCHAR url[256] = {0};
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REPORT_REGPROTECT_EXCEPTION, m_strServerIP, _ttoi(m_strServerPort));
-    std::string sJson = BuildJsonString_RegProtectException(lpComputerID, 255);
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_regprotectexception.json");
+    if (sJson.empty()) sJson = BuildJsonString_RegProtectException(lpComputerID, 255);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":121,\"addOrFull\":1,\"section\":0,\"Enable\":1,\"alarmMode\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] RegProtectException computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+// ---------------------------------------------------------------------------
+// Fix11: missing policy modules implementations
+// ---------------------------------------------------------------------------
+
+// Fix11 helper: read policy JSON item array from exe_dir\policies\<fname>.json
+static std::string LoadPolicyJsonFromFile(LPCTSTR lpComputerID, const wchar_t* wszFileName)
+{
+    TCHAR szPath[MAX_PATH] = {0};
+    DWORD dwLen = ::GetModuleFileName(NULL, szPath, MAX_PATH - 1);
+    if (dwLen == 0) return "";
+    std::wstring strFull(szPath);
+    size_t nPos = strFull.find_last_of(L"\\/");
+    if (nPos == std::wstring::npos) return "";
+    std::wstring strDir = strFull.substr(0, nPos);
+    std::wstring strJsonPath = strDir + L"\\policies\\" + wszFileName;
+    HANDLE hFile = ::CreateFileW(strJsonPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return "";
+    DWORD dwSize = ::GetFileSize(hFile, NULL);
+    if (dwSize == 0 || dwSize > 16*1024*1024) { ::CloseHandle(hFile); return ""; }
+    std::string sBuf(dwSize, 0);
+    DWORD dwRead = 0;
+    BOOL bOk = ::ReadFile(hFile, &sBuf[0], dwSize, &dwRead, NULL);
+    ::CloseHandle(hFile);
+    if (!bOk || dwRead != dwSize) return "";
+    if (sBuf.size() >= 3 && (unsigned char)sBuf[0] == 0xEF && (unsigned char)sBuf[1] == 0xBB && (unsigned char)sBuf[2] == 0xBF)
+        sBuf = sBuf.substr(3);
+    Json::Value root;
+    Json::Reader reader;
+    if (!reader.parse(sBuf, root) || !root.isObject()) return "";
+    if (!root.isMember("items") || !root["items"].isArray()) return "";
+    const Json::Value& arr = root["items"];
+    Json::Value outArr(Json::arrayValue);
+    for (Json::Value::const_iterator it = arr.begin(); it != arr.end(); ++it)
+        outArr.append(*it);
+    Json::FastWriter writer;
+    std::string sOut = writer.write(outArr);
+    std::string::size_type nEnd = sOut.find_last_not_of("\r\n");
+    if (nEnd == std::string::npos) sOut.clear();
+    else sOut.erase(nEnd + 1);
+    return sOut;
+}
+
+
+
+static std::string BuildJsonString_OSResource(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":361,\"CMDContent\":[{";
+    sJson += "\"Enable\":1,\"CpuThreshold\":80,\"MemoryThreshold\":85,\"DiskThreshold\":90,\"AlertInterval\":300";
+    sJson += "}]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientOSResourceToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_CLIENT_OSRESOURCE_CONFIG, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_osresource.json");
+    if (sJson.empty()) sJson = BuildJsonString_OSResource(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":361,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] OSResource computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_ScanExclude(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":140,\"CMDContent\":[{";
+    sJson += "\"EXCLUDESCANFOLDER\":1,\"REGPROTECT\":1,\"FILEPROTECT\":1,\"DEP\":1,\"IPSEC\":1,\"PROCESSAUDIT\":1";
+    sJson += "}]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientScanExcludeToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SCAN_EXPORT_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_scanexclude.json");
+    if (sJson.empty()) sJson = BuildJsonString_ScanExclude(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":140,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] ScanExclude computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_UsbWhitelist(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":100,\"CMDID\":122,\"Operation\":\"replace\",\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"PID\":\"0x%04X\",\"VID\":\"0x%04X\",\"ProductDesc\":\"USB-Dev-%04d\",\"IsWhiteList\":1,\"SerialNumber\":\"SN-%04d\"}", i+0x1234, i+0x5678, i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientUsbWhitelistToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_USB_WHITELIST_INFO, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_usbwhitelist.json");
+    if (sJson.empty()) sJson = BuildJsonString_UsbWhitelist(lpComputerID, 100);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":100,\"CMDID\":122,\"Operation\":\"replace\",\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] UsbWhitelist computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_UDisk(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"SerialNumber\":\"UDISK-SN-%04d\",\"RegStatus\":1,\"ReadOnly\":%d,\"Encrypt\":%d}", i, i%2, (i+1)%2);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientUDiskToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REGISTER_UDISK_INFO, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_udisk.json");
+    if (sJson.empty()) sJson = BuildJsonString_UDisk(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] UDisk computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_WiFi(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":615,\"CMDVER\":1,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"SSID\":\"Corp-WiFi-%04d\",\"MAC\":\"AA:BB:CC:DD:EE:%02X\",\"IsWhiteList\":1,\"Source\":0,\"WLTime\":\"2026-01-01 00:00:00\"}", i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientWiFiToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_WIFI_WHITELIST, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_wifi.json");
+    if (sJson.empty()) sJson = BuildJsonString_WiFi(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":615,\"CMDVER\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] WiFi computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_IllegalConnect(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":169,\"Enable\":1,\"ApplyEnable\":0,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"host\":\"blocked-%04d.example.com\",\"desc\":\"block-%04d\",\"Enable\":1}", i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientIllegalConnectToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_ILLEGAL_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_illegalconnect.json");
+    if (sJson.empty()) sJson = BuildJsonString_IllegalConnect(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":169,\"Enable\":1,\"ApplyEnable\":0,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] IllegalConnect computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_Firewall(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"Default_IN\":0,\"Default_OUT\":0,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[1024];
+        sprintf_s(buf, sizeof(buf), "{\"RuleName\":\"Rule-%04d\",\"Operation\":1,\"Direction\":%d,\"Protocol\":6,\"LocalPort\":%d,\"RemoteIP\":\"192.168.%d.%d\",\"Action\":%d}", i, (i%2)+1, 1000+i, i%256, i/256, i%2);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientFirewallToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_NW_PLY_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_firewall.json");
+    if (sJson.empty()) sJson = BuildJsonString_Firewall(lpComputerID, 100);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":162,\"FireWall\":1,\"FireWallState\":1,\"SynDefence\":0,\"Default_IN\":0,\"Default_OUT\":0,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] Firewall computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_BaseLine(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":[{";
+    sJson += "\"dwPasswordComplexity\":\"0,1\",\"dwMin_passwd_len\":\"0,8\",\"dwPassword_hist_len\":\"0,5\",\"dwMax_passwd_age\":\"0,90\",\"dwLockout_threshold\":\"0,5\",\"dwDisable_guest\":\"0,1\",\"dwAuditCategoryLogon\":\"0,1\",\"dwAuditCategoryAccountManagement\":\"0,1\",\"dwClearPageShutDown\":\"0,1\",\"dwDontDisplayLastUserName\":\"0,1\",\"dwRestrictAnonymous\":\"0,1\"";
+    sJson += "}]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientBaseLineToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SECB_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_baseline.json");
+    if (sJson.empty()) sJson = BuildJsonString_BaseLine(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] BaseLine computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_USBKey(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":200,\"CMDID\":171,\"USBKeyAuth\":1,\"OsAuth\":1,\"Safemode\":0,\"BindDomain\":1,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[1024];
+        sprintf_s(buf, sizeof(buf), "{\"KeySerialID\":\"UK-SN-%04d\",\"KeyName\":\"USBKey-%04d\",\"ProductId\":\"PID-%04d\",\"UserName\":\"user%04d\",\"Domain\":\"CORP\",\"BoundleTime\":\"2026-01-01 10:00:00\"}", i, i, i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientUSBKeyToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_USBKEY_INFO, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_usbkey.json");
+    if (sJson.empty()) sJson = BuildJsonString_USBKey(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":200,\"CMDID\":171,\"USBKeyAuth\":1,\"OsAuth\":1,\"Safemode\":0,\"BindDomain\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] USBKey computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_MacDomain(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":182,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[1024];
+        sprintf_s(buf, sizeof(buf), "{\"DomainID\":%d,\"DomainName\":\"Domain-%02d\",\"InDomainAction\":%d,\"ExDomainAction\":%d,\"ExceptionDomainRule\":[{\"exDomainID\":%d,\"Action\":%d}]}", i+1, i, i%2, (i+1)%2, i+2, i%2);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientMacDomainToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HOSTREINFORCE_MAC_GLOBALDOMAIN_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_macdomain.json");
+    if (sJson.empty()) sJson = BuildJsonString_MacDomain(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":182,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] MacDomain computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_ThreatDetect(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":320,\"CMDContent\":[{";
+    sJson += "\"Enable\":1,\"EventID\":\"5156,4688,4624,4634\",\"Channel\":\"Security\",\"Level\":0";
+    sJson += "}]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientThreatDetectToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_THREAT_DETECT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_threatdetect.json");
+    if (sJson.empty()) sJson = BuildJsonString_ThreatDetect(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":320,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] ThreatDetect computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_WorkSheet(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":174,\"WorkSheetID\":\"WS-001\",\"WorkSheetName\":\"Update-001\",\"WorkSheetState\":1,\"UserName\":\"admin\",\"StartTime\":\"2026-01-01 09:00:00\",\"EndTime\":\"2026-01-01 18:00:00\",\"Total\":10,\"Succeed\":8,\"WLToDB\":2,\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[1024];
+        sprintf_s(buf, sizeof(buf), "{\"FileName\":\"file_%04d.exe\",\"HashValue\":\"hash%04d\",\"executable\":1,\"UpdateTime\":\"2026-01-01 10:00:00\",\"ActionType\":1,\"State\":1}", i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientWorkSheetToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_WORK_SHEET_TO_USM, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_worksheet.json");
+    if (sJson.empty()) sJson = BuildJsonString_WorkSheet(lpComputerID, 50);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":174,\"WorkSheetID\":\"WS-001\",\"WorkSheetName\":\"Update-001\",\"WorkSheetState\":1,\"UserName\":\"admin\",\"StartTime\":\"2026-01-01 09:00:00\",\"EndTime\":\"2026-01-01 18:00:00\",\"Total\":10,\"Succeed\":8,\"WLToDB\":2,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] WorkSheet computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_WorkSheetResult(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":176,\"WorkSheetID\":\"WS-001\",\"WorkSheetName\":\"Update-001\",\"WorkSheetState\":1,\"UserName\":\"admin\",\"RESULT\":\"SUC\",\"CMDContent\":[{";
+    sJson += "\"WorkSheetID\":\"WS-001\",\"RESULT\":\"SUC\"";
+    sJson += "}]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientWorkSheetResultToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_WORK_SHEET_RETURN_TO_USM, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_worksheetresult.json");
+    if (sJson.empty()) sJson = BuildJsonString_WorkSheetResult(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":176,\"WorkSheetID\":\"WS-001\",\"WorkSheetName\":\"Update-001\",\"WorkSheetState\":1,\"UserName\":\"admin\",\"RESULT\":\"SUC\",\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] WorkSheetResult computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+
+// ---------------------------------------------------------------------------
+// Fix11b: additional policy rule upload modules (aligned with IEG real client)
+// ---------------------------------------------------------------------------
+
+static std::string BuildJsonString_MacException(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":183,\"operation\":\"replace\",\"CMDContent\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"Filename\":\"C:\\\\Test\\\\MAC\\\\exc_%04d.txt\",\"UserName\":\"User_%04d\",\"process\":\"proc_%04d.exe\",\"DomainID\":%d,\"Action\":0}", i, i, i, (i % 5) + 1);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientMacExceptionToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_HOSTREINFORCE_MAC_EXCEPTION_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_macexception.json");
+    if (sJson.empty()) sJson = BuildJsonString_MacException(lpComputerID, 20);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":183,\"operation\":\"replace\",\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] MacException computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_TrustSigner(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"CMDVER\":1,\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":296,\"CMDContent\":{\"trust_cert\":[";
+    for (int i = 0; i < nCount; ++i)
+    {
+        char buf[512];
+        sprintf_s(buf, sizeof(buf), "{\"vendor\":\"Vendor%04d\",\"description\":\"Trust signer %04d\"}", i, i);
+        if (i > 0) sJson += ",";
+        sJson += buf;
+    }
+    sJson += "]}}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientTrustSignerToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_TRUSTSIGNER_REPORT, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_trustsigner.json");
+    if (sJson.empty()) sJson = BuildJsonString_TrustSigner(lpComputerID, 3);
+    else { std::string wrap = "[{\"CMDVER\":1,\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":296,\"CMDContent\":{\"trust_cert\":" + sJson + "}}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] TrustSigner computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_VirusUpgrade(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":354,\"CMDContent\":{";
+    sJson += "\"Protocol\":\"https\",\"Address\":\"192.168.7.80\",\"Port\":8440,\"CycleItem\":1,\"CycleDay\":1,\"CycleHour\":14,\"CycleMinute\":0";
+    sJson += "}}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientVirusUpgradeToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_VIRUS_UPGRADE_CONFIG, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_virusupgrade.json");
+    if (sJson.empty()) sJson = BuildJsonString_VirusUpgrade(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":354,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] VirusUpgrade computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_Surveil(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":501,\"CMDContent\":{";
+    sJson += "\"enable\":1,\"static_trap\":1,\"dynamic_trap\":1,\"behavior_analysis\":1,\"ignore_trust_state\":0,\"deal_mode\":0";
+    sJson += "}}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientSurveilToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SYNC_SURVEIL, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_surveil.json");
+    if (sJson.empty()) sJson = BuildJsonString_Surveil(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":501,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] Surveil computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_DataGuard(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":502,\"CMDContent\":{";
+    sJson += "\"enable\":1,\"deal_mode\":0,\"exts\":[{\"name\":\"doc\",\"description\":\"Word\"},{\"name\":\"pdf\",\"description\":\"PDF\"},{\"name\":\"xls\",\"description\":\"Excel\"}]";
+    sJson += "}}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientDataGuardToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SYNC_DATAGUARD, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_dataguard.json");
+    if (sJson.empty()) sJson = BuildJsonString_DataGuard(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":502,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] DataGuard computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
+    if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
+    return bRet;
+}
+
+static std::string BuildJsonString_Backup(LPTSTR lpComputerID, int nCount)
+{
+    std::string sJson = "[{\"ComputerID\":\"";
+    sJson += (LPCSTR)CStringA(lpComputerID);
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":503,\"CMDContent\":{";
+    sJson += "\"enable\":1,\"path\":\"D:\\\\backup\",\"max_disk_space\":1024,\"max_times\":10,\"trusted_process_backup\":1,\"expiration_period\":30,\"max_file_size\":100,\"file_types\":[{\"ext\":\"doc\",\"description\":\"Word\"},{\"ext\":\"pdf\",\"description\":\"PDF\"}]";
+    sJson += "}}]";
+    return sJson;
+}
+BOOL CSendInfoToServer::SendClientBackupToServer(LPTSTR lpComputerID)
+{
+    BOOL bRet = FALSE;
+    WCHAR url[256] = {0};
+    _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SYNC_BACKUP, m_strServerIP, _ttoi(m_strServerPort));
+    std::string sJson = LoadPolicyJsonFromFileFlex(lpComputerID, L"policy_databackup.json");
+    if (sJson.empty()) sJson = BuildJsonString_Backup(lpComputerID, 1);
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":503,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    char* pResult = NULL;
+    bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
+    WriteInfo(_T("[POLICY-UPLOAD] Backup computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
     if (pResult) CWLNetCommApi::instance()->pdoDelete((void**)&pResult);
     return bRet;
 }

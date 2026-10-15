@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "desc": "扫描例外（杀毒扫描例外文件夹/注册表/文件保护等）",
+    "url": "/USM/scanExcludeConfig.do",
+    "cmdid": 140,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "EXCLUDESCANFOLDER": 1,
+      "REGPROTECT": 1,
+      "FILEPROTECT": 1,
+      "DEP": 1,
+      "IPSEC": 1,
+      "PROCESSAUDIT": 1
+    }
+  ]
+}

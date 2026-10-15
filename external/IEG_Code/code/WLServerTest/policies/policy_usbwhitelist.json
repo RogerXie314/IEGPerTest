@@ -1,0 +1,712 @@
+{
+  "_meta": {
+    "desc": "外设（USB设备）白名单",
+    "url": "/USM/hotplugUsbDev.do",
+    "cmdid": 122,
+    "cmdtype": 100,
+    "max_count": 100,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "PID": "0x1234",
+      "VID": "0x5678",
+      "ProductDesc": "USB-Dev-0000",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0000"
+    },
+    {
+      "PID": "0x1235",
+      "VID": "0x5679",
+      "ProductDesc": "USB-Dev-0001",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0001"
+    },
+    {
+      "PID": "0x1236",
+      "VID": "0x567A",
+      "ProductDesc": "USB-Dev-0002",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0002"
+    },
+    {
+      "PID": "0x1237",
+      "VID": "0x567B",
+      "ProductDesc": "USB-Dev-0003",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0003"
+    },
+    {
+      "PID": "0x1238",
+      "VID": "0x567C",
+      "ProductDesc": "USB-Dev-0004",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0004"
+    },
+    {
+      "PID": "0x1239",
+      "VID": "0x567D",
+      "ProductDesc": "USB-Dev-0005",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0005"
+    },
+    {
+      "PID": "0x123A",
+      "VID": "0x567E",
+      "ProductDesc": "USB-Dev-0006",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0006"
+    },
+    {
+      "PID": "0x123B",
+      "VID": "0x567F",
+      "ProductDesc": "USB-Dev-0007",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0007"
+    },
+    {
+      "PID": "0x123C",
+      "VID": "0x5680",
+      "ProductDesc": "USB-Dev-0008",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0008"
+    },
+    {
+      "PID": "0x123D",
+      "VID": "0x5681",
+      "ProductDesc": "USB-Dev-0009",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0009"
+    },
+    {
+      "PID": "0x123E",
+      "VID": "0x5682",
+      "ProductDesc": "USB-Dev-0010",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0010"
+    },
+    {
+      "PID": "0x123F",
+      "VID": "0x5683",
+      "ProductDesc": "USB-Dev-0011",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0011"
+    },
+    {
+      "PID": "0x1240",
+      "VID": "0x5684",
+      "ProductDesc": "USB-Dev-0012",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0012"
+    },
+    {
+      "PID": "0x1241",
+      "VID": "0x5685",
+      "ProductDesc": "USB-Dev-0013",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0013"
+    },
+    {
+      "PID": "0x1242",
+      "VID": "0x5686",
+      "ProductDesc": "USB-Dev-0014",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0014"
+    },
+    {
+      "PID": "0x1243",
+      "VID": "0x5687",
+      "ProductDesc": "USB-Dev-0015",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0015"
+    },
+    {
+      "PID": "0x1244",
+      "VID": "0x5688",
+      "ProductDesc": "USB-Dev-0016",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0016"
+    },
+    {
+      "PID": "0x1245",
+      "VID": "0x5689",
+      "ProductDesc": "USB-Dev-0017",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0017"
+    },
+    {
+      "PID": "0x1246",
+      "VID": "0x568A",
+      "ProductDesc": "USB-Dev-0018",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0018"
+    },
+    {
+      "PID": "0x1247",
+      "VID": "0x568B",
+      "ProductDesc": "USB-Dev-0019",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0019"
+    },
+    {
+      "PID": "0x1248",
+      "VID": "0x568C",
+      "ProductDesc": "USB-Dev-0020",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0020"
+    },
+    {
+      "PID": "0x1249",
+      "VID": "0x568D",
+      "ProductDesc": "USB-Dev-0021",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0021"
+    },
+    {
+      "PID": "0x124A",
+      "VID": "0x568E",
+      "ProductDesc": "USB-Dev-0022",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0022"
+    },
+    {
+      "PID": "0x124B",
+      "VID": "0x568F",
+      "ProductDesc": "USB-Dev-0023",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0023"
+    },
+    {
+      "PID": "0x124C",
+      "VID": "0x5690",
+      "ProductDesc": "USB-Dev-0024",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0024"
+    },
+    {
+      "PID": "0x124D",
+      "VID": "0x5691",
+      "ProductDesc": "USB-Dev-0025",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0025"
+    },
+    {
+      "PID": "0x124E",
+      "VID": "0x5692",
+      "ProductDesc": "USB-Dev-0026",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0026"
+    },
+    {
+      "PID": "0x124F",
+      "VID": "0x5693",
+      "ProductDesc": "USB-Dev-0027",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0027"
+    },
+    {
+      "PID": "0x1250",
+      "VID": "0x5694",
+      "ProductDesc": "USB-Dev-0028",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0028"
+    },
+    {
+      "PID": "0x1251",
+      "VID": "0x5695",
+      "ProductDesc": "USB-Dev-0029",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0029"
+    },
+    {
+      "PID": "0x1252",
+      "VID": "0x5696",
+      "ProductDesc": "USB-Dev-0030",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0030"
+    },
+    {
+      "PID": "0x1253",
+      "VID": "0x5697",
+      "ProductDesc": "USB-Dev-0031",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0031"
+    },
+    {
+      "PID": "0x1254",
+      "VID": "0x5698",
+      "ProductDesc": "USB-Dev-0032",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0032"
+    },
+    {
+      "PID": "0x1255",
+      "VID": "0x5699",
+      "ProductDesc": "USB-Dev-0033",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0033"
+    },
+    {
+      "PID": "0x1256",
+      "VID": "0x569A",
+      "ProductDesc": "USB-Dev-0034",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0034"
+    },
+    {
+      "PID": "0x1257",
+      "VID": "0x569B",
+      "ProductDesc": "USB-Dev-0035",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0035"
+    },
+    {
+      "PID": "0x1258",
+      "VID": "0x569C",
+      "ProductDesc": "USB-Dev-0036",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0036"
+    },
+    {
+      "PID": "0x1259",
+      "VID": "0x569D",
+      "ProductDesc": "USB-Dev-0037",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0037"
+    },
+    {
+      "PID": "0x125A",
+      "VID": "0x569E",
+      "ProductDesc": "USB-Dev-0038",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0038"
+    },
+    {
+      "PID": "0x125B",
+      "VID": "0x569F",
+      "ProductDesc": "USB-Dev-0039",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0039"
+    },
+    {
+      "PID": "0x125C",
+      "VID": "0x56A0",
+      "ProductDesc": "USB-Dev-0040",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0040"
+    },
+    {
+      "PID": "0x125D",
+      "VID": "0x56A1",
+      "ProductDesc": "USB-Dev-0041",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0041"
+    },
+    {
+      "PID": "0x125E",
+      "VID": "0x56A2",
+      "ProductDesc": "USB-Dev-0042",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0042"
+    },
+    {
+      "PID": "0x125F",
+      "VID": "0x56A3",
+      "ProductDesc": "USB-Dev-0043",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0043"
+    },
+    {
+      "PID": "0x1260",
+      "VID": "0x56A4",
+      "ProductDesc": "USB-Dev-0044",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0044"
+    },
+    {
+      "PID": "0x1261",
+      "VID": "0x56A5",
+      "ProductDesc": "USB-Dev-0045",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0045"
+    },
+    {
+      "PID": "0x1262",
+      "VID": "0x56A6",
+      "ProductDesc": "USB-Dev-0046",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0046"
+    },
+    {
+      "PID": "0x1263",
+      "VID": "0x56A7",
+      "ProductDesc": "USB-Dev-0047",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0047"
+    },
+    {
+      "PID": "0x1264",
+      "VID": "0x56A8",
+      "ProductDesc": "USB-Dev-0048",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0048"
+    },
+    {
+      "PID": "0x1265",
+      "VID": "0x56A9",
+      "ProductDesc": "USB-Dev-0049",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0049"
+    },
+    {
+      "PID": "0x1266",
+      "VID": "0x56AA",
+      "ProductDesc": "USB-Dev-0050",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0050"
+    },
+    {
+      "PID": "0x1267",
+      "VID": "0x56AB",
+      "ProductDesc": "USB-Dev-0051",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0051"
+    },
+    {
+      "PID": "0x1268",
+      "VID": "0x56AC",
+      "ProductDesc": "USB-Dev-0052",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0052"
+    },
+    {
+      "PID": "0x1269",
+      "VID": "0x56AD",
+      "ProductDesc": "USB-Dev-0053",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0053"
+    },
+    {
+      "PID": "0x126A",
+      "VID": "0x56AE",
+      "ProductDesc": "USB-Dev-0054",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0054"
+    },
+    {
+      "PID": "0x126B",
+      "VID": "0x56AF",
+      "ProductDesc": "USB-Dev-0055",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0055"
+    },
+    {
+      "PID": "0x126C",
+      "VID": "0x56B0",
+      "ProductDesc": "USB-Dev-0056",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0056"
+    },
+    {
+      "PID": "0x126D",
+      "VID": "0x56B1",
+      "ProductDesc": "USB-Dev-0057",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0057"
+    },
+    {
+      "PID": "0x126E",
+      "VID": "0x56B2",
+      "ProductDesc": "USB-Dev-0058",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0058"
+    },
+    {
+      "PID": "0x126F",
+      "VID": "0x56B3",
+      "ProductDesc": "USB-Dev-0059",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0059"
+    },
+    {
+      "PID": "0x1270",
+      "VID": "0x56B4",
+      "ProductDesc": "USB-Dev-0060",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0060"
+    },
+    {
+      "PID": "0x1271",
+      "VID": "0x56B5",
+      "ProductDesc": "USB-Dev-0061",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0061"
+    },
+    {
+      "PID": "0x1272",
+      "VID": "0x56B6",
+      "ProductDesc": "USB-Dev-0062",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0062"
+    },
+    {
+      "PID": "0x1273",
+      "VID": "0x56B7",
+      "ProductDesc": "USB-Dev-0063",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0063"
+    },
+    {
+      "PID": "0x1274",
+      "VID": "0x56B8",
+      "ProductDesc": "USB-Dev-0064",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0064"
+    },
+    {
+      "PID": "0x1275",
+      "VID": "0x56B9",
+      "ProductDesc": "USB-Dev-0065",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0065"
+    },
+    {
+      "PID": "0x1276",
+      "VID": "0x56BA",
+      "ProductDesc": "USB-Dev-0066",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0066"
+    },
+    {
+      "PID": "0x1277",
+      "VID": "0x56BB",
+      "ProductDesc": "USB-Dev-0067",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0067"
+    },
+    {
+      "PID": "0x1278",
+      "VID": "0x56BC",
+      "ProductDesc": "USB-Dev-0068",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0068"
+    },
+    {
+      "PID": "0x1279",
+      "VID": "0x56BD",
+      "ProductDesc": "USB-Dev-0069",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0069"
+    },
+    {
+      "PID": "0x127A",
+      "VID": "0x56BE",
+      "ProductDesc": "USB-Dev-0070",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0070"
+    },
+    {
+      "PID": "0x127B",
+      "VID": "0x56BF",
+      "ProductDesc": "USB-Dev-0071",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0071"
+    },
+    {
+      "PID": "0x127C",
+      "VID": "0x56C0",
+      "ProductDesc": "USB-Dev-0072",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0072"
+    },
+    {
+      "PID": "0x127D",
+      "VID": "0x56C1",
+      "ProductDesc": "USB-Dev-0073",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0073"
+    },
+    {
+      "PID": "0x127E",
+      "VID": "0x56C2",
+      "ProductDesc": "USB-Dev-0074",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0074"
+    },
+    {
+      "PID": "0x127F",
+      "VID": "0x56C3",
+      "ProductDesc": "USB-Dev-0075",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0075"
+    },
+    {
+      "PID": "0x1280",
+      "VID": "0x56C4",
+      "ProductDesc": "USB-Dev-0076",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0076"
+    },
+    {
+      "PID": "0x1281",
+      "VID": "0x56C5",
+      "ProductDesc": "USB-Dev-0077",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0077"
+    },
+    {
+      "PID": "0x1282",
+      "VID": "0x56C6",
+      "ProductDesc": "USB-Dev-0078",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0078"
+    },
+    {
+      "PID": "0x1283",
+      "VID": "0x56C7",
+      "ProductDesc": "USB-Dev-0079",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0079"
+    },
+    {
+      "PID": "0x1284",
+      "VID": "0x56C8",
+      "ProductDesc": "USB-Dev-0080",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0080"
+    },
+    {
+      "PID": "0x1285",
+      "VID": "0x56C9",
+      "ProductDesc": "USB-Dev-0081",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0081"
+    },
+    {
+      "PID": "0x1286",
+      "VID": "0x56CA",
+      "ProductDesc": "USB-Dev-0082",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0082"
+    },
+    {
+      "PID": "0x1287",
+      "VID": "0x56CB",
+      "ProductDesc": "USB-Dev-0083",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0083"
+    },
+    {
+      "PID": "0x1288",
+      "VID": "0x56CC",
+      "ProductDesc": "USB-Dev-0084",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0084"
+    },
+    {
+      "PID": "0x1289",
+      "VID": "0x56CD",
+      "ProductDesc": "USB-Dev-0085",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0085"
+    },
+    {
+      "PID": "0x128A",
+      "VID": "0x56CE",
+      "ProductDesc": "USB-Dev-0086",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0086"
+    },
+    {
+      "PID": "0x128B",
+      "VID": "0x56CF",
+      "ProductDesc": "USB-Dev-0087",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0087"
+    },
+    {
+      "PID": "0x128C",
+      "VID": "0x56D0",
+      "ProductDesc": "USB-Dev-0088",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0088"
+    },
+    {
+      "PID": "0x128D",
+      "VID": "0x56D1",
+      "ProductDesc": "USB-Dev-0089",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0089"
+    },
+    {
+      "PID": "0x128E",
+      "VID": "0x56D2",
+      "ProductDesc": "USB-Dev-0090",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0090"
+    },
+    {
+      "PID": "0x128F",
+      "VID": "0x56D3",
+      "ProductDesc": "USB-Dev-0091",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0091"
+    },
+    {
+      "PID": "0x1290",
+      "VID": "0x56D4",
+      "ProductDesc": "USB-Dev-0092",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0092"
+    },
+    {
+      "PID": "0x1291",
+      "VID": "0x56D5",
+      "ProductDesc": "USB-Dev-0093",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0093"
+    },
+    {
+      "PID": "0x1292",
+      "VID": "0x56D6",
+      "ProductDesc": "USB-Dev-0094",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0094"
+    },
+    {
+      "PID": "0x1293",
+      "VID": "0x56D7",
+      "ProductDesc": "USB-Dev-0095",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0095"
+    },
+    {
+      "PID": "0x1294",
+      "VID": "0x56D8",
+      "ProductDesc": "USB-Dev-0096",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0096"
+    },
+    {
+      "PID": "0x1295",
+      "VID": "0x56D9",
+      "ProductDesc": "USB-Dev-0097",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0097"
+    },
+    {
+      "PID": "0x1296",
+      "VID": "0x56DA",
+      "ProductDesc": "USB-Dev-0098",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0098"
+    },
+    {
+      "PID": "0x1297",
+      "VID": "0x56DB",
+      "ProductDesc": "USB-Dev-0099",
+      "IsWhiteList": 1,
+      "SerialNumber": "SN-0099"
+    }
+  ]
+}

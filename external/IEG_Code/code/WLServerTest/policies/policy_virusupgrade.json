@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "desc": "病毒库升级配置（升级服务器地址与周期）",
+    "url": "/USM/virusUpgradeConfig.do",
+    "cmdid": 354,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 为单个配置对象（Protocol/Address/Port/CycleItem/CycleDay/CycleHour/CycleMinute），整体作为 CMDContent 上报。"
+  },
+  "items": {
+    "Protocol": "https",
+    "Address": "192.168.7.80",
+    "Port": 8440,
+    "CycleItem": 1,
+    "CycleDay": 1,
+    "CycleHour": 14,
+    "CycleMinute": 0
+  }
+}

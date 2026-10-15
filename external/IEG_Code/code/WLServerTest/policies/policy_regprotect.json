@@ -1,0 +1,92 @@
+{
+  "_meta": {
+    "desc": "注册表保护（受保护注册表项列表）",
+    "url": "/USM/RegProtectConfig.do",
+    "cmdid": 240,
+    "cmdtype": 150,
+    "max_count": 1000,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0000",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0001",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0002",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0003",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0004",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0005",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0006",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0007",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0008",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0009",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0010",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0011",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0012",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0013",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0014",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0015",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0016",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0017",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0018",
+      "RegType": 1
+    },
+    {
+      "RegItem": "HKLM\\SOFTWARE\\Demo\\RegItem_0019",
+      "RegType": 1
+    }
+  ]
+}

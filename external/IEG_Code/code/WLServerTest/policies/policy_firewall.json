@@ -1,0 +1,912 @@
+{
+  "_meta": {
+    "desc": "微隔离/网络策略（防火墙开关与访问控制规则）",
+    "url": "/USM/clientFirewallConfig.do",
+    "cmdid": 162,
+    "cmdtype": 150,
+    "max_count": 100,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "RuleName": "Rule-0000",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1000,
+      "RemoteIP": "192.168.0.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0001",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1001,
+      "RemoteIP": "192.168.1.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0002",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1002,
+      "RemoteIP": "192.168.2.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0003",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1003,
+      "RemoteIP": "192.168.3.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0004",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1004,
+      "RemoteIP": "192.168.4.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0005",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1005,
+      "RemoteIP": "192.168.5.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0006",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1006,
+      "RemoteIP": "192.168.6.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0007",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1007,
+      "RemoteIP": "192.168.7.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0008",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1008,
+      "RemoteIP": "192.168.8.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0009",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1009,
+      "RemoteIP": "192.168.9.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0010",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1010,
+      "RemoteIP": "192.168.10.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0011",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1011,
+      "RemoteIP": "192.168.11.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0012",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1012,
+      "RemoteIP": "192.168.12.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0013",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1013,
+      "RemoteIP": "192.168.13.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0014",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1014,
+      "RemoteIP": "192.168.14.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0015",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1015,
+      "RemoteIP": "192.168.15.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0016",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1016,
+      "RemoteIP": "192.168.16.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0017",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1017,
+      "RemoteIP": "192.168.17.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0018",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1018,
+      "RemoteIP": "192.168.18.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0019",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1019,
+      "RemoteIP": "192.168.19.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0020",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1020,
+      "RemoteIP": "192.168.20.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0021",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1021,
+      "RemoteIP": "192.168.21.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0022",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1022,
+      "RemoteIP": "192.168.22.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0023",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1023,
+      "RemoteIP": "192.168.23.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0024",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1024,
+      "RemoteIP": "192.168.24.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0025",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1025,
+      "RemoteIP": "192.168.25.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0026",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1026,
+      "RemoteIP": "192.168.26.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0027",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1027,
+      "RemoteIP": "192.168.27.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0028",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1028,
+      "RemoteIP": "192.168.28.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0029",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1029,
+      "RemoteIP": "192.168.29.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0030",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1030,
+      "RemoteIP": "192.168.30.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0031",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1031,
+      "RemoteIP": "192.168.31.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0032",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1032,
+      "RemoteIP": "192.168.32.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0033",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1033,
+      "RemoteIP": "192.168.33.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0034",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1034,
+      "RemoteIP": "192.168.34.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0035",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1035,
+      "RemoteIP": "192.168.35.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0036",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1036,
+      "RemoteIP": "192.168.36.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0037",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1037,
+      "RemoteIP": "192.168.37.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0038",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1038,
+      "RemoteIP": "192.168.38.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0039",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1039,
+      "RemoteIP": "192.168.39.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0040",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1040,
+      "RemoteIP": "192.168.40.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0041",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1041,
+      "RemoteIP": "192.168.41.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0042",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1042,
+      "RemoteIP": "192.168.42.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0043",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1043,
+      "RemoteIP": "192.168.43.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0044",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1044,
+      "RemoteIP": "192.168.44.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0045",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1045,
+      "RemoteIP": "192.168.45.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0046",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1046,
+      "RemoteIP": "192.168.46.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0047",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1047,
+      "RemoteIP": "192.168.47.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0048",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1048,
+      "RemoteIP": "192.168.48.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0049",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1049,
+      "RemoteIP": "192.168.49.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0050",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1050,
+      "RemoteIP": "192.168.50.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0051",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1051,
+      "RemoteIP": "192.168.51.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0052",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1052,
+      "RemoteIP": "192.168.52.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0053",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1053,
+      "RemoteIP": "192.168.53.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0054",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1054,
+      "RemoteIP": "192.168.54.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0055",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1055,
+      "RemoteIP": "192.168.55.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0056",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1056,
+      "RemoteIP": "192.168.56.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0057",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1057,
+      "RemoteIP": "192.168.57.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0058",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1058,
+      "RemoteIP": "192.168.58.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0059",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1059,
+      "RemoteIP": "192.168.59.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0060",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1060,
+      "RemoteIP": "192.168.60.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0061",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1061,
+      "RemoteIP": "192.168.61.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0062",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1062,
+      "RemoteIP": "192.168.62.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0063",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1063,
+      "RemoteIP": "192.168.63.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0064",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1064,
+      "RemoteIP": "192.168.64.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0065",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1065,
+      "RemoteIP": "192.168.65.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0066",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1066,
+      "RemoteIP": "192.168.66.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0067",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1067,
+      "RemoteIP": "192.168.67.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0068",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1068,
+      "RemoteIP": "192.168.68.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0069",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1069,
+      "RemoteIP": "192.168.69.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0070",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1070,
+      "RemoteIP": "192.168.70.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0071",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1071,
+      "RemoteIP": "192.168.71.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0072",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1072,
+      "RemoteIP": "192.168.72.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0073",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1073,
+      "RemoteIP": "192.168.73.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0074",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1074,
+      "RemoteIP": "192.168.74.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0075",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1075,
+      "RemoteIP": "192.168.75.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0076",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1076,
+      "RemoteIP": "192.168.76.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0077",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1077,
+      "RemoteIP": "192.168.77.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0078",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1078,
+      "RemoteIP": "192.168.78.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0079",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1079,
+      "RemoteIP": "192.168.79.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0080",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1080,
+      "RemoteIP": "192.168.80.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0081",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1081,
+      "RemoteIP": "192.168.81.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0082",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1082,
+      "RemoteIP": "192.168.82.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0083",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1083,
+      "RemoteIP": "192.168.83.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0084",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1084,
+      "RemoteIP": "192.168.84.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0085",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1085,
+      "RemoteIP": "192.168.85.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0086",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1086,
+      "RemoteIP": "192.168.86.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0087",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1087,
+      "RemoteIP": "192.168.87.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0088",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1088,
+      "RemoteIP": "192.168.88.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0089",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1089,
+      "RemoteIP": "192.168.89.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0090",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1090,
+      "RemoteIP": "192.168.90.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0091",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1091,
+      "RemoteIP": "192.168.91.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0092",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1092,
+      "RemoteIP": "192.168.92.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0093",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1093,
+      "RemoteIP": "192.168.93.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0094",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1094,
+      "RemoteIP": "192.168.94.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0095",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1095,
+      "RemoteIP": "192.168.95.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0096",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1096,
+      "RemoteIP": "192.168.96.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0097",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1097,
+      "RemoteIP": "192.168.97.0",
+      "Action": 1
+    },
+    {
+      "RuleName": "Rule-0098",
+      "Operation": 1,
+      "Direction": 1,
+      "Protocol": 6,
+      "LocalPort": 1098,
+      "RemoteIP": "192.168.98.0",
+      "Action": 0
+    },
+    {
+      "RuleName": "Rule-0099",
+      "Operation": 1,
+      "Direction": 2,
+      "Protocol": 6,
+      "LocalPort": 1099,
+      "RemoteIP": "192.168.99.0",
+      "Action": 1
+    }
+  ]
+}

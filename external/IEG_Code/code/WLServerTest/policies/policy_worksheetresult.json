@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "desc": "工单策略执行结果回报",
+    "url": "/USM/ReportWorkSheetResult.do",
+    "cmdid": 176,
+    "cmdtype": 150,
+    "max_count": 1,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "WorkSheetID": "WS-001",
+      "RESULT": "SUC"
+    }
+  ]
+}

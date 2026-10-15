@@ -1,0 +1,362 @@
+{
+  "_meta": {
+    "desc": "WIFI白名单配置列表",
+    "url": "/USM/ieg/WiFiWhiteList.do",
+    "cmdid": 615,
+    "cmdtype": 150,
+    "max_count": 50,
+    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+  },
+  "items": [
+    {
+      "SSID": "Corp-WiFi-0000",
+      "MAC": "AA:BB:CC:DD:EE:00",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0001",
+      "MAC": "AA:BB:CC:DD:EE:01",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0002",
+      "MAC": "AA:BB:CC:DD:EE:02",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0003",
+      "MAC": "AA:BB:CC:DD:EE:03",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0004",
+      "MAC": "AA:BB:CC:DD:EE:04",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0005",
+      "MAC": "AA:BB:CC:DD:EE:05",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0006",
+      "MAC": "AA:BB:CC:DD:EE:06",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0007",
+      "MAC": "AA:BB:CC:DD:EE:07",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0008",
+      "MAC": "AA:BB:CC:DD:EE:08",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0009",
+      "MAC": "AA:BB:CC:DD:EE:09",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0010",
+      "MAC": "AA:BB:CC:DD:EE:0A",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0011",
+      "MAC": "AA:BB:CC:DD:EE:0B",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0012",
+      "MAC": "AA:BB:CC:DD:EE:0C",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0013",
+      "MAC": "AA:BB:CC:DD:EE:0D",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0014",
+      "MAC": "AA:BB:CC:DD:EE:0E",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0015",
+      "MAC": "AA:BB:CC:DD:EE:0F",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0016",
+      "MAC": "AA:BB:CC:DD:EE:10",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0017",
+      "MAC": "AA:BB:CC:DD:EE:11",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0018",
+      "MAC": "AA:BB:CC:DD:EE:12",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0019",
+      "MAC": "AA:BB:CC:DD:EE:13",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0020",
+      "MAC": "AA:BB:CC:DD:EE:14",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0021",
+      "MAC": "AA:BB:CC:DD:EE:15",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0022",
+      "MAC": "AA:BB:CC:DD:EE:16",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0023",
+      "MAC": "AA:BB:CC:DD:EE:17",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0024",
+      "MAC": "AA:BB:CC:DD:EE:18",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0025",
+      "MAC": "AA:BB:CC:DD:EE:19",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0026",
+      "MAC": "AA:BB:CC:DD:EE:1A",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0027",
+      "MAC": "AA:BB:CC:DD:EE:1B",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0028",
+      "MAC": "AA:BB:CC:DD:EE:1C",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0029",
+      "MAC": "AA:BB:CC:DD:EE:1D",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0030",
+      "MAC": "AA:BB:CC:DD:EE:1E",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0031",
+      "MAC": "AA:BB:CC:DD:EE:1F",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0032",
+      "MAC": "AA:BB:CC:DD:EE:20",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0033",
+      "MAC": "AA:BB:CC:DD:EE:21",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0034",
+      "MAC": "AA:BB:CC:DD:EE:22",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0035",
+      "MAC": "AA:BB:CC:DD:EE:23",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0036",
+      "MAC": "AA:BB:CC:DD:EE:24",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0037",
+      "MAC": "AA:BB:CC:DD:EE:25",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0038",
+      "MAC": "AA:BB:CC:DD:EE:26",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0039",
+      "MAC": "AA:BB:CC:DD:EE:27",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0040",
+      "MAC": "AA:BB:CC:DD:EE:28",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0041",
+      "MAC": "AA:BB:CC:DD:EE:29",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0042",
+      "MAC": "AA:BB:CC:DD:EE:2A",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0043",
+      "MAC": "AA:BB:CC:DD:EE:2B",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0044",
+      "MAC": "AA:BB:CC:DD:EE:2C",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0045",
+      "MAC": "AA:BB:CC:DD:EE:2D",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0046",
+      "MAC": "AA:BB:CC:DD:EE:2E",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0047",
+      "MAC": "AA:BB:CC:DD:EE:2F",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0048",
+      "MAC": "AA:BB:CC:DD:EE:30",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    },
+    {
+      "SSID": "Corp-WiFi-0049",
+      "MAC": "AA:BB:CC:DD:EE:31",
+      "IsWhiteList": 1,
+      "Source": 0,
+      "WLTime": "2026-01-01 00:00:00"
+    }
+  ]
+}
