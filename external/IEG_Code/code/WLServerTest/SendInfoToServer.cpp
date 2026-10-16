@@ -3660,20 +3660,27 @@ BOOL CSendInfoToServer::SendClientOSResourceToServer(LPTSTR lpComputerID)
 
 static std::string BuildJsonString_ScanExclude(LPTSTR lpComputerID, int nCount)
 {
-    std::string sJson = "[{\"ComputerID\":\"";
+    std::string sJson = "[{\"Enable\":1,\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":150,\"CMDID\":140,\"CMDContent\":[{";
-    sJson += "\"EXCLUDESCANFOLDER\":1,\"REGPROTECT\":1,\"FILEPROTECT\":1,\"DEP\":1,\"IPSEC\":1,\"PROCESSAUDIT\":1";
-    sJson += ",\"Paths\":[";
-    sJson += "{\"Type\":0,\"Path\":\"C:\\\\Windows\\\\Temp\"}";
-    sJson += ",{\"Type\":0,\"Path\":\"C:\\\\Users\\\\Default\\\\AppData\\\\Local\\\\Temp\"}";
-    sJson += ",{\"Type\":0,\"Path\":\"C:\\\\Program Files\\\\Common Files\"}";
-    sJson += ",{\"Type\":1,\"Path\":\"C:\\\\Test\\\\Exclude\\\\file_0001.txt\"}";
-    sJson += ",{\"Type\":1,\"Path\":\"C:\\\\Test\\\\Exclude\\\\file_0002.txt\"}";
-    sJson += ",{\"Type\":2,\"Path\":\"HKLM\\\\SOFTWARE\\\\Demo\\\\ExcludeKey1\"}";
-    sJson += ",{\"Type\":2,\"Path\":\"HKLM\\\\SOFTWARE\\\\Demo\\\\ExcludeKey2\"}";
-    sJson += "]";
-    sJson += "}]}]";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":152,\"CMDContent\":[";
+    const char* szScanPaths[] = {
+        "C:\\Windows\\Temp",
+        "C:\\Users\\Default\\AppData\\Local\\Temp",
+        "C:\\Program Files\\Common Files",
+        "C:\\Test\\Exclude\\file_0001.txt",
+        "C:\\Test\\Exclude\\file_0002.txt",
+        "HKLM\\SOFTWARE\\Demo\\ExcludeKey1",
+        "HKLM\\SOFTWARE\\Demo\\ExcludeKey2"
+    };
+    int nPath = sizeof(szScanPaths) / sizeof(szScanPaths[0]);
+    for (int i = 0; i < nPath; ++i)
+    {
+        if (i > 0) sJson += ",";
+        sJson += "{\"NoScanPath\":\"";
+        sJson += szScanPaths[i];
+        sJson += "\",\"WarnException\":0}";
+    }
+    sJson += "]}]";
     return sJson;
 }
 BOOL CSendInfoToServer::SendClientScanExcludeToServer(LPTSTR lpComputerID)
@@ -3683,7 +3690,7 @@ BOOL CSendInfoToServer::SendClientScanExcludeToServer(LPTSTR lpComputerID)
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_SCAN_EXPORT_REPORT, m_strServerIP, _ttoi(m_strServerPort));
     std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_scanexclude.json");
     if (sJson.empty()) sJson = BuildJsonString_ScanExclude(lpComputerID, 1);
-    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":140,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    else { std::string wrap = "[{\"Enable\":1,\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":152,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] ScanExclude computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3725,7 +3732,7 @@ static std::string BuildJsonString_UDisk(LPTSTR lpComputerID, int nCount)
 {
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
-    sJson += "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"CMDContent\":[";
+    sJson += "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"floppyDisk\":1,\"usbDevice\":1,\"wpd\":1,\"WifiWhiteList\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"NoRegComUSB\":7,\"NoRegSafeUSB\":7,\"KillVirusAreaofComUSB\":1,\"KillVirusAreaofSafeUSB\":3,\"CMDContent\":[";
     for (int i = 0; i < nCount; ++i)
     {
         char buf[1024];
@@ -3746,7 +3753,7 @@ BOOL CSendInfoToServer::SendClientUDiskToServer(LPTSTR lpComputerID)
     _snwprintf_s(url, sizeof(url)/sizeof(url[0]), _TRUNCATE, URL_REGISTER_UDISK_INFO, m_strServerIP, _ttoi(m_strServerPort));
     std::string sJson = LoadPolicyJsonFromFile(lpComputerID, L"policy_udisk.json");
     if (sJson.empty()) sJson = BuildJsonString_UDisk(lpComputerID, 50);
-    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
+    else { std::string wrap = "[{\"ComputerID\":\"" + std::string((LPCSTR)CStringA(lpComputerID)) + "\",\"CMDTYPE\":150,\"CMDID\":120,\"cdrom\":1,\"wireless\":1,\"usbEthernet\":1,\"blueTooth\":1,\"serialPort\":1,\"parallelPort\":1,\"floppyDisk\":1,\"usbDevice\":1,\"wpd\":1,\"WifiWhiteList\":1,\"UsbStorageCtrl\":1,\"usbSwitch\":1,\"NoRegComUSB\":7,\"NoRegSafeUSB\":7,\"KillVirusAreaofComUSB\":1,\"KillVirusAreaofSafeUSB\":3,\"CMDContent\":" + sJson + "}]"; sJson = wrap; }
     char* pResult = NULL;
     bRet = CWLNetCommApi::instance()->pdoPost(url, (LPSTR)sJson.c_str(), &pResult);
     WriteInfo(_T("[POLICY-UPLOAD] UDisk computerID=%s ret=%d size=%d"), lpComputerID, bRet, (int)sJson.length());
@@ -3849,14 +3856,7 @@ static std::string BuildJsonString_BaseLine(LPTSTR lpComputerID, int nCount)
     std::string sJson = "[{\"ComputerID\":\"";
     sJson += (LPCSTR)CStringA(lpComputerID);
     sJson += "\",\"CMDTYPE\":150,\"CMDID\":167,\"LEVEL\":0,\"CMDContent\":{";
-    sJson += "\"dwPasswordComplexity\":1,\"dwMin_passwd_len\":8,\"dwPassword_hist_len\":5,\"dwMax_passwd_age\":90,\"dwLockout_threshold\":5,\"dwDisable_guest\":1";
-    sJson += ",\"dwUsrmod3_lockout_observation_window\":30,\"dwUsrmod3_lockout_duration\":30";
-    sJson += ",\"dwAuditCategoryLogon\":1,\"dwAuditCategoryAccountManagement\":1,\"dwAuditCategoryAccountLogon\":1,\"dwAuditCategoryObjectAccess\":1,\"dwAuditCategoryPolicyChange\":1,\"dwAuditCategoryPrivilegeUse\":1,\"dwAuditCategorySystem\":1,\"dwAuditCategoryDetailedTracking\":1,\"dwAuditCategoryDirectoryServiceAccess\":1";
-    sJson += ",\"dwClearPageShutDown\":1,\"dwDontDisplayLastUserName\":1,\"dwDisableCAD\":1,\"dwRestrictAnonymousSam\":1,\"dwRestrictAnonymous\":1,\"dwAutoRun\":0,\"dwShare\":0";
-    sJson += ",\"dwApplicationLog\":1,\"dwSeclog\":1,\"dwSystemLog\":1,\"dwCachedLogonsCount\":10,\"dwDisableDomainCreds\":1,\"dwEnableUac\":1";
-    sJson += ",\"dwForbidAutoLogin\":1,\"dwForbidAutoReboot\":1,\"dwForbidAutoShutdown\":1,\"dwForbidChangeIp\":1,\"dwForbidChangeName\":1,\"dwForbidConsoleAutoLogin\":1,\"dwForbidFloppyCopy\":1,\"dwForbidGethelp\":1,\"dwForcedLogoff\":1";
-    sJson += ",\"dwRdpRortNum\":1,\"dwDepIn\":1,\"dwDepOut\":1,\"dwDeleteIpForwardEntry\":1,\"dwRemoteHostRDP\":1,\"dwRemoteLoginTime\":1,\"dwScrnSave\":1";
-    sJson += ",\"dwForbidAdminToTurnOff\":1,\"dwSynAttackDetectionDesign\":1,\"dwPasswordExpiryWarning\":1,\"dwForbidDefaultOPTUser\":1";
+    sJson += "\"dwPasswordComplexity\":\"1,1\",\"dwMin_passwd_len\":\"1,8\",\"dwPassword_hist_len\":\"1,5\",\"dwMax_passwd_age\":\"1,90\",\"dwLockout_threshold\":\"1,5\",\"dwDisable_guest\":\"1,1\",\"dwUsrmod3_lockout_observation_window\":\"1,30\",\"dwUsrmod3_lockout_duration\":\"1,30\",\"dwAuditCategoryLogon\":\"1,1\",\"dwAuditCategoryAccountManagement\":\"1,1\",\"dwAuditCategoryAccountLogon\":\"1,1\",\"dwAuditCategoryObjectAccess\":\"1,1\",\"dwAuditCategoryPolicyChange\":\"1,1\",\"dwAuditCategoryPrivilegeUse\":\"1,1\",\"dwAuditCategorySystem\":\"1,1\",\"dwAuditCategoryDetailedTracking\":\"1,1\",\"dwAuditCategoryDirectoryServiceAccess\":\"1,1\",\"dwClearPageShutDown\":\"1,1\",\"dwDontDisplayLastUserName\":\"1,1\",\"dwDisableCAD\":\"1,1\",\"dwRestrictAnonymousSam\":\"1,1\",\"dwRestrictAnonymous\":\"1,1\",\"dwAutoRun\":\"0,0\",\"dwShare\":\"0,0\",\"dwApplicationLog\":\"1,1\",\"dwSeclog\":\"1,1\",\"dwSystemLog\":\"1,1\",\"dwCachedLogonsCount\":\"1,10\",\"dwDisableDomainCreds\":\"1,1\",\"dwEnableUac\":\"1,1\",\"dwForbidAutoLogin\":\"1,1\",\"dwForbidAutoReboot\":\"1,1\",\"dwForbidAutoShutdown\":\"1,1\",\"dwForbidChangeIp\":\"1,1\",\"dwForbidChangeName\":\"1,1\",\"dwForbidConsoleAutoLogin\":\"1,1\",\"dwForbidFloppyCopy\":\"1,1\",\"dwForbidGethelp\":\"1,1\",\"dwForcedLogoff\":\"1,1\",\"dwRdpRortNum\":\"1,1\",\"dwDepIn\":\"1,1\",\"dwDepOut\":\"1,1\",\"dwDeleteIpForwardEntry\":\"1,1\",\"dwRemoteHostRDP\":\"1,1\",\"dwRemoteLoginTime\":\"1,1\",\"dwScrnSave\":\"1,1\",\"dwForbidAdminToTurnOff\":\"1,1\",\"dwSynAttackDetectionDesign\":\"1,1\",\"dwPasswordExpiryWarning\":\"1,1\",\"dwForbidDefaultOPTUser\":\"1,1\"";
     sJson += "}}]";
     return sJson;
 }

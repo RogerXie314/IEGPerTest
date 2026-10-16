@@ -1,50 +1,40 @@
 {
   "_meta": {
-    "desc": "扫描例外（杀毒扫描例外文件夹/注册表/文件保护等）",
+    "desc": "扫描例外（杀毒扫描例外目录/文件，对齐 IEG wmg_NoScanPath_GetJson：NoScanPath + WarnException）",
     "url": "/USM/scanExcludeConfig.do",
-    "cmdid": 140,
+    "cmdid": 152,
     "cmdtype": 150,
     "max_count": 1,
-    "usage": "items 数组元素整体作为 CMDContent 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
+    "usage": "items 数组元素整体作为 CMDContent[{NoScanPath,WarnException}] 上报。修改本文件后下一次配置上传即生效；保留为默认模拟数据即可让平台界面显示数据。"
   },
   "items": [
     {
-      "EXCLUDESCANFOLDER": 1,
-      "REGPROTECT": 1,
-      "FILEPROTECT": 1,
-      "DEP": 1,
-      "IPSEC": 1,
-      "PROCESSAUDIT": 1,
-      "Paths": [
-        {
-          "Type": 0,
-          "Path": "C:\\Windows\\Temp"
-        },
-        {
-          "Type": 0,
-          "Path": "C:\\Users\\Default\\AppData\\Local\\Temp"
-        },
-        {
-          "Type": 0,
-          "Path": "C:\\Program Files\\Common Files"
-        },
-        {
-          "Type": 1,
-          "Path": "C:\\Test\\Exclude\\file_0001.txt"
-        },
-        {
-          "Type": 1,
-          "Path": "C:\\Test\\Exclude\\file_0002.txt"
-        },
-        {
-          "Type": 2,
-          "Path": "HKLM\\SOFTWARE\\Demo\\ExcludeKey1"
-        },
-        {
-          "Type": 2,
-          "Path": "HKLM\\SOFTWARE\\Demo\\ExcludeKey2"
-        }
-      ]
+      "NoScanPath": "C:\\Windows\\Temp",
+      "WarnException": 0
+    },
+    {
+      "NoScanPath": "C:\\Users\\Default\\AppData\\Local\\Temp",
+      "WarnException": 0
+    },
+    {
+      "NoScanPath": "C:\\Program Files\\Common Files",
+      "WarnException": 0
+    },
+    {
+      "NoScanPath": "C:\\Test\\Exclude\\file_0001.txt",
+      "WarnException": 0
+    },
+    {
+      "NoScanPath": "C:\\Test\\Exclude\\file_0002.txt",
+      "WarnException": 1
+    },
+    {
+      "NoScanPath": "HKLM\\SOFTWARE\\Demo\\ExcludeKey1",
+      "WarnException": 0
+    },
+    {
+      "NoScanPath": "HKLM\\SOFTWARE\\Demo\\ExcludeKey2",
+      "WarnException": 1
     }
   ]
 }

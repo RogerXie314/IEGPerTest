@@ -1882,7 +1882,7 @@ void CWLServerTestDlg::PrepareVecClients_UpdateControls()
 
 
 
-	strPreRegCount.Format(_T("О©╫О©╫в╒О©╫О©╫: %d"), m_iPreviousRegistered_ClientCount);
+	strPreRegCount.Format(_T("ряв╒╡А: %d"), m_iPreviousRegistered_ClientCount);
 
 
 
@@ -3154,7 +3154,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 
-		strTmp.Format(_T("О©╫О©╫в╒О©╫О©╫: %d"),g_nTotalRegistered_ClientCount);
+		strTmp.Format(_T("ряв╒╡А: %d"),g_nTotalRegistered_ClientCount);
 
 
 
@@ -4870,7 +4870,7 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
-            strTmpRegisteredClientCount.Format(_T("О©╫О©╫в╒О©╫О©╫: %d"), g_nTotalRegistered_ClientCount);
+            strTmpRegisteredClientCount.Format(_T("ряв╒╡А: %d"), g_nTotalRegistered_ClientCount);
 
 
 
@@ -5898,7 +5898,7 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
 
-            strTmpRegisteredClientCount.Format(_T("О©╫О©╫в╒О©╫О©╫: %d"), g_nTotalRegistered_ClientCount);
+            strTmpRegisteredClientCount.Format(_T("ряв╒╡А: %d"), g_nTotalRegistered_ClientCount);
 
 
 
@@ -6247,7 +6247,7 @@ void CWLServerTestDlg::OnBnClicked_ClientReg_Reset()
 
 
 
-		strTmp.Format(_T("О©╫О©╫в╒О©╫О©╫: %d"),g_nTotalRegistered_ClientCount);
+		strTmp.Format(_T("ряв╒╡А: %d"),g_nTotalRegistered_ClientCount);
 
 
 

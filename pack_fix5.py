@@ -4,7 +4,7 @@ import zipfile
 
 src_dir = r"D:/Development/IEGPerTest/external/IEG_Code/code/WLServerTest/x64/Release"
 artifact_dir = r"D:/Development/IEGPerTest/artifacts"
-pack_name = "WLServerTest_V6.7_Fix5"
+pack_name = "WLServerTest_V6.8"
 pack_dir = os.path.join(artifact_dir, pack_name)
 
 # Project root
