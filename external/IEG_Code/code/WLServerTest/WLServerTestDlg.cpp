@@ -9609,7 +9609,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-		AfxMessageBox(_T("ï¿½ï¿½×¢ï¿½ï¿½Í»ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½×?ï¿½ï¿½"));
+		AfxMessageBox(_T("ÒÑ×¢²áÍ»ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½×?ï¿½ï¿½"));
 
 
 
@@ -13126,43 +13126,12 @@ void CWLServerTestDlg::OnBnClickedUploadCfg()
 			{
 				if (g_bStopTask) break;
 				CSendInfoToServer snd(pArg->strServerIP, pArg->strServerPort, pArg->strIdPre);
-				int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first,
-				                                        (LPTSTR)(LPCTSTR)pArg->vecTargets[i].second,
-				                                        pArg->strCfgJson.c_str());
-				BOOL bFP    = snd.SendClientFileProtectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bReg   = snd.SendClientRegProtectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bProc  = snd.SendClientProcessAuditToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bMac   = snd.SendClientMacSubObjToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bTP    = snd.SendClientTrustProcessToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bTPath = snd.SendClientTrustPathToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bFPE   = snd.SendClientFileProtectExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bRPE   = snd.SendClientRegProtectExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bUser  = snd.SendClientOSUserToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				// Fix11: additional policy modules
-				BOOL bOSRes = snd.SendClientOSResourceToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bScan  = snd.SendClientScanExcludeToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bUSBWL = snd.SendClientUsbWhitelistToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bUDisk = snd.SendClientUDiskToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bWiFi  = snd.SendClientWiFiToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bIll   = snd.SendClientIllegalConnectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bFW    = snd.SendClientFirewallToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bBase  = snd.SendClientBaseLineToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bUK    = snd.SendClientUSBKeyToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bMacDom= snd.SendClientMacDomainToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bThreat= snd.SendClientThreatDetectToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bWS    = snd.SendClientWorkSheetToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bWSR   = snd.SendClientWorkSheetResultToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				// Fix11b: additional policy modules (MAC exception / trust signer / virus upgrade / surveil / data guard / backup)
-				BOOL bMacExc= snd.SendClientMacExceptionToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bTrSgn = snd.SendClientTrustSignerToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bVUpg  = snd.SendClientVirusUpgradeToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bSurv  = snd.SendClientSurveilToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bDGuard= snd.SendClientDataGuardToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-				BOOL bBackup= snd.SendClientBackupToServer((LPTSTR)(LPCTSTR)pArg->vecTargets[i].first);
-
-				WriteInfo(_T("[CFG-UPLOAD] manual computerID=%s ret=%d"),
-				          pArg->vecTargets[i].first.GetString(), nRet);
-				if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser && bOSRes && bScan && bUSBWL && bUDisk && bWiFi && bIll && bFW && bBase && bUK && bMacDom && bThreat && bWS && bWSR && bMacExc && bTrSgn && bVUpg && bSurv && bDGuard && bBackup)
+				// Fix13: unified full upload (main config + all policy modules)
+				BOOL bAll = pDlg->UploadAllCfgModulesToServer(snd,
+				                                               pArg->vecTargets[i].first,
+				                                               pArg->vecTargets[i].second,
+				                                               pArg->strCfgJson);
+				if (bAll)
 					InterlockedIncrement64(&g_nCfgUploadOk64);
 				else
 					if (!pDlg->AddCfgUploadRetry(pArg->vecTargets[i].first, pArg->vecTargets[i].second))
@@ -13215,22 +13184,15 @@ void CWLServerTestDlg::LoadCfgUploadSettingsFromIni()
 		(m_bAutoUploadCfgChecked ? 1 : 0), g_nCfgRetryMaxAttempts, g_nCfgRetryBaseDelayMs);
 }
 
-void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
+// Fix13: unified full client config upload (main config + all policy modules).
+// Shared by auto upload, manual upload and retry thread, so every path uploads the
+// same complete module set; retry can heal partial failures that happen right after
+// a client comes online (auto upload), instead of only reposting CMDID 201.
+BOOL CWLServerTestDlg::UploadAllCfgModulesToServer(CSendInfoToServer& snd,
+                                                    const CString& strComputerID,
+                                                    const CString& strClientIP,
+                                                    const std::string& strCfgJson)
 {
-	// ??????????4???????????????3?????????????????
-	std::string strCfgJson;
-	CString strErrMsg;
-	if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
-	{
-		WriteError(_T("[CFG-UPLOAD] load template failed: %s"), strErrMsg.GetString());
-		return;
-	}
-
-	CString strComputerID = cclient.Client_GetComputerID();
-	CString strClientIP   = cclient.GetClientIP();
-	CString strIdPre      = m_strEditCtrl_ToRegisterClient_ClientIDPrefix;
-
-	CSendInfoToServer snd(m_strServerIP, m_strServerPort, strIdPre);
 	int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)strComputerID,
 	                                        (LPTSTR)(LPCTSTR)strClientIP,
 	                                        strCfgJson.c_str());
@@ -13266,9 +13228,29 @@ void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
 	BOOL bDGuard= snd.SendClientDataGuardToServer((LPTSTR)(LPCTSTR)strComputerID);
 	BOOL bBackup= snd.SendClientBackupToServer((LPTSTR)(LPCTSTR)strComputerID);
 
+	WriteInfo(_T("[CFG-UPLOAD] full upload computerID=%s ip=%s ret=%d"), strComputerID.GetString(), strClientIP.GetString(), nRet);
+	return (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser && bOSRes && bScan && bUSBWL && bUDisk && bWiFi && bIll && bFW && bBase && bUK && bMacDom && bThreat && bWS && bWSR && bMacExc && bTrSgn && bVUpg && bSurv && bDGuard && bBackup);
+}
 
-	WriteInfo(_T("[CFG-UPLOAD] computerID=%s ip=%s ret=%d"), strComputerID.GetString(), strClientIP.GetString(), nRet);
-	if (nRet == CFG_UPLOAD_RET_OK && bFP && bReg && bProc && bMac && bTP && bTPath && bFPE && bRPE && bUser && bOSRes && bScan && bUSBWL && bUDisk && bWiFi && bIll && bFW && bBase && bUK && bMacDom && bThreat && bWS && bWSR && bMacExc && bTrSgn && bVUpg && bSurv && bDGuard && bBackup)
+void CWLServerTestDlg::UploadClientConfigForClient(client& cclient)
+{
+	// ??????????4???????????????3?????????????????
+	std::string strCfgJson;
+	CString strErrMsg;
+	if (!CClientConfigUploader::LoadClientConfigTemplate(strCfgJson, strErrMsg))
+	{
+		WriteError(_T("[CFG-UPLOAD] load template failed: %s"), strErrMsg.GetString());
+		return;
+	}
+
+	CString strComputerID = cclient.Client_GetComputerID();
+	CString strClientIP   = cclient.GetClientIP();
+	CString strIdPre      = m_strEditCtrl_ToRegisterClient_ClientIDPrefix;
+
+	CSendInfoToServer snd(m_strServerIP, m_strServerPort, strIdPre);
+	// Fix13: unified full upload -> auto upload uploads exactly the same complete
+	// module set as manual upload; partial failures are healed by full retry
+	if (UploadAllCfgModulesToServer(snd, strComputerID, strClientIP, strCfgJson))
 	{
 		InterlockedIncrement64(&g_nCfgUploadOk64);
 	}
@@ -13354,13 +13336,15 @@ BOOL CWLServerTestDlg::AddCfgUploadRetry(const CString& strComputerID, const CSt
 
 					CSendInfoToServer snd(pDlg->m_strServerIP, pDlg->m_strServerPort,
 						pDlg->m_strEditCtrl_ToRegisterClient_ClientIDPrefix);
-					int nRet = snd.SendClientConfigToServer((LPTSTR)(LPCTSTR)item.strComputerID,
-						(LPTSTR)(LPCTSTR)item.strClientIP,
-						strCfgJson.c_str());
+					// Fix13: retry re-uploads the FULL set (main config + all policy modules)
+					// so a partial failure right after client online is healed to the same
+					// complete configuration as manual upload, instead of only reposting CMDID 201.
+					BOOL bRet = pDlg->UploadAllCfgModulesToServer(snd,
+						item.strComputerID, item.strClientIP, strCfgJson);
 					WriteInfo(_T("[CFG-UPLOAD] retry computerID=%s ip=%s attempt=%d ret=%d"),
-						item.strComputerID.GetString(), item.strClientIP.GetString(), item.nRetryCount + 1, nRet);
+						item.strComputerID.GetString(), item.strClientIP.GetString(), item.nRetryCount + 1, bRet);
 
-					if (nRet == CFG_UPLOAD_RET_OK)
+					if (bRet)
 					{
 						InterlockedIncrement64(&g_nCfgUploadOk64);
 						pDlg->PostMessage(WM_APP + 101, 0, 0);   // t7: refresh stats text
