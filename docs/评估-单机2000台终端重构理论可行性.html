@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单机 2000 台终端重构理论可行性评估 · WLServerTest</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1f2430; --sub:#5b6472; --line:#e3e6ec;
+    --accent:#1f6feb; --ok:#1a7f4b; --warn:#b26a00; --bad:#c0392b; --okbg:#e8f5ee; --warnbg:#fdf3e2; --badbg:#fcecea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"Microsoft YaHei","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       line-height:1.7;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 22px 64px}
+  header.hero{background:linear-gradient(135deg,#12325c,#1f6feb);color:#fff;border-radius:14px;
+       padding:30px 32px;box-shadow:0 6px 22px rgba(20,40,80,.18)}
+  header.hero h1{margin:0 0 10px;font-size:24px;line-height:1.4;font-weight:700}
+  header.hero p{margin:4px 0;color:#dbe6fb;font-size:13.5px}
+  .tag{display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);
+       border-radius:20px;padding:2px 12px;font-size:12.5px;margin-right:8px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+       padding:22px 26px;margin-top:20px;box-shadow:0 1px 3px rgba(20,30,50,.04)}
+  h2{font-size:19px;margin:0 0 14px;padding-left:12px;border-left:4px solid var(--accent)}
+  h3{font-size:16px;margin:20px 0 8px;color:#12325c}
+  h4{font-size:14.5px;margin:14px 0 6px;color:#2b3a52}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0 8px 22px;padding:0}
+  li{margin:4px 0}
+  code{background:#eef1f6;border:1px solid #dfe4ec;border-radius:5px;padding:1px 6px;
+       font-family:"Cascadia Mono",Consolas,"Courier New",monospace;font-size:12.8px;color:#0b3d91}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f0f3f8;font-weight:600;color:#2b3a52}
+  tr:nth-child(even) td{background:#fafbfd}
+  .verdict{display:flex;gap:14px;align-items:flex-start;border-radius:10px;padding:14px 16px;margin:12px 0}
+  .verdict.ok{background:var(--okbg);border:1px solid #bfe3cf}
+  .verdict.warn{background:var(--warnbg);border:1px solid #f0d9ad}
+  .verdict.bad{background:var(--badbg);border:1px solid #f0c3bd}
+  .badge{flex:0 0 auto;font-size:12.5px;font-weight:700;border-radius:6px;padding:3px 10px;color:#fff;white-space:nowrap}
+  .badge.ok{background:var(--ok)} .badge.warn{background:var(--warn)} .badge.bad{background:var(--bad)}
+  .muted{color:var(--sub);font-size:13px}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
+  .kpi .box{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kpi .box .n{font-size:22px;font-weight:700;color:#12325c}
+  .kpi .box .l{font-size:12.5px;color:var(--sub);margin-top:2px}
+  .foot{margin-top:26px;color:var(--sub);font-size:12.5px;text-align:center}
+  .pill{display:inline-block;border-radius:5px;padding:1px 8px;font-size:12.5px;font-weight:600}
+  .pill.r1{background:#e6f0ff;color:#1f4fa8} .pill.r2{background:#e8f5ee;color:#1a7f4b}
+  .pill.r3{background:#fdf3e2;color:#9a5a00}
+  .evidence{font-size:12.8px}
+  @media (max-width:760px){ .kpi{grid-template-columns:repeat(2,1fr)} header.hero h1{font-size:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>单机稳定承载 2000 台终端的重构理论可行性评估</h1>
+  <p><span class="tag">WLServerTest V6.8.1 基线</span><span class="tag">目标：5 台主机 × 2000 台 = 10000 台</span><span class="tag">范围：理论可行性，不含实施</span></p>
+  <p>评估日期：2026-11-02 ｜ 依据：<code>main</code> 分支源码 + 项目内压力稳定性评估与压测记录</p>
+</header>
+
+<!-- ============ 结论速览 ============ -->
+<section>
+  <h2>0. 结论速览</h2>
+
+  <div class="verdict ok">
+    <span class="badge ok">可行</span>
+    <div>
+      <strong>心跳保活口径：理论可行，改动量小。</strong>
+      仅要求 2000 台终端长期保持 TCP 心跳在线的场景下，单机 2000 台的资源需求（约 2000 个套接字、几十到几百 MB 内存、可忽略的心跳 CPU）完全在现代服务器能力范围内；真正卡住的是代码里写死的 <code>g_sock[1000]</code> 与“1 终端 = 1 线程”两处架构约束，二者均可通过小到中等规模改造解除。
+    </div>
+  </div>
+
+  <div class="verdict warn">
+    <span class="badge warn">条件可行</span>
+    <div>
+      <strong>心跳 + 日志压力口径：理论可行，但由 CPU 与限速粒度主导。</strong>
+      若按当前“每客户端 1 线程、每秒约 2.73 条日志”的模型，2000 台 ≈ 5460 EPS/主机，属重负载，单机可达性取决于服务器核数与目标 EPS；架构改造（线程池化/事件驱动 + 优先级修复）是<strong>必要条件而非充分条件</strong>，必须配合压测调参验证。
+    </div>
+  </div>
+
+  <div class="verdict bad">
+    <span class="badge bad">现状不支持</span>
+    <div>
+      <strong>零改造直接上 2000 台：不可行。</strong>
+      当前架构单进程硬上限 1000（<code>g_sock[1000]</code>，越界即内存破坏），且实测 400–500 台即出现心跳掉线（根因是日志线程 <code>TIME_CRITICAL</code> 抢占心跳线程）。2000 台在不改代码的前提下无法达成。
+    </div>
+  </div>
+
+  <div class="kpi">
+    <div class="box"><div class="n">1000</div><div class="l">当前单机硬上限（套接字数组）</div></div>
+    <div class="box"><div class="n">~4000</div><div class="l">2000 台在现行线程模型下的线程数</div></div>
+    <div class="box"><div class="n">5460</div><div class="l">2000 台日志压力估算 EPS/主机</div></div>
+    <div class="box"><div class="n">3 项</div><div class="l">解除硬约束的必要改造</div></div>
+  </div>
+  <p class="muted">补充：项目历史上已走过这条路的相当部分——C++ 老工具实测 <strong>500 台/主机、4 台发日志合计 4000 EPS 稳定</strong>；C# 版本则在日志压力下落线（<strong>BUG-2026-001</strong>）并被放弃，团队最终退回老工具。方案以「回归老工具基线」为前提，并对“2000 台/主机”作高风险外推处理，详见第 6 节。</p>
+</section>
+
+<!-- ============ 目标与前提 ============ -->
+<section>
+  <h2>1. 目标与前提假设</h2>
+  <h3>1.1 目标</h3>
+  <ul>
+    <li>用 <strong>5 台主机</strong>稳定模拟 <strong>10000 台终端</strong>，即每台主机需稳定承载 <strong>2000 台</strong>。</li>
+    <li>“稳定”定义为：压测全程心跳不批量掉线；开启日志时日志曲线（EPS）平稳，无级联断连。</li>
+  </ul>
+
+  <h3>1.2 评估前提假设（未在项目内验证的部分均按此假设）</h3>
+  <table>
+    <thead><tr><th>项</th><th>假设值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>服务器规格</td><td>16–32 核 / 32 GB+ / 万兆网卡</td><td>日志压力下 CPU 为主要瓶颈，核数直接决定可行上限</td></tr>
+      <tr><td>线程默认栈</td><td>1 MB 预留（MFC <code>AfxBeginThread</code> 默认）</td><td>操作系统通用默认值，用于估算虚拟地址与提交内存</td></tr>
+      <tr><td>Windows 动态端口区间</td><td>默认 16384 个（49152–65535）</td><td>用于判断 2000 条长连接是否耗尽本地端口</td></tr>
+      <tr><td>单客户端日志速率</td><td>≈ 2.73 EPS</td><td>取自项目压测记录：1 线程/客户端，外层 Sleep(1000)，一轮依次发 File/ProcStart/Reg 三条</td></tr>
+      <tr><td>平台侧承载</td><td>需支持 10000 条并发长连接</td><td>本次评估以客户端模拟工具为主，平台侧容量单独确认</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.3 不在本次范围</h3>
+  <p class="muted">本次仅做<strong>理论可行性评估</strong>：定位瓶颈、推演各重构路径的可行性、给出相互依赖与风险边界；<strong>不包含本轮实际代码重构、编译与压测实施</strong>。</p>
+</section>
+
+<!-- ============ 瓶颈定位 ============ -->
+<section>
+  <h2>2. 当前架构瓶颈定位</h2>
+  <p>现行 WLServerTest 是 <strong>MFC 单进程 GUI 压测工具</strong>，其“客户端模拟”核心由两条线程链构成：注册链、心跳链，外加按需叠加的日志链。以下为决定单机上限的四类约束，均已在源码中定位。</p>
+
+  <table class="evidence">
+    <thead><tr><th>约束</th><th>源码位置</th><th>取值/机制</th><th>性质</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>套接字池写死</td>
+        <td><code>WLServerTestDlg.cpp:306</code> <code>SOCKET g_sock[1000]</code></td>
+        <td>固定 1000 槽；<code>:7478</code> <code>g_sock[g_nSocketCount++]</code> 写入无越界保护，且 <code>g_nSocketCount</code> 非原子递增</td>
+        <td><span class="pill r1">硬上限</span></td>
+      </tr>
+      <tr>
+        <td>线程粒度 1:1</td>
+        <td><code>WLServerTestDlg.h:58</code> <code>HB_CLIENTCOUNT_PER_THREAD 1</code></td>
+        <td>1 个心跳线程对应 1 个终端；线程数 = 终端数</td>
+        <td><span class="pill r1">硬上限</span></td>
+      </tr>
+      <tr>
+        <td>界面输入上限</td>
+        <td><code>WLServerTestDlg.cpp:2406 / :2584</code></td>
+        <td>心跳、日志“客户端数”下拉最高项均为 1000</td>
+        <td><span class="pill r1">硬上限</span></td>
+      </tr>
+      <tr>
+        <td>日志线程优先级不对称</td>
+        <td><code>WLServerTestDlg.cpp:11476</code>（日志 <code>THREAD_PRIORITY_TIME_CRITICAL</code>）／<code>:10031</code>（心跳 <code>THREAD_PRIORITY_NORMAL</code>）</td>
+        <td>日志线程一旦就绪即优先于心跳线程占用 CPU；高并发下心跳线程 <code>Sleep(30000)</code> 到期后可能长时间得不到调度 → 心跳超时被判离线</td>
+        <td><span class="pill r3">稳定性瓶颈</span></td>
+      </tr>
+      <tr>
+        <td>注册线程数 = 客户端数</td>
+        <td><code>WLServerTestDlg.cpp:5752</code> 循环内 <code>AfxBeginThread(...Register_SameTime...)</code> + <code>Sleep(20)</code></td>
+        <td>2000 台会产生 2000 个瞬时注册线程，且仅错峰就需 2000×20ms ≈ 40 秒</td>
+        <td><span class="pill r3">启动冲击</span></td>
+      </tr>
+      <tr>
+        <td>心跳线程内同步 HTTPS 阻塞</td>
+        <td>心跳线程内对 <code>cmd=17 POLICY</code> 同步调用 <code>SendHeartbeat()</code>（HTTPS）；<code>cmd=18 NOREGISTER</code> 同步重注册</td>
+        <td>单次 HTTPS 可能耗时数秒，期间该客户端心跳连接空闲 → 服务端可能判离线</td>
+        <td><span class="pill r3">稳定性瓶颈</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.1 已有实测证据（可直接引用的历史结论）</h3>
+  <table>
+    <thead><tr><th>场景</th><th>结果</th><th>出处</th></tr></thead>
+    <tbody>
+      <tr><td>心跳 + 日志（长稳）</td><td>300 客户端长期稳定运行</td><td>压力稳定性评估文档 §三</td></tr>
+      <tr><td>心跳 + 日志 400×1</td><td>V6.5.1 修复后稳定</td><td><code>README.md</code> V6.5.1 特性</td></tr>
+      <tr><td>心跳 + 日志 400–500</td><td>日志曲线不稳 + 心跳大量掉线，500 台曾崩溃</td><td>压力稳定性评估文档 §四</td></tr>
+      <tr><td>官方推荐压测方案</td><td>3 台 × 1000 客户端 = 3000 在线，EPS 2000/主机</td><td><code>README.md</code>「推荐压测方案」</td></tr>
+      <tr><td>单客户端日志速率</td><td>≈ 2.73 EPS；项目曾提出“内部 ~3600 EPS/主机”量级的限速观察</td><td>项目聊天记录（2026-05-12）</td></tr>
+    </tbody>
+  </table>
+
+  <p class="muted">关键结论：<strong>400–500 台的崩溃根因被定位为“线程优先级不对称 + OS 线程调度压力”，而接力方案（NativeRunner）已把心跳与日志线程同级降为 <code>ABOVE_NORMAL</code> 并解除心跳线程内的 HTTPS 阻塞——但该修复“尚未完成压测验证”。这意味着通往 2000 台的路径在项目内部已有方向性共识，只差落地与验证。</strong></p>
+</section>
+
+<!-- ============ 资源模型 ============ -->
+<section>
+  <h2>3. 单机 2000 台资源模型测算</h2>
+  <p>下表按“现状（零改造）”与“目标（完成必要改造后）”两种形态，对单机 2000 台的资源占用量级进行测算。数值为量级估算，用于判断瓶颈方位，不作为精确容量承诺。</p>
+
+  <table>
+    <thead><tr><th>维度</th><th>现状模型（1 线程/终端）</th><th>改造后（线程池化/事件驱动）</th><th>判断</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>线程数</td>
+        <td>心跳 2000 + 日志 2000 = <strong>≈ 4000</strong>（注册阶段再加 2000 瞬时）</td>
+        <td>池化后 <strong>约 100–400</strong>；事件驱动可压到 <strong>≈ 8–32</strong></td>
+        <td>现状远超稳定可调度区间，是首要瓶颈</td>
+      </tr>
+      <tr>
+        <td>线程栈内存（预留）</td>
+        <td>4000 × 1 MB ≈ <strong>4 GB 虚拟地址</strong></td>
+        <td>200 × 1 MB ≈ <strong>200 MB</strong></td>
+        <td>x64 下预留不致命，但提交内存与内核栈随线程数线性增长</td>
+      </tr>
+      <tr>
+        <td>内核栈 / 非分页池</td>
+        <td>4000 × ~16 KB ≈ <strong>64 MB</strong></td>
+        <td>200 × ~16 KB ≈ <strong>3 MB</strong></td>
+        <td>现状可承受，但叠加调度开销后恶化</td>
+      </tr>
+      <tr>
+        <td>套接字句柄</td>
+        <td>2000（受 <code>g_sock[1000]</code> 限制，<strong>现状直接越界</strong>）</td>
+        <td>2000+（动态池 2048/4096）</td>
+        <td>单进程句柄数远未到达 Windows 上限，仅需扩容数组</td>
+      </tr>
+      <tr>
+        <td>本地端口</td>
+        <td>2000 条长连接占用 2000 个动态端口</td>
+        <td>同左</td>
+        <td>默认区间 16384 个，静态占用 2000 无压力；<strong>频繁重连 + TIME_WAIT 才需关注</strong></td>
+      </tr>
+      <tr>
+        <td>客户端对象内存</td>
+        <td>2000 × 数百字节 ≈ 亚 MB 级</td>
+        <td>同左</td>
+        <td>可忽略</td>
+      </tr>
+      <tr>
+        <td>心跳 CPU</td>
+        <td>2000 次 / 30 s ≈ 67 次/s</td>
+        <td>同左</td>
+        <td>可忽略</td>
+      </tr>
+      <tr>
+        <td>日志 CPU（EPS）</td>
+        <td>2000 × 2.73 ≈ <strong>5460 EPS</strong></td>
+        <td>EPS 由设定决定，不由线程数决定</td>
+        <td><strong>CPU 主导项</strong>，需按核数与 EPS 目标核算</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 线程数对比（示意）</h3>
+  <svg viewBox="0 0 720 240" width="100%" height="240" role="img" aria-label="线程数对比柱状图">
+    <rect x="0" y="0" width="720" height="240" fill="#ffffff"/>
+    <!-- axis -->
+    <line x1="120" y1="20" x2="120" y2="200" stroke="#c9d2e0"/>
+    <line x1="120" y1="200" x2="690" y2="200" stroke="#c9d2e0"/>
+    <!-- gridlines -->
+    <line x1="120" y1="110" x2="690" y2="110" stroke="#eef1f6"/>
+    <line x1="120" y1="20" x2="690" y2="20" stroke="#eef1f6"/>
+    <text x="12" y="26" font-size="11" fill="#5b6472">4000</text>
+    <text x="12" y="114" font-size="11" fill="#5b6472">2000</text>
+    <text x="16" y="204" font-size="11" fill="#5b6472">0</text>
+    <!-- bars: scale 4000 -> 180px, so 1 unit = 0.045px -->
+    <rect x="180" y="20" width="70" height="180" fill="#c0392b"/>
+    <text x="215" y="14" font-size="12" fill="#c0392b" text-anchor="middle" font-weight="700">≈4000</text>
+    <text x="215" y="218" font-size="12" fill="#5b6472" text-anchor="middle">现状 1:1</text>
+    <rect x="320" y="191" width="70" height="9" fill="#1a7f4b"/>
+    <text x="355" y="184" font-size="12" fill="#1a7f4b" text-anchor="middle" font-weight="700">≈200</text>
+    <text x="355" y="218" font-size="12" fill="#5b6472" text-anchor="middle">线程池化</text>
+    <rect x="460" y="198.6" width="70" height="1.4" fill="#1f6feb"/>
+    <text x="495" y="192" font-size="12" fill="#1f6feb" text-anchor="middle" font-weight="700">≈32</text>
+    <text x="495" y="218" font-size="12" fill="#5b6472" text-anchor="middle">事件驱动</text>
+    <!-- after -->
+    <rect x="600" y="20" width="70" height="180" fill="#b26a00"/>
+    <text x="635" y="14" font-size="12" fill="#b26a00" text-anchor="middle" font-weight="700">≈4000</text>
+    <text x="635" y="218" font-size="12" fill="#5b6472" text-anchor="middle">现状 1:1（同）</text>
+    <text x="370" y="236" font-size="11" fill="#9aa3b2" text-anchor="middle">2000 台终端在不同线程模型下的线程数量级（对数概念示意，非等比）</text>
+  </svg>
+
+  <p class="muted">注：上图为数量级示意。核心含义是——<strong>现状模型下线程数随终端数线性膨胀至数千级，而这是已在 400–500 台暴露的调度崩溃原因</strong>；只要把线程与终端解耦，2000 台的线程/内存/句柄资源都在服务器舒适区。</p>
+</section>
+
+<!-- ============ 重构路径 ============ -->
+<section>
+  <h2>4. 重构路径逐条理论可行性推演</h2>
+  <p>按“解除约束 → 稳定调度 → 压降 CPU”三个层次，共梳理 6 条路径。每条给出：改造内容、理论可行性、工作量、前置依赖与风险。</p>
+
+  <h3>R1　套接字池动态化 <span class="pill r1">必要 · 低风险</span></h3>
+  <ul>
+    <li><strong>内容</strong>：将 <code>g_sock[1000]</code> 改为按目标规模动态分配（如 <code>std::vector&lt;SOCKET&gt;</code> 或 <code>g_sock[4096]</code>），并给 <code>g_nSocketCount</code> 加越界保护、将写入改为 <code>InterlockedIncrement</code> 原子操作。</li>
+    <li><strong>理论可行性</strong>：<span class="badge ok">高</span>。这是纯数据结构扩容，不改变线程/协议逻辑；2000 个套接字对单进程而言远低于系统上限。</li>
+    <li><strong>工作量</strong>：小。</li>
+    <li><strong>风险</strong>：需同时修复 <code>g_nSocketCount++</code> 的竞态（文档 §差异 4 记录的 socket 泄漏隐患），否则扩容后竞态窗口内的错槽问题会被放大。</li>
+  </ul>
+
+  <h3>R2　线程模型与终端解耦 <span class="pill r2">核心 · 中高工作量</span></h3>
+  <p>这是把单机从 ~500 台推向 2000 台的<strong>关键路径</strong>，含三档方案，可按成本递进：</p>
+  <table>
+    <thead><tr><th>档位</th><th>做法</th><th>理论可行性</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>R2a 心跳线程池化</td>
+        <td>把 <code>HB_CLIENTCOUNT_PER_THREAD</code> 由 1 提高到 N（如 10–50），并相应扩大 <code>HBClientCount_InEveryThread</code>（现为 10）。一个线程在一轮内顺序处理 N 个终端的心跳，然后统一 <code>Sleep(30s)</code>。</td>
+        <td><span class="badge ok">高</span>：<strong>代码骨架已具备</strong>——线程数组已按 <code>HBClientCount_InEveryThread</code> 预申请，线程数按 <code>客户端数 / HB_CLIENTCOUNT_PER_THREAD</code> 计算，循环本身就是多终端结构，只需改常量与数组尺寸。</td>
+        <td>N=20 时心跳线程 2000→100。心跳间隔 30s，单线程带 10–50 个终端时间上充裕。</td>
+      </tr>
+      <tr>
+        <td>R2b 日志线程池化</td>
+        <td>日志链目前同样是 1 线程/终端。改为线程池，每线程轮转多个终端并按限速发送。</td>
+        <td><span class="badge warn">中</span>：日志有每终端 EPS 节奏与子报文间隔逻辑，池化需引入每终端调度状态（对齐 NativeRunner 的“每 clientId 队列 + 单一写端”思路）。</td>
+        <td>与 R6 的 socket 共享修复一并做更稳妥。</td>
+      </tr>
+      <tr>
+        <td>R2c 事件驱动（IOCP）</td>
+        <td>用 IO 完成端口统一管理全部套接字，心跳/日志发送走完成队列，取消“按终端建线程”。</td>
+        <td><span class="badge ok">高（长期最优）</span>：单机数千连接的标准解法，线程数可压到核数量级，且彻底消除“终端数 = 线程数”的线性膨胀。</td>
+        <td>工作量最大，属于架构级重写；建议在 R2a/R2b 验证到瓶颈后再评估。</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>依赖</strong>：R2 必须先有 R1（套接字池足够大），否则池化后仍会撞 1000 上限。</p>
+
+  <h3>R3　线程优先级与调度修复 <span class="pill r3">必要 · 低风险</span></h3>
+  <ul>
+    <li><strong>内容</strong>：把日志线程由 <code>THREAD_PRIORITY_TIME_CRITICAL</code> 降为 <code>ABOVE_NORMAL</code>，与心跳线程同级调度（NativeRunner 已如此处理）。</li>
+    <li><strong>理论可行性</strong>：<span class="badge ok">高</span>。项目文档已论证：原 <code>TIME_CRITICAL + NORMAL</code> 组合下，500 个日志线程每 50ms 唤醒一次会长时间饿死心跳线程；同级后改为公平轮转。</li>
+    <li><strong>注意</strong>：文档明确此改动<strong>“尚未完成压测验证”</strong>——可行性有理论支撑，但稳定性提升幅度必须由实测确认。</li>
+  </ul>
+
+  <h3>R4　解除心跳线程内的同步 HTTPS 阻塞 <span class="pill r3">重要 · 中工作量</span></h3>
+  <ul>
+    <li><strong>内容</strong>：收到 <code>cmd=17 POLICY</code> / <code>cmd=18 NOREGISTER</code> 时，不在心跳线程内同步发起 HTTPS，而是投递到独立工作线程/队列（可借鉴 NativeRunner 用 stdio 交给控制侧处理的做法）。</li>
+    <li><strong>理论可行性</strong>：<span class="badge ok">高</span>。属于职责下沉，不改变协议语义。</li>
+    <li><strong>依赖/风险</strong>：若采用 R2c 事件驱动，此问题自然消解；若走 R2a 池化，则需显式剥离，否则一个线程下的 N 个终端都会被其 HTTPS 阻塞拖累。</li>
+  </ul>
+
+  <h3>R5　注册并发限流 <span class="pill r3">建议 · 中低工作量</span></h3>
+  <ul>
+    <li><strong>内容</strong>：把“每客户端一个注册线程”改为固定并发度的注册池（如 20–50 并发），去掉 <code>Sleep(20)</code> 硬错峰。</li>
+    <li><strong>理论可行性</strong>：<span class="badge ok">高</span>。2000 个瞬时线程的启动冲击会被摊平；注册是初始化一次性动作，不影响稳态。</li>
+    <li><strong>风险</strong>：注册并发度过高会打爆平台注册接口，需与平台侧确认窗口。</li>
+  </ul>
+
+  <h3>R6　协议与共享资源健壮性 <span class="pill r3">建议 · 中低工作量</span></h3>
+  <ul>
+    <li><strong>内容</strong>：① <code>g_nSocketCount</code> 原子化；② 停止信号 <code>g_bStopTask</code> 加内存屏障（<code>volatile</code>/<code>Interlocked</code>）；③ 修复“心跳重连后 <code>g_sock[i]</code> 与日志线程持有的旧 socket 失效”的既有缺陷；④ HB/日志共享同一 socket 的发送加 per-socket 锁。</li>
+    <li><strong>理论可行性</strong>：<span class="badge ok">高</span>，逐条均为局部修复。</li>
+    <li><strong>风险/边界</strong>：HB 与日志共享 socket 的并发碰撞，单 socket 每周期概率极低（约 0.017%），但<strong>终端数放大到 2000 后，全机每周期出现碰撞的期望次数升到约 0.3 次</strong>（≈每 90 秒一次）——数量级虽不致命，但应显式加锁或改为独立连接，不能再沿用“数量少所以不锁”的旧假设。</li>
+  </ul>
+</section>
+
+<!-- ============ 组合方案 ============ -->
+<section>
+  <h2>5. 组合方案与阶段建议</h2>
+  <table>
+    <thead><tr><th>阶段</th><th>目标</th><th>必须完成的路径</th><th>预期可达</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>阶段一：解除硬约束</td>
+        <td>让单机“能”跑 2000 台</td>
+        <td>R1 + R3 + R5</td>
+        <td>心跳保活口径 2000 台理论上可达；日志压力口径预计仍受 400–500 台历史瓶颈影响</td>
+      </tr>
+      <tr>
+        <td>阶段二：解耦线程</td>
+        <td>让单机“稳”跑 2000 台</td>
+        <td>阶段一 + R2a/R2b + R4 + R6</td>
+        <td>心跳 2000 台稳定 + 日志压力具备可行性（线程数降到数百级）</td>
+      </tr>
+      <tr>
+        <td>阶段三：架构升级（可选，非首选）</td>
+        <td>仅当阶段二仍触及上限时再评估</td>
+        <td>阶段二 + R2c（IOCP）</td>
+        <td>单机余量充足，可持续演进</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">建议：先做阶段一（成本最低、直接解除 1000 硬上限），用一次 2000 台心跳压测取得基线；再据日志压测结果决定是否推进阶段二。阶段划分以「复用项目自身已验证的设计」为准则，<strong>不首选从零事件驱动重写</strong>（依据见第 6 节「历史弯路对照」）。</p>
+</section>
+
+<!-- ============ 历史弯路对照 ============ -->
+<section>
+  <h2>6. 历史弯路对照与修正（避免重蹈覆辙）</h2>
+  <p>在给出结论前必须先说明一件事：<strong>这条 2000 台的路，项目已经走过大半，但“走过”的方式与直觉相反</strong>。C++ 老工具在 6 台×500 的配置下实跑过 3000 心跳 + 4000 EPS 且平台非瓶颈；而同一时期，<strong>C# SimulatorApp 恰恰是在日志压力下落线的一方</strong>（BUG-2026-001：2000 客户端 + 日志，根因在 C# 发送侧），其修复仅验证到 1000 EPS，随后团队放弃 C# 路线、退回基于原始代码树的老工具（C++）继续改造。因此<strong>可靠的基线是老工具（C++），不是 C#</strong>——这一点直接决定本方案该对标谁。</p>
+
+  <h3>6.1 历史弯路清单（带出处）</h3>
+  <table>
+    <thead><tr><th>#</th><th>走过的弯路</th><th>出处</th><th>教训</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>日志字段值/枚举自造：<code>LogContent</code> 用描述性文本、<code>UsbType</code> 用 1/2/3 顺序号、出现重复 <code>CMDVER</code></td><td><code>docs/经验教训-日志类型实现.md</code>；聊天记录 2026-05-13/14</td><td>平台只认内核常量与真实样例，自造值被静默丢弃；排查应“先数据后代码”</td></tr>
+      <tr><td>2</td><td>只翻 docs、不查 git 历史工作版本，绕远路</td><td>聊天记录 2026-05-14“应该最先 git log/git show”</td><td>重构前先挖历史分支/commit 里的可用实现</td></tr>
+      <tr><td>3</td><td>C# 采 per-client 长跑 Task + 写锁，2000 客户端 + 日志时大量掉线；<strong>且此后 C# 路线被放弃、退回老工具</strong></td><td>git <code>e1adb96</code>《BUG-2026-001》；聊天记录 2026-03-06 / 2026-05-07</td><td>高并发下 per-client 持续任务互拖；修复（每轮发 3–5 条后退出）<strong>仅验证到 1000 EPS</strong>，远低于本项目目标量级</td></tr>
+      <tr><td>4</td><td>误判“老工具用独立短连接发日志”并实施</td><td>BUG-2026-001（<code>6ddf31d</code> 已 revert）</td><td>日志复用 HB 持久 socket 是有意设计，且短连接会撞端口上限</td></tr>
+      <tr><td>5</td><td><code>Sleep(30000)</code> 不可中断 → 停止按钮无响应</td><td>聊天记录 2026-05-10</td><td>休眠必须可中断（100ms 粒度检查停止信号）</td></tr>
+      <tr><td>6</td><td>日志 <code>TIME_CRITICAL</code> / 心跳 <code>NORMAL</code> 优先级不对称 → 400–500 台掉线</td><td>压力稳定性评估文档 §4.1</td><td>同级调度；但该修复“未压测验证”，不可当已解决</td></tr>
+      <tr><td>7</td><td>发布包缺 <code>WLNetComm.dll</code> → 500 客户端崩溃（<code>pEnableTLSv1</code> 空指针）</td><td>聊天记录 2026-05-11；对比文档 #16</td><td>部署必须含全部依赖；多机部署需环境一致</td></tr>
+      <tr><td>8</td><td>GBK 源文件被 UTF-8 工具重写 → 中文变 <code>efbfbd</code></td><td>聊天记录 2026-05-11</td><td>源码编辑走二进制 GBK 读写；中文用字节转义</td></tr>
+      <tr><td>9</td><td>结构级 bug（花括号嵌套错误）致日志静默不发；幽灵控件不可删（DDX 断言）</td><td>聊天记录 2026-05-11 / 05-13</td><td>改结构后必须回归关键分支</td></tr>
+      <tr><td>10</td><td>短连接模式低估端口 / TIME_WAIT 容量</td><td>历史脚本 <code>scripts/estimate_client_limit.ps1</code></td><td>短连接需按动态端口 + TimedWaitDelay 核算</td></tr>
+      <tr><td>11</td><td>理论 EPS（3270）高于平台实测（2620，−20%）</td><td>对比文档「理论 EPS 与实测对比」</td><td>验收以平台入库实测为准，理论值只作参考</td></tr>
+      <tr><td>12</td><td>一度假设平台无上限</td><td>BUG-2026-001：平台 HB watchdog 90s PolicyDrain；平台总部署 3013</td><td>平台承载与离线阈值属硬边界，须先确认</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 对照现有方案的“重蹈覆辙”风险与修正</h3>
+  <table>
+    <thead><tr><th>方案点</th><th>可能重复的历史错误</th><th>修正做法</th></tr></thead>
+    <tbody>
+      <tr><td>R2a 心跳线程池化</td><td>直接复活旧函数 <code>ThreadFunc_HeartbeatSend_Ori</code>（每线程 10 客户端）会丢失现行 <code>_New</code> 路径已有的修复（devid 竞态、ComputerIP 注入、自动配置上传）</td><td>只在 <code>_New</code> 路径上提高 <code>HB_CLIENTCOUNT_PER_THREAD</code> 并扩大数组；回归的是“每线程多客户端”这一历史已验证机制，而非旧函数</td></tr>
+      <tr><td>R2b 日志池化</td><td>把 C# 当作“已验证权威”去移植——但 C# 正是日志压力下被淘汰的一方，其修复仅验证到 1000 EPS</td><td>思路可借鉴 C# 的“每轮批量 + 每 clientId 锁 + 单写端”，但<strong>基线对标是老工具（C++）在 4000 EPS 下的实证</strong>，不是 C#；C# 只作参考不作依据</td></tr>
+      <tr><td>R2c 事件驱动（IOCP）</td><td>从零重写，重演“过早理论推导”与 C# 教训</td><td>降为后续可选项；<strong>不首选从零重写</strong>，优先复用已验证设计</td></tr>
+      <tr><td>R3 优先级修复</td><td>把它当成“已解决”，忽略“未压测验证”</td><td>按假说处理，必须在 2000 规模实测确认</td></tr>
+      <tr><td>R1 扩容 / R6 原子化</td><td>扩容后放大 <code>g_nSocketCount++</code> 竞态与不可中断休眠</td><td>同批修复原子计数、停止信号屏障、可中断休眠</td></tr>
+      <tr><td>验证方法</td><td>用工具侧“成功数”当验收（已知虚高）</td><td>以平台入库实测为准 + 24 小时 soak（对齐 BUG-2026-001 验证口径）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 修正后的对标与路线</h3>
+  <ul>
+    <li><strong>总原则修正为“回归老工具（C++）基线 + 分阶段外推验证”。</strong>对标对象是已经在 4000 EPS 下被证明的 C++ 老工具，<strong>不是被淘汰的 C#</strong>；“从零 IOCP 重写”降为最后手段。</li>
+    <li><strong>阶段一</strong>（解除硬约束）：R1 套接字池扩容 + R6 原子化/可中断 + R5 注册限流。</li>
+    <li><strong>阶段二</strong>（解耦线程，对齐老工具已验证机制）：R2a 在 <code>_New</code> 路径池化（老工具 HB 本就是每线程多客户端）+ R2b 借鉴 C# 的批量/单写端思路 + R3 同级优先级 + R4 剥离同步 HTTPS。</li>
+    <li><strong>阶段三</strong>（可选）：R2c IOCP，仅当阶段二仍触及上限。</li>
+    <li><strong>验收</strong>：每个阶段都以平台入库实测 + 24h soak 收口，不用理论 EPS 或工具计数下结论。</li>
+  </ul>
+
+  <h3>6.4 可靠性判定——本方案到底靠不靠谱</h3>
+  <p>把方案拆成“方向”与“量级”两件事来判断，结论并不相同：</p>
+  <table>
+    <thead><tr><th>判断项</th><th>结论</th><th>依据</th></tr></thead>
+    <tbody>
+      <tr><td>技术方向（解耦线程、扩容套接字、修优先级、复用老工具机制）</td><td><span class="badge ok">站得住</span></td><td>与项目历史一致：老工具 HB 本就是每线程多客户端，且它是在 4000 EPS 下被证明稳定的那一方</td></tr>
+      <tr><td>把 C# 设计当“已验证参照”</td><td><span class="badge bad">不成立，已修正</span></td><td>C# 在日志压力下落线、修复仅验证到 1000 EPS、并被放弃；对标应是老工具</td></tr>
+      <tr><td>“2000 台/主机”本身</td><td><span class="badge warn">无历史先例，属高风险外推</span></td><td>历史最高只演示到 <strong>500 台/主机</strong>（老工具 6×500）；2000 台是 4 倍外推</td></tr>
+      <tr><td>目标日志吞吐“≈5460 EPS/主机”</td><td><span class="badge warn">远超任何验证点，属高风险外推</span></td><td>老工具 4000 EPS 是 4 台合计（≈1000 EPS/主机）；C# 修复仅 1000 EPS；目标是其约 5.5 倍</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">一句话：<strong>方案的方向靠谱，但“2000 台/主机 + 5460 EPS/主机”不是“回归已验证”，而是把已验证基线（老工具 500 台/主机、~1000 EPS/主机）向上外推约 4–5.5 倍。</strong>这一外推必须被视为高风险、需分阶段实测证伪，而不能定性为“已证明可行”。</p>
+</section>
+
+<!-- ============ 风险与边界 ============ -->
+<section>
+  <h2>7. 关键风险与边界条件</h2>
+  <table>
+    <thead><tr><th>#</th><th>风险/边界</th><th>影响</th><th>应对</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>日志 CPU 与 EPS 目标</td><td>2000 台 × 2.73 EPS ≈ 5460 EPS/主机，可能超出核数承载</td><td>据此确认服务器核数，或下调每客户端 EPS / 采用池化降开销</td></tr>
+      <tr><td>2</td><td>Thread-critical 修复未经实测</td><td>降优先级能否真正消除掉线，尚无压测结论</td><td>阶段一后立即做 2000 台心跳压测取证</td></tr>
+      <tr><td>3</td><td>平台侧 10000 长连接承载</td><td>平台若对单 IP/单机连接数有限制，客户端再稳也无法上线</td><td>与平台确认连接数、注册速率与超时阈值</td></tr>
+      <tr><td>4</td><td>跨主机 ClientId 冲突</td><td>同 ClientId 心跳互踢 session，导致批量掉线</td><td>5 台各分配独立序号段（README 已明确）</td></tr>
+      <tr><td>5</td><td>共享 socket 并发碰撞（见 R6④）</td><td>2000 台规模下期望约每 90 秒一次碰撞</td><td>加 per-socket 锁或拆独立连接</td></tr>
+      <tr><td>6</td><td>端口耗尽（重连 churn）</td><td>频繁重连叠加 TIME_WAIT 可能耗尽动态端口</td><td>延长重连间隔、必要时调整动态端口区间</td></tr>
+      <tr><td>7</td><td>每终端 1 线程的“隐性”假设</td><td>任何残留的 1:1 建线程路径都会把线程数重新推高</td><td>改造后专项检查全部 <code>AfxBeginThread</code> 调用点</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 结论 ============ -->
+<section>
+  <h2>8. 结论</h2>
+  <ul>
+    <li><strong>理论可行性成立，但分两个口径</strong>：心跳保活口径“可行且改动小”；心跳 + 日志压力口径“可行但受 CPU 与限速粒度主导”，必须实测确认。</li>
+    <li><strong>现状为零改造不可行</strong>：硬上限 1000 与 400–500 台实测崩溃两条证据共同否决了“不改代码直接上 2000 台”。</li>
+    <li><strong>关键改造集中在三点</strong>：套接字池动态化（R1）、线程与终端解耦（R2）、线程优先级与阻塞修复（R3/R4）。其中 R2 是决定单机能否从 ~500 台跨到 2000 台的核心。</li>
+    <li><strong>最重要的修正——“回归”这一半成立，“移植 C# 设计”这一半不成立</strong>：可靠的基线是 C++ 老工具（实测 500 台/主机、4 台合计 4000 EPS 稳定），而 C# 版本恰恰是日志压力下掉线并被放弃的一方（其修复仅验证到 1000 EPS）。因此应<strong>以老工具为对标</strong>，C# 的批量/单写端思路只作参考；<strong>R2c（IOCP）不首选从零重写</strong>，仅在阶段二仍触顶时再评估。</li>
+    <li><strong>可靠性的边界必须讲清</strong>：“2000 台/主机”是历史已验证水位（约 500 台/主机）的 4 倍外推，目标日志吞吐（≈5460 EPS/主机）是已验证水位（约 1000 EPS/主机）的约 5.5 倍——因此本方案应定性为<strong>“方向可行、量级高风险、需分阶段实测证伪”</strong>，而非“已证明可行”。</li>
+    <li><strong>验收口径对齐历史教训</strong>：以平台入库实测 + 24 小时 soak 为准（工具侧“成功数”已知虚高），并把平台 watchdog（约 90s）、平台既有部署规模、短连接端口/TIME_WAIT 作为硬边界先行确认。</li>
+    <li>综合定性：<strong>理论可行、需实测闭环</strong>——方向已被项目内部（NativeRunner 与 BUG-2026-001）验证过，不足是“尚未在 2000/主机规模完成压测闭环”。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 ============ -->
+<section>
+  <h2>附录 A　证据索引</h2>
+  <table class="evidence">
+    <thead><tr><th>结论</th><th>证据来源</th></tr></thead>
+    <tbody>
+      <tr><td>单进程套接字上限 1000、写入无越界保护、计数非原子</td><td><code>external/IEG_Code/code/WLServerTest/WLServerTestDlg.cpp:306 / :7478</code></td></tr>
+      <tr><td>线程粒度 1 线程/终端</td><td><code>WLServerTestDlg.h:58</code> <code>HB_CLIENTCOUNT_PER_THREAD 1</code></td></tr>
+      <tr><td>每线程终端数组已按 10 预申请（池化骨架）</td><td><code>WLServerTestDlg.cpp:6555 / :7428 / :7433</code></td></tr>
+      <tr><td>心跳线程结构、30s 可中断休眠、优先级 NORMAL</td><td><code>WLServerTestDlg.cpp:7393 / :10031</code></td></tr>
+      <tr><td>日志线程 1:1、TIME_CRITICAL、复用 g_sock[i]</td><td><code>WLServerTestDlg.cpp:8506 / :11386 / :11476</code></td></tr>
+      <tr><td>注册线程 = 客户端数 + Sleep(20) 错峰</td><td><code>WLServerTestDlg.cpp:5752</code></td></tr>
+      <tr><td>界面下拉上限 1000</td><td><code>WLServerTestDlg.cpp:2406 / :2584</code></td></tr>
+      <tr><td>连接为非阻塞 + select 2s 超时</td><td><code>SendInfoToServer.cpp:111</code></td></tr>
+      <tr><td>300 稳定 / 400×1 稳定 / 500 崩溃 + 根因分析</td><td><code>docs/分析-WLServerTest与NativeRunner代码差异及压力稳定性评估.md</code> §三/§四</td></tr>
+      <tr><td>3 台 × 1000 官方推荐方案</td><td><code>README.md</code>「推荐压测方案」</td></tr>
+      <tr><td>单客户端 ≈ 2.73 EPS、内部限速量级</td><td><code>docs/聊天记录.md</code>（2026-05-12）</td></tr>
+      <tr><td>NativeRunner 同级优先级 / 非阻塞 POLICY / 单一写端</td><td>压力稳定性评估文档 §二、§四；<code>docs/项目实施文档.md</code></td></tr>
+      <tr><td>C# 2000 客户端失败—修复闭环、老工具 10 客户端/线程、C++ 500/主机 4000 EPS 验证</td><td>git <code>e1adb96</code>《BUG-2026-001-2000客户端心跳稳定性.md》</td></tr>
+      <tr><td>“每轮发 3–5 条后退出 + 每 clientId 独立锁 + 单一写端”已验证修复</td><td><code>simulator-subprocess</code> 分支 <code>src/SimulatorLib/Workers/LogWorker.cs</code>、<code>HeartbeatStreamRegistry.cs</code></td></tr>
+      <tr><td>容量阈值实测（500 稳定 / 750 不稳定）、平台 HB watchdog 90s、平台部署 3013</td><td>BUG-2026-001 提交历史（<code>a4e8804</code>／<code>ee40a17</code>／<code>615ef21</code>）</td></tr>
+      <tr><td>短连接端口 / TIME_WAIT 容量模型</td><td>历史脚本 <code>scripts/estimate_client_limit.ps1</code>（<code>03cbb58</code>）</td></tr>
+      <tr><td>日志字段值/枚举需对齐权威样例、应优先查 git 历史工作版本</td><td><code>docs/经验教训-日志类型实现.md</code>；<code>docs/短连接日志实现记录.md</code>；聊天记录 2026-05-13/14</td></tr>
+      <tr><td>GBK 源文件被 UTF-8 重写、WLNetComm.dll 缺失致 500 崩溃、不可中断 Sleep、花括号嵌套 bug</td><td><code>docs/聊天记录.md</code>（2026-05-10 / 05-11 / 05-13）；对比文档 #12/#16</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<p class="foot">WLServerTest 单机 2000 台终端重构理论可行性评估 · 生成于 2026-11-02 · 基于 <code>main</code> 分支 V6.8.1</p>
+
+</div>
+</body>
+</html>
