@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IEG 客户端策略上传完整链路图（WLServerTest 对齐版）</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#263449; --line:#475569;
+    --a:#22d3ee; --b:#a78bfa; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+    --txt:#e2e8f0; --sub:#94a3b8; --dim:#64748b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--txt); font-family:"Microsoft YaHei","PingFang SC",sans-serif; padding:32px 20px 60px; line-height:1.5;}
+  .wrap{max-width:1180px; margin:0 auto;}
+  h1{font-size:24px; margin-bottom:4px;}
+  .sub{color:var(--sub); font-size:13px; margin-bottom:24px;}
+  h2{font-size:17px; margin:34px 0 14px; padding-left:10px; border-left:4px solid var(--a);}
+  h3{font-size:14px; margin:16px 0 8px; color:#cbd5e1;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--sub); background:var(--panel); padding:10px 14px; border-radius:10px; margin-bottom:18px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:10px; height:10px; border-radius:3px; display:inline-block;}
+  .track{display:flex; gap:14px; align-items:stretch; margin-bottom:18px;}
+  .track-label{writing-mode:vertical-lr; transform:rotate(180deg); display:flex; align-items:center; justify-content:center; font-weight:700; letter-spacing:2px; padding:10px 6px; border-radius:10px; font-size:13px;}
+  .track-a .track-label{background:rgba(34,211,238,.15); color:var(--a); border:1px solid rgba(34,211,238,.4);}
+  .track-b .track-label{background:rgba(167,139,250,.15); color:var(--b); border:1px solid rgba(167,139,250,.4);}
+  .flow{flex:1; display:flex; flex-direction:column; gap:10px;}
+  .node{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; position:relative;}
+  .node.hl-a{border-color:rgba(34,211,238,.55); background:linear-gradient(180deg, rgba(34,211,238,.10), var(--panel));}
+  .node.hl-b{border-color:rgba(167,139,250,.55); background:linear-gradient(180deg, rgba(167,139,250,.10), var(--panel));}
+  .node .t{font-weight:700; font-size:14px;}
+  .node .d{font-size:12px; color:var(--sub); margin-top:4px;}
+  .node .src{font-size:11px; color:var(--dim); margin-top:2px;}
+  .arrow{height:18px; position:relative;}
+  .arrow::after{content:""; position:absolute; left:50%; top:0; width:2px; height:18px; background:var(--line); transform:translateX(-50%);}
+  .arrow.end::after{display:none;}
+  .branch{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:2px 0 2px 0;}
+  .branch .node{padding:8px 10px; font-size:12px;}
+  .branch .node .t{font-size:12.5px;}
+  .branch .node .d{font-size:11px;}
+  .mini{font-family:Consolas,"Courier New",monospace; font-size:11px; color:#c4b5fd; background:#111a2e; border:1px solid #2b3a55; border-radius:6px; padding:2px 6px; display:inline-block; margin-right:6px; margin-top:4px;}
+  .badge{display:inline-block; font-size:11px; padding:1px 8px; border-radius:20px; margin-left:8px; vertical-align:1px;}
+  .b-ok{background:rgba(52,211,153,.15); color:var(--ok);}
+  .b-warn{background:rgba(251,191,36,.15); color:var(--warn);}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; background:var(--panel); border-radius:10px; overflow:hidden;}
+  th,td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top;}
+  th{background:var(--panel2); color:#cbd5e1; font-weight:700; white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  td.c{font-family:Consolas,"Courier New",monospace; font-size:11.5px; color:#a5f3fc;}
+  .note{background:var(--panel); border-left:3px solid var(--warn); padding:10px 14px; border-radius:0 10px 10px 0; font-size:12.5px; color:var(--sub); margin:12px 0;}
+  .note b{color:var(--warn);}
+  .okline{background:rgba(52,211,153,.08); border-left:3px solid var(--ok); padding:10px 14px; border-radius:0 10px 10px 0; font-size:12.5px; color:var(--sub); margin:12px 0;}
+  .okline b{color:var(--ok);}
+  .foot{margin-top:40px; font-size:11.5px; color:var(--dim); border-top:1px solid var(--line); padding-top:14px;}
+  code{font-family:Consolas,"Courier New",monospace; font-size:11.5px; background:#111a2e; padding:1px 5px; border-radius:4px; color:#a5f3fc;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>IEG 客户端策略上传完整链路图</h1>
+<div class="sub">对齐版本：WLServerTest V6.7 Fix6 ｜ 真理源：IEG_Code（WLUtilities/WLJsonParse.cpp、WLCConfig/DealLocalConfig.cpp、WLCConfig/FileUpload.cpp、include/CmdWord/WLCmdWordDef.h、include/format/commurl.h）</div>
+
+<div class="legend">
+  <span><i class="dot" style="background:var(--a)"></i>轨道 A：状态总报（CMDTYPE 200 / 指令）</span>
+  <span><i class="dot" style="background:var(--b)"></i>轨道 B：规则分报（CMDTYPE 150 / CMDTYPE_POLICY 策略）</span>
+  <span><i class="dot" style="background:var(--ok)"></i>Fix6 已对齐 IEG</span>
+  <span><i class="dot" style="background:var(--line)"></i>平台下行（策略接受，反向参考）</span>
+</div>
+
+<h2>双轨总览</h2>
+<p style="font-size:13px;color:var(--sub);margin-bottom:14px;">IEG 配置上报采用 <b style="color:var(--txt)">状态总报 + 规则分报</b> 两条互相独立的轨道：<code>clientRefresh.do</code> 只上报开关类扁平状态字段（不含规则明细）；文件保护 / 注册表保护 / 进程审计 / MAC / 信任进程 / 信任路径等策略明细，各自走独立 URL 分报。两条轨道共用 <code>pdoPost</code> 发送通道，但 CMDTYPE 不同，服务端按 CMDTYPE + URL 路由处理。</p>
+
+<div class="track track-a">
+  <div class="track-label">轨道 A · 状态总报</div>
+  <div class="flow">
+    <div class="node hl-a">
+      <div class="t">CWLDealMsg::RealFlush_SendClientStatusToServer<span class="badge b-ok">Fix6 未改动</span></div>
+      <div class="d">填充 CLIENT_STATUS_STRUCT（约 90+ 扁平字段）→ CWLJsonParse::Fush_GetJson 构造 JSON</div>
+      <div class="src">WLCConfig/WLDealMsg.cpp:913 ｜ WLUtilities/WLJsonParse.cpp:3629</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="node hl-a">
+      <div class="t">clientRefresh.do 状态总报<span class="badge b-ok">CMDTYPE 200 即 CMDTYPE_CMD</span></div>
+      <div class="d">
+        <span class="mini">CMDTYPE:200</span><span class="mini">CMDID:201</span><span class="mini">DATA_TO_SERVER_UPDATE_CLIENT_STATUS</span>
+        <br>报文外层：<code>[{ComputerID, CMDTYPE:200, CMDID:201, CMDContent:{108 个标准扁平字段}}]</code>
+      </div>
+      <div class="d">承载字段：开关状态（dwFilePotectStatus/dwRegProtectStatus/dwMACStatus/dwIsProcessAudit/scanControl/loopholeProtect 等）、硬磁盘信息数组 etc.，<b>不含任何规则明细</b></div>
+      <div class="src">include/format/commurl.h:14 → URL_UPDATESTATUS ｜ WLServerTest SendClientConfigToServer（SendInfoToServer.cpp:3132）</div>
+    </div>
+    <div class="arrow end"></div>
+  </div>
+</div>
+
+<div class="track track-b">
+  <div class="track-label">轨道 B · 规则分报</div>
+  <div class="flow">
+    <div class="node hl-b">
+      <div class="t">DealLocalConfig / FileUpload 分模块上报入口<span class="badge b-ok">全部使用 CMDTYPE_POLICY = 150</span></div>
+      <div class="d">文件保护、文件保护例外、注册表保护、注册表保护例外、进程审计、信任进程/信任路径、MAC 主客体，每个模块独立 POST 独立 URL</div>
+      <div class="src">WLCConfig/DealLocalConfig.cpp:1125/1245/1400/1513/1764/1911 ｜ WLCConfig/FileUpload.cpp:2337</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="branch">
+      <div class="node hl-b">
+        <div class="t">文件保护<span class="badge b-ok">Fix6 CMDTYPE→150</span></div>
+        <div class="d"><span class="mini">FileProtect.do</span><br>CMDID:241 · 满规格 1000 条<br>元素：<code>FullPath</code><br>表头：Enable/alarmMode/addOrFull</div>
+        <div class="src">hostDefence_CheckFileProtect_GetJson</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">注册表保护<span class="badge b-ok">Fix6 CMDTYPE→150</span></div>
+        <div class="d"><span class="mini">RegProtect.do</span><br>CMDID:240 · 满规格 1000 条<br>元素：<code>RegItem/RegType</code><br>表头：addOrFull/section/Enable/alarmMode</div>
+        <div class="src">hostDefence_CheckRegProtect_GetJson</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">进程审计<span class="badge b-ok">Fix6 CMDTYPE→150 + Enable</span></div>
+        <div class="d"><span class="mini">ProcessAudits.do</span><br>CMDID:243 · 满规格 1000 条<br>元素：<code>FileName</code><br>表头：Enable/KeepOldAuditSwitch/JustReload</div>
+        <div class="src">host_AD_Process_GetJson (WLJsonParse.cpp:5926)</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">MAC 主客体<span class="badge b-ok">Fix6 数组包裹复位</span></div>
+        <div class="d"><span class="mini">AccessControlConfig.do</span><br>CMDID:181 · 满规格 10000 条（主/客体各 5000）<br>CMDContent_1：<code>ProcessName/UserName/DomainID</code><br>CMDContent_2：<code>Filename/DomainID</code><br>表头：Flag/Enable</div>
+        <div class="src">hostDefence_MAC_SubObj_GetJson (WLJsonParse.cpp:9360)</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node hl-b">
+        <div class="t">信任进程<span class="badge b-ok">Fix6 数组包裹复位</span></div>
+        <div class="d"><span class="mini">trushProcessCfg.do</span><br>CMDID:247 · 满规格 256 条<br>元素：<code>FileName/TrustChild/id</code>（注释写 childProcess，代码以 TrustChild 为准）<br>表头：CMDVER/Operation</div>
+        <div class="src">Def2USM_Trust_Process_GetJson (WLJsonParse.cpp:11763)</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">信任路径<span class="badge b-ok">Fix6 数组包裹复位</span></div>
+        <div class="d"><span class="mini">trushPathCfg.do</span><br>CMDID:248 · 满规格 64 条<br>元素：<code>Path</code>（只保留 Path，无 id）<br>表头：CMDVER/Operation</div>
+        <div class="src">Def2USM_Trust_Path_GetJson (WLJsonParse.cpp:11966)</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">文件保护例外<span class="badge b-ok">Fix6 CMDTYPE→150</span></div>
+        <div class="d"><span class="mini">FileProtectException.do</span><br>CMDID:242 · 满规格 1000 条<br>元素：<code>FullPath</code><br>表头：仅 addOrFull（无 Enable/alarmMode）</div>
+        <div class="src">hostDefence_CheckFileProtectException_GetJson</div>
+      </div>
+      <div class="node hl-b">
+        <div class="t">注册表保护例外<span class="badge b-ok">Fix6 CMDTYPE→150</span></div>
+        <div class="d"><span class="mini">clientSycRegExpRule.do</span><br>CMDID:121 · 满规格 255 条<br>元素：<code>RegItem/RegType</code><br>表头：addOrFull/section/Enable/alarmMode</div>
+        <div class="src">hostDefence_CheckRegProtectException_GetJson</div>
+      </div>
+    </div>
+    <div class="arrow end"></div>
+  </div>
+</div>
+
+<h2>Fix6 修复点（本轮改动，SendInfoToServer.cpp 共 11 处）</h2>
+<table>
+  <tr><th>模块</th><th>修复前（Fix5 遗留）</th><th>修复后（对齐 IEG）</th><th>依据</th></tr>
+  <tr><td>文件保护</td><td class="c">CMDTYPE:200</td><td class="c">CMDTYPE:150</td><td>CMDTYPE_POLICY=150（WLCmdWordDef.h:16）</td></tr>
+  <tr><td>注册表保护</td><td class="c">CMDTYPE:200</td><td class="c">CMDTYPE:150</td><td>同上</td></tr>
+  <tr><td>进程审计</td><td class="c">CMDTYPE:200，缺表头字段</td><td class="c">CMDTYPE:150 + Enable:1 + KeepOldAuditSwitch:0 + JustReload:1</td><td>host_AD_Process_GetJson（WLJsonParse.cpp:5926）</td></tr>
+  <tr><td>MAC 主客体</td><td class="c">{...}]}（单对象且结尾多 ]）</td><td class="c">[{...}]（数组包裹，结尾 ]}]）</td><td>root.append(person) → 数组（WLJsonParse.cpp:9414）</td></tr>
+  <tr><td>信任进程</td><td class="c">{...]}（单对象）</td><td class="c">[{...}]</td><td>root.append(trustProcess)（WLJsonParse.cpp:11836）</td></tr>
+  <tr><td>信任路径</td><td class="c">{...]}（单对象）</td><td class="c">[{...}]</td><td>root.append(trustPath)（WLJsonParse.cpp:12030）</td></tr>
+  <tr><td>文件保护例外</td><td class="c">CMDTYPE:200</td><td class="c">CMDTYPE:150</td><td>CMDTYPE_POLICY=150</td></tr>
+  <tr><td>注册表保护例外</td><td class="c">CMDTYPE:200</td><td class="c">CMDTYPE:150</td><td>同上</td></tr>
+</table>
+
+<div class="note">
+  <b>核心根因说明</b>：服务端按 <code>CMDTYPE</code> + URL 路由报文。规则分报必须用 <code>CMDTYPE_POLICY = 150</code>（WLCmdWordDef.h 枚举：CMDTYPE_POLICY=150 策略、CMDTYPE_CMD=200 指令）；Fix5 误用 200，规则的 JSON 即使到达服务端也会被路由/校验逻辑丢弃，表现为"开关状态上去了、策略全是空"。Fix6 将 8 个规则分报统一为 150，并把 3 个模块的 JSON 外层结构复位为 IEG 的数组包裹形式。
+</div>
+
+<h2>字段映射对照（IEG 源码 → WLServerTest 实现）</h2>
+<table>
+  <tr><th>规则模块</th><th>IEG 构造函数（真理源）</th><th>WLServerTest 实现（SendInfoToServer.cpp）</th><th>CMDContent 字段</th></tr>
+  <tr><td>文件保护</td><td class="c">hostDefence_CheckFileProtect_GetJson</td><td class="c">BuildJsonString_FileProtect (:3229)</td><td>FullPath ×1000</td></tr>
+  <tr><td>注册表保护</td><td class="c">hostDefence_CheckRegProtect_GetJson</td><td class="c">BuildJsonString_RegProtect (:3245)</td><td>RegItem/RegType ×1000</td></tr>
+  <tr><td>进程审计</td><td class="c">host_AD_Process_GetJson (:5926)</td><td class="c">BuildJsonString_ProcessAudit (:3261)</td><td>FileName ×1000；表头 Enable/KeepOldAuditSwitch/JustReload</td></tr>
+  <tr><td>MAC 主客体</td><td class="c">hostDefence_MAC_SubObj_GetJson (:9360)</td><td class="c">BuildJsonString_MacSubObj (:3277)</td><td>CMDContent_1: ProcessName/UserName/DomainID ×5000；CMDContent_2: Filename/DomainID ×5000；表头 Flag/Enable</td></tr>
+  <tr><td>信任进程</td><td class="c">Def2USM_Trust_Process_GetJson (:11763)</td><td class="c">BuildJsonString_TrustProcess (:3301)</td><td>FileName/TrustChild/id ×256；表头 CMDVER/Operation</td></tr>
+  <tr><td>信任路径</td><td class="c">Def2USM_Trust_Path_GetJson (:11966)</td><td class="c">BuildJsonString_TrustPath (:3317)</td><td>Path ×64；表头 CMDVER/Operation</td></tr>
+  <tr><td>文件保护例外</td><td class="c">hostDefence_CheckFileProtectException_GetJson</td><td class="c">BuildJsonString_FileProtectException (:3333)</td><td>FullPath ×1000；表头仅 addOrFull</td></tr>
+  <tr><td>注册表保护例外</td><td class="c">hostDefence_CheckRegProtectException_GetJson</td><td class="c">BuildJsonString_RegProtectException (:3349)</td><td>RegItem/RegType ×255</td></tr>
+</table>
+
+<h2>平台下行（策略接受模块）反向参考</h2>
+<div class="track track-b" style="opacity:.92">
+  <div class="track-label" style="background:var(--line);color:#cbd5e1;border-color:var(--line);">平台 → 工具</div>
+  <div class="flow">
+    <div class="node" style="border-color:var(--line);">
+      <div class="t">策略接受勾选框（IDC_CHECK_POLICY_RECV = 1111）</div>
+      <div class="d">平台批量下发策略 → 工具接收策略后回执报文。当前 WLServerTest 仅做界面绑定（WLServerTestDlg.cpp:1142），无回执处理逻辑；其价值在于 <b>平台下发报文的字段结构 = 平台期望客户端上传的字段结构</b>，可作为上传格式的反向校验参考。</div>
+      <div class="src">Resource.h:146 ｜ WLServerTest.rc:191</div>
+    </div>
+  </div>
+</div>
+
+<div class="okline">
+  <b>Fix6 验证结论</b>：8 个规则分报报文均为 <code>[{...}]</code> 合法 JSON 数组、CMDTYPE 统一 150、字段名逐字对齐 IEG 构造函数、满规格条数（1000/1000/1000/255/1000/10000/256/64）不变；编译 BUILD_EXITCODE=0。剩余不可控项：服务端对 <code>pdoPost</code> 的编码/Content-Type 细节与响应判定策略，需实机测试确认。
+</div>
+
+<div class="foot">
+  说明：本图基于 IEG_Code 源码逐函数核对绘制（WLCmdWordDef.h、commurl.h、WLJsonParse.cpp、DealLocalConfig.cpp、FileUpload.cpp、WLNetCommApi.h）。WLServerTest 侧实现位于 SendInfoToServer.cpp，自 Fix6 起与 IEG 规则分报完全同构。生成时间：2026-10-14。
+</div>
+
+</div>
+</body>
+</html>
