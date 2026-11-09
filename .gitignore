@@ -42,3 +42,24 @@ external/IEG_Code/code/WLServerTest/res/*
 
 dump/
 build_wlservertest.log
+
+# --- 本地工具缓存 / 临时目录（本地保留，不进仓库） ---
+.dumate/
+.tmp/
+.local-archive/
+
+# --- 源码目录内的备份与 VS 临时文件（本地保留，不进仓库） ---
+external/IEG_Code/code/WLServerTest/Backup*/
+external/IEG_Code/code/WLServerTest/.bak_cfg_upload/
+external/IEG_Code/code/WLServerTest/*.bak
+external/IEG_Code/code/WLServerTest/*.bak_*
+external/IEG_Code/code/WLServerTest/*.backup
+external/IEG_Code/code/WLServerTest/*.decoded.txt
+external/IEG_Code/code/WLServerTest/*.aps
+external/IEG_Code/code/WLServerTest/UpgradeLog.htm
+external/IEG_Code/code/WLServerTest/x64/
+external/IEG_Code/code/WLServerTest/Release/
+
+# policies/*.json 属于发布包内容，需可跟踪（新增模板不要被忽略）
+!external/IEG_Code/code/WLServerTest/policies/
+!external/IEG_Code/code/WLServerTest/policies/*.json

@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Dark+",
+    "workbench.colorTheme": "Default Dark Modern",
     "chat.tools.terminal.autoApprove": {
         "/^git checkout main; git pull$/": {
             "approve": true,
