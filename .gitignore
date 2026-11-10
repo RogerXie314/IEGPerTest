@@ -47,6 +47,7 @@ build_wlservertest.log
 .dumate/
 .tmp/
 .local-archive/
+.workbuddy/
 
 # --- 源码目录内的备份与 VS 临时文件（本地保留，不进仓库） ---
 external/IEG_Code/code/WLServerTest/Backup*/
