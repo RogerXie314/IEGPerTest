@@ -298,12 +298,90 @@ volatile LONG64 g_nCfgUploadRetry64 = 0;  // total retry attempts count
 
 
 
-int g_nSocketCount = 0;
+volatile LONG g_nSocketCount = 0;
+// ---- R1/R6: dynamic socket table (replaces fixed g_sock[1000]) ----
+static const int MAX_SUPPORTED_CLIENTS = 4096;
+std::vector<SOCKET> g_vecSockTable;
+CCriticalSection g_csSockTable;
+
+static void InitSocketTable(int nCapacity)
+{
+    CSingleLock lk(&g_csSockTable, TRUE);
+    if (nCapacity > MAX_SUPPORTED_CLIENTS) nCapacity = MAX_SUPPORTED_CLIENTS;
+    if ((int)g_vecSockTable.size() < nCapacity)
+        g_vecSockTable.resize(nCapacity, INVALID_SOCKET);
+}
+
+static void ClearSocketTable()
+{
+    CSingleLock lk(&g_csSockTable, TRUE);
+    for (size_t i = 0; i < g_vecSockTable.size(); ++i) g_vecSockTable[i] = INVALID_SOCKET;
+    g_nSocketCount = 0;
+}
+
+static BOOL SetSocketForClient(int nClientIndex, SOCKET s)
+{
+    if (nClientIndex < 0 || nClientIndex >= MAX_SUPPORTED_CLIENTS) return FALSE;
+    CSingleLock lk(&g_csSockTable, TRUE);
+    if ((int)g_vecSockTable.size() <= nClientIndex)
+        g_vecSockTable.resize(nClientIndex + 1, INVALID_SOCKET);
+    BOOL bNewSlot = (g_vecSockTable[nClientIndex] == INVALID_SOCKET && s != INVALID_SOCKET);
+    g_vecSockTable[nClientIndex] = s;
+    if (bNewSlot) ::InterlockedIncrement(&g_nSocketCount);
+    return TRUE;
+}
+
+static SOCKET GetSocketForClient(int nClientIndex)
+{
+    CSingleLock lk(&g_csSockTable, TRUE);
+    if (nClientIndex < 0 || nClientIndex >= (int)g_vecSockTable.size()) return INVALID_SOCKET;
+    return g_vecSockTable[nClientIndex];
+}
+
+// ---- R4: detach synchronous HTTPS policy fetch from heartbeat threads ----
+static CCriticalSection g_csPolicyFetchQueue;
+static std::vector<int> g_vecPolicyFetchQueue;
+static volatile LONG g_nPolicyWorkerStarted = 0;
+static volatile BOOL g_bPolicyWorkerStop = FALSE;
+
+unsigned int ThreadFunc_PolicyFetchWorker(LPVOID)
+{
+    while (!g_bPolicyWorkerStop)
+    {
+        int nClientIndex = -1;
+        {
+            CSingleLock lk(&g_csPolicyFetchQueue, TRUE);
+            if (!g_vecPolicyFetchQueue.empty())
+            {
+                nClientIndex = g_vecPolicyFetchQueue.front();
+                g_vecPolicyFetchQueue.erase(g_vecPolicyFetchQueue.begin());
+            }
+        }
+        if (nClientIndex < 0) { Sleep(50); continue; }
+        if (nClientIndex < (int)g_vecAllClientObjects.size())
+        {
+            if (!g_WLServerTestDlg->SendHeartbeat(g_vecAllClientObjects[nClientIndex]))
+                WriteWarn(_T("ST:Async policy fetch failed. Client index:%d"), nClientIndex);
+        }
+    }
+    return 0;
+}
+
+static void EnqueuePolicyFetch(int nClientIndex)
+{
+    if (nClientIndex < 0) return;
+    if (::InterlockedCompareExchange(&g_nPolicyWorkerStarted, 1, 0) == 0)
+        AfxBeginThread((AFX_THREADPROC)ThreadFunc_PolicyFetchWorker, NULL, THREAD_PRIORITY_NORMAL, 0, 0, NULL);
+    CSingleLock lk(&g_csPolicyFetchQueue, TRUE);
+    if (g_vecPolicyFetchQueue.size() < (size_t)MAX_SUPPORTED_CLIENTS)
+        g_vecPolicyFetchQueue.push_back(nClientIndex);
+}
 
 
 
 
-SOCKET g_sock[1000] = {INVALID_SOCKET};
+
+// R1: fixed g_sock[1000] replaced by g_vecSockTable (see helpers above)
 
 
 
@@ -2404,6 +2482,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 	m_comHB_ClientCount.AddString(_T("1000"));
+	m_comHB_ClientCount.AddString(_T("2000"));
 
 
 
@@ -2582,6 +2661,7 @@ BOOL CWLServerTestDlg::OnInitDialog()
 
 
 	m_comAppLog_Task_ClientCount.AddString(_T("1000"));
+	m_comAppLog_Task_ClientCount.AddString(_T("2000"));
 
 
 
@@ -5140,6 +5220,27 @@ unsigned int ThreadFunc_Register_SameTime(PVOID pIndex)
 
 
 
+// ---- R5: fixed-size registration pool (replaces one thread per client) ----
+struct REG_POOL_ARG
+{
+    int nStart;
+    int nEnd;
+};
+
+unsigned int ThreadFunc_Register_Pool(PVOID pArgument)
+{
+    REG_POOL_ARG* pArg = (REG_POOL_ARG*)pArgument;
+    if (!pArg) return 0;
+    for (int i = pArg->nStart; i < pArg->nEnd; ++i)
+    {
+        // R5: registration stop is controlled by m_bRegisterSameTime_Now (not the task stop flag)
+        if (!g_WLServerTestDlg->m_bRegisterSameTime_Now) { Sleep(50); continue; }
+        ThreadFunc_Register_SameTime((PVOID)&g_vecAllClientObjects[i]);
+    }
+    delete pArg;
+    return 0;
+}
+
 void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
@@ -5575,11 +5676,13 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
         g_vecAllClientObjects.clear();
+        ClearSocketTable();
 
 
 
 
         g_vecAllClientObjects.reserve(iNeedToRegClientCount + 1);
+        InitSocketTable(iNeedToRegClientCount);
 
 
 
@@ -5749,12 +5852,12 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
 
-            AfxBeginThread((AFX_THREADPROC)ThreadFunc_Register_SameTime, (PVOID)&clt, THREAD_PRIORITY_NORMAL, 0, 0, NULL);
+            // R5: registration handled by fixed-size pool launched below
 
 
 
 
-            Sleep(20);
+            // R5: removed 20ms stagger; pool replaces transient threads
 
 
 
@@ -5984,6 +6087,24 @@ void CWLServerTestDlg::OnBnClicked_RegisterClients() //lzq:????
 
 
         m_bRegisterSameTime_Now = TRUE;
+    // R5: launch fixed-size registration pool instead of 2000 transient threads
+    {
+        const int REG_POOL_SIZE = 32;
+        int nWorkers = iNeedToRegClientCount < REG_POOL_SIZE ? iNeedToRegClientCount : REG_POOL_SIZE;
+        if (nWorkers > 0)
+        {
+            int nPer = (iNeedToRegClientCount + nWorkers - 1) / nWorkers;
+            for (int w = 0; w < nWorkers; ++w)
+            {
+                REG_POOL_ARG* pRegArg = new REG_POOL_ARG;
+                pRegArg->nStart = w * nPer;
+                pRegArg->nEnd = (w + 1) * nPer;
+                if (pRegArg->nEnd > iNeedToRegClientCount) pRegArg->nEnd = iNeedToRegClientCount;
+                AfxBeginThread((AFX_THREADPROC)ThreadFunc_Register_Pool, pRegArg, THREAD_PRIORITY_NORMAL, 0, 0, NULL);
+            }
+        }
+    }
+
 
 
 
@@ -6552,7 +6673,7 @@ unsigned int UseHBPort_ThreatLog_CheckBox(int iCurUsedClient)//lzq:???��?,?
 
 
 
-const DWORD HBClientCount_InEveryThread = 10;  // ???10
+const DWORD HBClientCount_InEveryThread = 20;  // R2a: matches HB_CLIENTCOUNT_PER_THREAD
 
 
 
@@ -7475,7 +7596,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-		g_sock[g_nSocketCount++] = sock[i];
+		SetSocketForClient(pHeapArgs->iArrClientIndex[i], sock[i]); // R1/R6: index by client, atomic-safe
 
 
 
@@ -7624,6 +7745,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 				sSendInfo[i]->CreateConnection(sock[i],g_WLServerTestDlg->m_strServerIP,g_WLServerTestDlg->m_strServerPortHB);
+				SetSocketForClient(pHeapArgs->iArrClientIndex[i], sock[i]); // R6: publish reconnected socket
 
 
 
@@ -7740,7 +7862,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
 
-	            dwRet = g_WLServerTestDlg->SendHeartbeat(g_vecAllClientObjects[pHeapArgs->iArrClientIndex[i]]);//??https,??��????
+	            EnqueuePolicyFetch(pHeapArgs->iArrClientIndex[i]); dwRet = ERROR_SUCCESS; // R4: HTTPS off HB thread//??https,??��????
 
 
 
@@ -7818,6 +7940,7 @@ unsigned int ThreadFunc_HeartbeatSend_New(PHB_SENDER_THREAD_ARG pHeapArgs) //lzq
 
 
                     sSendInfo[i]->CreateConnection(sock[i],g_WLServerTestDlg->m_strServerIP,g_WLServerTestDlg->m_strServerPortHB);
+                    SetSocketForClient(pHeapArgs->iArrClientIndex[i], sock[i]); // R6: publish reconnected socket
 
 
 
@@ -8788,6 +8911,11 @@ unsigned int ThreadFunc_MsgLogSend(PLOG_SENDER_THREAD_ARG pHeapArgs)   //??? ???
 
 
 
+                // R6: follow socket recreation after heartbeat reconnect
+                {
+                    SOCKET sFresh = GetSocketForClient(pHeapArgs->iThisClient_VectorIndex);
+                    if (sFresh != INVALID_SOCKET) pHeapArgs->sock = sFresh;
+                }
 				if (pHeapArgs->sock != INVALID_SOCKET)
 
 
@@ -9624,7 +9752,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-	int iThisTask_ThreadCount = iNeedHB_ClientCount / HB_CLIENTCOUNT_PER_THREAD ;
+	int iThisTask_ThreadCount = (iNeedHB_ClientCount + HB_CLIENTCOUNT_PER_THREAD - 1) / HB_CLIENTCOUNT_PER_THREAD; // R2a: ceil
 
 
 
@@ -9875,7 +10003,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-			pThreadArgs ->iClientCount = HB_CLIENTCOUNT_PER_THREAD;
+			pThreadArgs ->iClientCount = 0; // R2a: actual count filled after client assignment
 
 
 
@@ -9975,7 +10103,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-					g_nHeartBeatSending_ClientCount += HB_CLIENTCOUNT_PER_THREAD;
+					g_nHeartBeatSending_ClientCount += iThisThread_ClientIndex; // R2a: actual count
 
 
 
@@ -10000,6 +10128,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
+		pThreadArgs->iClientCount = iThisThread_ClientIndex; // R2a: last thread may carry fewer clients
 		CString strOnlineClientCount;
 
 
@@ -10028,7 +10157,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 		}
 
 		InterlockedIncrement(&g_nActiveHbThreads); // v16: track thread count
-		AfxBeginThread((AFX_THREADPROC)ThreadFunc_HeartbeatSend_New, (PHB_SENDER_THREAD_ARG)pThreadArgs, THREAD_PRIORITY_NORMAL, 0, 0, NULL); 		
+		AfxBeginThread((AFX_THREADPROC)ThreadFunc_HeartbeatSend_New, (PHB_SENDER_THREAD_ARG)pThreadArgs, THREAD_PRIORITY_ABOVE_NORMAL, 0, 0, NULL); // R3
 
 
 
@@ -10038,7 +10167,7 @@ void CWLServerTestDlg::OnBnClickedButtonHeartbeat_AddTask()
 
 
 
-		Sleep(500);
+		Sleep(20); // R2a: 100 pooled threads no longer need 500ms stagger
 
 
 
@@ -11383,7 +11512,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-					pHeapArgsForAllThread_MsgLog->sock = g_sock[i];
+					pHeapArgsForAllThread_MsgLog->sock = GetSocketForClient(i); // R6
 
 
 
@@ -11473,7 +11602,7 @@ if (m_iThisTask_SelectedOperationType & (CLIENT_MSGLOG_BLINE | CLIENT_MSGLOG_UKE
 
 
 
-				AfxBeginThread((AFX_THREADPROC)ThreadFunc_MsgLogSend,(PLOG_SENDER_THREAD_ARG)pHeapArgsForAllThread_MsgLog, THREAD_PRIORITY_TIME_CRITICAL, 0, 0, NULL);//?client ??
+				AfxBeginThread((AFX_THREADPROC)ThreadFunc_MsgLogSend,(PLOG_SENDER_THREAD_ARG)pHeapArgsForAllThread_MsgLog, THREAD_PRIORITY_ABOVE_NORMAL, 0, 0, NULL); // R3//?client ??
 
 
 
@@ -13601,6 +13730,7 @@ BOOL CWLServerTestDlg::OnEraseBkgnd(CDC* pDC)
 
 void CWLServerTestDlg::OnDestroy()
 {
+	g_bPolicyWorkerStop = TRUE; // R4: stop async policy fetch worker
 	CDialog::OnDestroy();
 	if (m_hBrushDlg)    { ::DeleteObject(m_hBrushDlg);    m_hBrushDlg    = NULL; }
 	if (m_hBrushWhite)  { ::DeleteObject(m_hBrushWhite);  m_hBrushWhite  = NULL; }

@@ -55,7 +55,7 @@ typedef struct _LOG_SENDER_THREAD_ARG
 
 
 // ??????????????????
-#define HB_CLIENTCOUNT_PER_THREAD 1
+#define HB_CLIENTCOUNT_PER_THREAD 20 // R2a: pooled heartbeat, 20 clients per thread
 typedef struct _HB_SENDER_THREAD_ARG
 {
 	int				iThisTask_LineIndex;           //???????vector?§Ö?????

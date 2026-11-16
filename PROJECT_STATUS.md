@@ -1,6 +1,6 @@
 # WLServerTest 项目状态文档
 
-> 本文档用于帮助新协作者快速进入开发状态。最后更新：2026-10-20（对应 commit `30124d3`，tag `v6.8.1`）。
+> 本文档用于帮助新协作者快速进入开发状态。最后更新：2026-11-16（分支 `refactor/scale-2000-per-host`，V6.9.0 规模化改造；`main` 仍为 V6.8.1）。
 
 ---
 
@@ -9,9 +9,10 @@
 WLServerTest 是一款 C++ MFC 桌面工具，用于模拟 IEG 终端安全管控客户端的注册、心跳、策略配置上传、日志上报等核心行为，用于测试服务端接口兼容性。
 
 - **仓库**：`https://github.com/RogerXie314/IEGPerTest.git`
-- **当前分支**：`main`
-- **当前版本**：`V6.8.1`
-- **最新 Tag**：`v6.8.1`
+- **当前分支**：`refactor/scale-2000-per-host`（基线 `origin/main` @ `96e89a1`；`main` 上的 V6.8.1 未改动）
+- **当前版本**：`V6.9.0`（仅本分支的规模化改造版本；`main` 仍为 V6.8.1）
+- **最新 Tag**：`v6.8.1`（本分支尚未打 tag）
+- **本分支专项文档**：[`docs/改造-单机2000台规模化实施说明.md`](docs/改造-单机2000台规模化实施说明.md)
 
 ---
 
@@ -227,3 +228,4 @@ python pack_fix5.py
 - `2026-11-02` | 账号: 当前会话 | 二次修订上述评估报告（可靠性再评估）：查实 C# 版正是日志压力下落线并被放弃的一方（其在 4000 EPS 量级下被 C++ 老工具反证，修复仅验证到 1000 EPS），据此纠正「把 C# 当已验证参照」的误判——对标对象改为 C++ 老工具；新增第 6.4 节「可靠性判定」，明确「2000 台/主机」为已验证水位（约 500 台/主机）的 4 倍外推、目标吞吐（≈5460 EPS/主机）约为已验证（~1000 EPS/主机）的 5.5 倍，定性为「方向可行、量级高风险、需分阶段实测证伪」。
 - `2026-11-09` | 账号: 当前会话 | 仓库整理（**未改动任何源码、未变更版本号**）：① `README.md` 从 V6.5.1 更新到当前基线 V6.8.1——重写版本特性段（V6.7 配置上传 / V6.8 修复 / V6.8.1 Fix13）、补双轨上报表（CMDTYPE 200 vs 150）、补发版检查清单与 `pack_fix5.py` 打包说明、修正产物路径为 `artifacts/WLServerTest_V6.8.1/`、文档索引补 `PROJECT_STATUS.md` 与根因分析；② `.gitignore` 新增 `.dumate/`、`.tmp/`、`.local-archive/` 与源码目录内备份/VS 临时文件规则（DuMate 等本地开发缓存只在本地保留、不入库），并补 `policies/*.json` 可跟踪规则；③ 清理源码目录历史备份：删除 `Backup`~`Backup6`、`.bak_cfg_upload/` 及 `*.bak_fix10`、`*.bak_policy_fix6`、`*.rc.backup`、`*.rc.decoded.txt`、`*.aps`、`*.suo`、`*.user`、`UpgradeLog.htm` 共 16 项（19 个文件），删除前全部打包归档到 `.local-archive/WLServerTest_source_backups_2026-11-09.zip` 并生成 md5 清单 json（已校验条目数与字节数一致；其中 `SendInfoToServer.cpp.bak_policy_fix6` 等 9 个中间态未进过 git，仅存在于该归档）；④ 同步修正 `策略上传根因分析.md` 第 7 节回滚路径，指向归档包与 git 提交 `6c1f544`。影响文件：`README.md`、`.gitignore`、`PROJECT_STATUS.md`、`策略上传根因分析.md`。
 - `2026-11-10` | 账号: 当前会话 | 仓库整理收尾（**未改动任何源码、未变更版本号**）：① 源码目录一次性修复脚本 `inspect_dlg.py`/`package_fix3.py`/`patch_dlg2.py`/`patch_dlg_policy.py`/`patch_policy_upload.py` 与 VS 缓存目录 `.vs/` 已清理，脚本先归档到 `.local-archive/WLServerTest_oneshot_scripts_2026-11-10.zip`（5 文件，md5 校验通过）；② `.gitignore` 增加 `.workbuddy/`（工作区记忆目录不入库）；③ 源码目录现仅保留可编译的 26 个 `.cpp/.h`、资源文件、`policies/`（28 个 JSON）与 `x64/Release` 产物。影响文件：`.gitignore`、`PROJECT_STATUS.md`。
+- `2026-11-16` | 账号: 当前会话 | **新分支 `refactor/scale-2000-per-host`**（基线 `origin/main` @ `96e89a1`），依据 `docs/评估-单机2000台终端重构理论可行性.html` 实施规模化改造，版本升到 V6.9.0（本分支专用，`main` 不变）。改动：R1 `g_sock[1000]`→`std::vector<SOCKET>` 动态表 + 按客户端索引写入 + 原子计数/越界保护；R2a 心跳由 1 终端 1 线程改为 20 终端/线程（ceil 线程数、末线程实际装载数、启动错峰 500→20ms，保留 `_New` 路径）；R3 日志与心跳统一 `THREAD_PRIORITY_ABOVE_NORMAL`；R4 POLICY 回包不再在 HB 线程同步 HTTPS，改为单工作线程 + 有界队列；R5 注册由每客户端 1 线程改为固定 32 工作线程；R6 重连后发布新 socket + 日志线程每轮刷新 + UI 下拉加 2000。新增 `docs/改造-单机2000台规模化实施说明.md` 与 `tools/verify_scale_build.py`（15 项静态检查全过）。验证：`build_verify.bat` → `BUILD_EXITCODE=0`；exe 文件/产品版本 `6,9,0,0`；`python pack_fix5.py` → `artifacts/WLServerTest_V6.9.0.zip`（32 文件）。**未做实机压测**；R2b 日志池化 / per-socket 发送锁 / R3 实测确认仍为待办，详见专项文档第 5 节。影响文件：`WLServerTestDlg.cpp/.h`、`WLServerTest.rc`、`pack_fix5.py`、`README.md`、`PROJECT_STATUS.md`、新增 2 个文档/脚本。
