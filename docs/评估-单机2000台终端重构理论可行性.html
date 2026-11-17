@@ -56,6 +56,11 @@
 <body>
 <div class="wrap">
 
+<div style="margin:16px 0;padding:14px 18px;background:var(--okbg);border:1px solid var(--ok);border-radius:8px;color:var(--ink);">
+  <strong style="color:var(--ok);">实测回填（2026-11-17，用户实测 V6.9.0）</strong>：本报告第 6.4 节对“2000 台 + 高 EPS”作“高风险外推、需分阶段实测证伪”的判定，<strong>就注册上线与威胁日志两条路径已被实测证伪</strong>——用户以 <strong>2000 台模拟上线 + 1000 台×1 条威胁检测（合计 2000 EPS）连续稳定运行 6 小时</strong>，无掉线/无异常。<br>
+  <span style="color:var(--sub);">边界：实测版本为 V6.9.0；配置上传路径未纳入本次实测（V6.9.1 曾在同等规模 5h 下最终失败约 48.75%，仍是短板）；未做 24h soak 与平台入库比对；白名单上传、HTTPS 策略拉取等路径未在该规模验证。故本报告其余风险判定继续有效，不得据此宣称“2000 台全功能已验证”。详见 <code>docs/改造-单机2000台规模化实施说明.md</code> §3.1。</span>
+</div>
+
 <header class="hero">
   <h1>单机稳定承载 2000 台终端的重构理论可行性评估</h1>
   <p><span class="tag">WLServerTest V6.8.1 基线</span><span class="tag">目标：5 台主机 × 2000 台 = 10000 台</span><span class="tag">范围：理论可行性，不含实施</span></p>
