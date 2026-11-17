@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Static verification for the scale refactor branch (V6.9.1).
+"""Static verification for the scale refactor branch (V6.9.2).
 
 Checks source invariants and packaged artifact count. Run from anywhere:
     python tools/verify_scale_build.py
@@ -17,7 +17,7 @@ SRC = os.path.join(ROOT, "external", "IEG_Code", "code", "WLServerTest")
 CPP = os.path.join(SRC, "WLServerTestDlg.cpp")
 H = os.path.join(SRC, "WLServerTestDlg.h")
 RC = os.path.join(SRC, "WLServerTest.rc")
-ZIP = os.path.join(ROOT, "artifacts", "WLServerTest_V6.9.1.zip")
+ZIP = os.path.join(ROOT, "artifacts", "WLServerTest_V6.9.2.zip")
 
 
 def read(path):
@@ -67,9 +67,9 @@ def main():
     results.append(check("R6 refresh socket in log thread",
                          "GetSocketForClient(pHeapArgs->iThisClient_VectorIndex)" in cpp))
 
-    results.append(check("version caption V6.9.1", 'CAPTION "WLServerTest V6.9.1"' in rc))
-    results.append(check("version numbers 6,9,1,0",
-                         "FILEVERSION 6,9,1,0" in rc and "PRODUCTVERSION 6,9,1,0" in rc))
+    results.append(check("version caption V6.9.2", 'CAPTION "WLServerTest V6.9.2"' in rc))
+    results.append(check("version numbers 6,9,2,0",
+                         "FILEVERSION 6,9,2,0" in rc and "PRODUCTVERSION 6,9,2,0" in rc))
 
     # Encoding guard: GBK source must never contain UTF-8 replacement bytes.
     enc_bad = []

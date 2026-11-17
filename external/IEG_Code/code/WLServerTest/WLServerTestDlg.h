@@ -268,7 +268,6 @@ public:
     // --- ???????? ---
     CEdit       m_editHbInterval;
     CButton     m_chkPolicyRecv;
-    CStatic     m_staticHbBadge;
 
     // --- ????????? ---
     CEdit       m_editWlConcurrent;

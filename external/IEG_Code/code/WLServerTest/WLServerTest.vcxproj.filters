@@ -27,7 +27,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-<ClCompile Include="ClientConfigUploader.cpp">
+    <ClCompile Include="ClientConfigUploader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client.cpp">
@@ -99,9 +99,21 @@
     <ClCompile Include="..\common\WLLogger.cpp">
       <Filter>external\wllog</Filter>
     </ClCompile>
+    <ClCompile Include="LogCategoryHelpDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RawPacketDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WhitelistPreviewDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VersionManagementDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-<ClInclude Include="ClientConfigUploader.h">
+    <ClInclude Include="ClientConfigUploader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client.h">
@@ -209,5 +221,8 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="res\WLServerTest.manifest" />
   </ItemGroup>
 </Project>

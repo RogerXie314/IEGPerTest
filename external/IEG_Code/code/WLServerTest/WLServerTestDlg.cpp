@@ -1244,7 +1244,6 @@ void CWLServerTestDlg::DoDataExchange(CDataExchange* pDX)
 
 
 
-    DDX_Control(pDX, IDC_STATIC_HB_BADGE,        m_staticHbBadge);
 
 
 
@@ -3466,7 +3465,6 @@ LoadCfgUploadSettingsFromIni();
 
 
 
-	m_staticHbBadge.SetWindowText(_T("TCP(Windows)"));
 
 
 
@@ -12783,14 +12781,12 @@ void CWLServerTestDlg::OnProjectTypeSelChange()
 void CWLServerTestDlg::OnBnClickedOsWindows()
 {
 	LoadClientVersionCombo();
-	m_staticHbBadge.SetWindowText(_T("TCP(Windows)"));
 	UpdateOsInfoText();
 }
 
 void CWLServerTestDlg::OnBnClickedOsLinux()
 {
 	LoadClientVersionCombo();
-	m_staticHbBadge.SetWindowText(_T("HTTPS(Linux)"));
 	UpdateOsInfoText();
 }
 
