@@ -1,4 +1,4 @@
-// VersionManagementDlg.h : ï¿½Í»ï¿½ï¿½Ë°æ±¾ï¿½ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½
+// VersionManagementDlg.h : ¿Í»§¶Ë°æ±¾¹ÜÀí¶Ô»°¿ò
 #pragma once
 
 class CVersionManagementDlg : public CDialog
@@ -6,7 +6,7 @@ class CVersionManagementDlg : public CDialog
     DECLARE_DYNAMIC(CVersionManagementDlg)
 
 public:
-    // bLinux: TRUE=ï¿½ï¿½Ê¾Linuxï¿½æ±¾, FALSE=ï¿½ï¿½Ê¾Windowsï¿½æ±¾
+    // bLinux: TRUE=ÏÔÊ¾Linux°æ±¾, FALSE=ÏÔÊ¾Windows°æ±¾
     CVersionManagementDlg(BOOL bLinux, CWnd* pParent = NULL);
     virtual ~CVersionManagementDlg();
 

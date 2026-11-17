@@ -9,6 +9,9 @@ import re
 import sys
 import zipfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_source_encoding import check_file, tracked_sources
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "external", "IEG_Code", "code", "WLServerTest")
 CPP = os.path.join(SRC, "WLServerTestDlg.cpp")
@@ -67,6 +70,15 @@ def main():
     results.append(check("version caption V6.9.0", 'CAPTION "WLServerTest V6.9.0"' in rc))
     results.append(check("version numbers 6,9,0,0",
                          "FILEVERSION 6,9,0,0" in rc and "PRODUCTVERSION 6,9,0,0" in rc))
+
+    # Encoding guard: GBK source must never contain UTF-8 replacement bytes.
+    enc_bad = []
+    for path in tracked_sources():
+        problems = check_file(path)
+        if problems:
+            enc_bad.append((os.path.basename(path), problems[:3]))
+    results.append(check("source encoding clean (no EF BF BD / UTF-8 BOM)",
+                         not enc_bad, str(enc_bad[:3])))
 
     if os.path.isfile(ZIP):
         with zipfile.ZipFile(ZIP) as zf:

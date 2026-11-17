@@ -245,7 +245,7 @@ CString CProfileConfig::ReadClientStartIp_FromIni()
 	return cstrClientStartIp;
 }
 
-// === Phase 7: ï¿½æ±¾ï¿½Ð±ï¿½ INI ï¿½ï¿½Ð´ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½ | ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ VersionList ï¿½Ú£ï¿½===
+// === Phase 7: °æ±¾ÁÐ±í INI ¶ÁÐ´£¨°æ±¾ºÅÓÃ | ·Ö¸ô£¬´æ VersionList ½Ú£©===
 
 BOOL CProfileConfig::WriteWindowsVersionList_ToIni(CString strList)
 {

@@ -101,6 +101,16 @@ python pack_fix5.py
 - **行尾**：CRLF（`\r\n`）
 - **Python 写入时必须**：`open(path, 'wb')` + `data.encode('gbk')`，**禁止**用默认 UTF-8 模式写入
 
+#### 6.1.1 已发生的乱码事故与防复发（必读）
+- **现象**：任务面板「状态」列显示 `锟斤拷始锟斤拷`，日志输出显示 `[LOG] TCP 锟斤拷胁通锟斤拷...`（2026-11-17 截图）。
+- **根因**：GBK 源码被以 **UTF-8 + errors='replace'** 读取后写回。每个无法解码的 GBK 字节变成 U+FFFD，落盘即 `EF BF BD`；MSVC 按 ANSI/GBK 解释该字节序列，运行时就显示成「锟斤拷」。这不是字体/显示问题，而是**源码字节已损坏**。已确认 `WLServerTestDlg.cpp` 在 Fix9（`903beac`，2026-10-14）由 0 个 `EF BF BD` 突增到 865 个；Fix13 后仍有 759 个，另有 5 个旧文件（注释）也有污染。
+- **修复方式**：从干净历史版本（`5a11d74` / `3f13aab` 等 0 污染 blob）按行还原；新增/手工修复 14 行（`请输入客户端信息`、`已停止`、`执行中`、`开始中`、`[LOG] TCP 威胁通道任务已添加` 等）；所有受影响源文件现在 `EF BF BD` 计数为 0，运行时中文串与干净版本逐条一致。
+- **防复发（强制）**：
+  1. 编译前自动运行 `python tools/check_source_encoding.py`——扫描所有 git 跟踪的 `.cpp/.h/.rc/.bat`，发现 `EF BF BD` 或 UTF-8 BOM 即报错并中止编译。`scripts/build_wlservertest.ps1` 与源码目录 `build_verify.bat` 已接入；`tools/verify_scale_build.py` 也包含该检查。
+  2. 任何编辑 **必须**走字节级 GBK 写入（见上方规则）；禁止用默认 UTF-8 的文本编辑器/API 直接保存 `.cpp/.h/.rc`。
+  3. 新增中文字符串若担心工具链，优先用 GBK 字节写入，或像 JSON 里那样用 `\xNN` 字节转义（与源文件编码无关）。
+  4. 提交前自检：`python tools/check_source_encoding.py` 必须输出 `[OK]`。
+
 ### 6.2 Python 辅助脚本
 - 代码正文使用 ASCII 半角标点
 - 用户输入含全角标点时，先 `replace` 成半角再嵌入源码
@@ -229,3 +239,4 @@ python pack_fix5.py
 - `2026-11-09` | 账号: 当前会话 | 仓库整理（**未改动任何源码、未变更版本号**）：① `README.md` 从 V6.5.1 更新到当前基线 V6.8.1——重写版本特性段（V6.7 配置上传 / V6.8 修复 / V6.8.1 Fix13）、补双轨上报表（CMDTYPE 200 vs 150）、补发版检查清单与 `pack_fix5.py` 打包说明、修正产物路径为 `artifacts/WLServerTest_V6.8.1/`、文档索引补 `PROJECT_STATUS.md` 与根因分析；② `.gitignore` 新增 `.dumate/`、`.tmp/`、`.local-archive/` 与源码目录内备份/VS 临时文件规则（DuMate 等本地开发缓存只在本地保留、不入库），并补 `policies/*.json` 可跟踪规则；③ 清理源码目录历史备份：删除 `Backup`~`Backup6`、`.bak_cfg_upload/` 及 `*.bak_fix10`、`*.bak_policy_fix6`、`*.rc.backup`、`*.rc.decoded.txt`、`*.aps`、`*.suo`、`*.user`、`UpgradeLog.htm` 共 16 项（19 个文件），删除前全部打包归档到 `.local-archive/WLServerTest_source_backups_2026-11-09.zip` 并生成 md5 清单 json（已校验条目数与字节数一致；其中 `SendInfoToServer.cpp.bak_policy_fix6` 等 9 个中间态未进过 git，仅存在于该归档）；④ 同步修正 `策略上传根因分析.md` 第 7 节回滚路径，指向归档包与 git 提交 `6c1f544`。影响文件：`README.md`、`.gitignore`、`PROJECT_STATUS.md`、`策略上传根因分析.md`。
 - `2026-11-10` | 账号: 当前会话 | 仓库整理收尾（**未改动任何源码、未变更版本号**）：① 源码目录一次性修复脚本 `inspect_dlg.py`/`package_fix3.py`/`patch_dlg2.py`/`patch_dlg_policy.py`/`patch_policy_upload.py` 与 VS 缓存目录 `.vs/` 已清理，脚本先归档到 `.local-archive/WLServerTest_oneshot_scripts_2026-11-10.zip`（5 文件，md5 校验通过）；② `.gitignore` 增加 `.workbuddy/`（工作区记忆目录不入库）；③ 源码目录现仅保留可编译的 26 个 `.cpp/.h`、资源文件、`policies/`（28 个 JSON）与 `x64/Release` 产物。影响文件：`.gitignore`、`PROJECT_STATUS.md`。
 - `2026-11-16` | 账号: 当前会话 | **新分支 `refactor/scale-2000-per-host`**（基线 `origin/main` @ `96e89a1`），依据 `docs/评估-单机2000台终端重构理论可行性.html` 实施规模化改造，版本升到 V6.9.0（本分支专用，`main` 不变）。改动：R1 `g_sock[1000]`→`std::vector<SOCKET>` 动态表 + 按客户端索引写入 + 原子计数/越界保护；R2a 心跳由 1 终端 1 线程改为 20 终端/线程（ceil 线程数、末线程实际装载数、启动错峰 500→20ms，保留 `_New` 路径）；R3 日志与心跳统一 `THREAD_PRIORITY_ABOVE_NORMAL`；R4 POLICY 回包不再在 HB 线程同步 HTTPS，改为单工作线程 + 有界队列；R5 注册由每客户端 1 线程改为固定 32 工作线程；R6 重连后发布新 socket + 日志线程每轮刷新 + UI 下拉加 2000。新增 `docs/改造-单机2000台规模化实施说明.md` 与 `tools/verify_scale_build.py`（15 项静态检查全过）。验证：`build_verify.bat` → `BUILD_EXITCODE=0`；exe 文件/产品版本 `6,9,0,0`；`python pack_fix5.py` → `artifacts/WLServerTest_V6.9.0.zip`（32 文件）。**未做实机压测**；R2b 日志池化 / per-socket 发送锁 / R3 实测确认仍为待办，详见专项文档第 5 节。影响文件：`WLServerTestDlg.cpp/.h`、`WLServerTest.rc`、`pack_fix5.py`、`README.md`、`PROJECT_STATUS.md`、新增 2 个文档/脚本。
+- `2026-11-17` | 账号: 当前会话 | **修复界面/日志中文乱码（编码回归）**：定位到根因是 GBK 源码被 UTF-8 replace 模式重写，产生 `EF BF BD` 替换字符字节（`锟斤拷`）；首次污染在 Fix9 `903beac`（0→865 个），Fix13 后残留 759 个 + 5 个旧文件注释。按干净历史 blob 逐行还原 111 行、手工修复剩余 14 行，覆盖任务面板状态（`开始中`/`执行中`/`已停止`）、`[LOG] TCP 威胁通道任务已添加`、各 AfxMessageBox 提示与注释；6 个受影响源文件现均无 `EF BF BD`，运行时中文串与干净历史版本逐条比对一致。新增 `tools/check_source_encoding.py` 防复发守卫，接入两个编译脚本与 `verify_scale_build.py`；根因与规则写入第 6.1.1 节。影响文件：`WLServerTestDlg.cpp`、`ProfileConfig.cpp/.h`、`VersionManagementDlg.h`、`client.h`、`RawPacketDlg.cpp`、`build_verify.bat`、`PROJECT_STATUS.md`、新增 `tools/check_source_encoding.py`、`scripts/build_wlservertest.ps1`、`tools/verify_scale_build.py`。

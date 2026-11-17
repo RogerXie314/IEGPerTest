@@ -43,6 +43,18 @@ if (-not (Test-Path $Project)) {
     exit 2
 }
 
+# ---------- 源码编码守卫：拦截 GBK 文件被 UTF-8 工具重写 (EF BF BD) ----------
+$pyCmd = Get-Command python -ErrorAction SilentlyContinue
+if ($pyCmd) {
+    & $pyCmd.Source (Join-Path $RepoRoot 'tools\check_source_encoding.py')
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[FATAL] 源码编码检查未通过，已中止编译（避免把乱码编进 exe）。" -ForegroundColor Red
+        exit 5
+    }
+} else {
+    Write-Host "[WARN] 未找到 python，跳过编码守卫；请手工确认源码无 EF BF BD。" -ForegroundColor Yellow
+}
+
 # ---------- 探测 MSBuild ----------
 function Find-MSBuild {
     if ($env:MSBUILD_EXE -and (Test-Path $env:MSBUILD_EXE)) {

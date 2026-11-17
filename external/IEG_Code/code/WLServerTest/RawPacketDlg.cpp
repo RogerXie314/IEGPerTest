@@ -168,8 +168,8 @@ static CString GetFriendlyName(const char* pcapName)
     int ge = s.Find(_T('}'));
     if (gs >= 0 && ge > gs)
     {
-        // ע��� Network\{4D36E972-...}\{NIC_GUID}\Connection �ڶ��� GUID ���뺬 {}��
-        // ֮ǰ Mid(gs+1, ge-gs-1) ȥ���˻����ŵ��� RegOpenKeyEx ��Զʧ�ܡ�
+// Registry path Network\{4D36E972-...}\{NIC_GUID}\Connection; NIC GUID contains {}.
+// Previous Mid(gs+1, ge-gs-1) stripped braces and made RegOpenKeyEx fail.
         CString guid = s.Mid(gs, ge - gs + 1);
         guid.MakeUpper();
         HKEY hKey;
@@ -185,7 +185,7 @@ static CString GetFriendlyName(const char* pcapName)
                 return CString(name);
         }
     }
-    // ���ˣ�����ԭʼ pcap ����ANSI -> TCHAR��
+// Raw pcap path is ANSI; convert to TCHAR before use.
     return CString(pcapName);
 }
 
@@ -195,12 +195,12 @@ BOOL CRawPacketDlg::OnInitDialog()
     SetWindowText(_T("Attack Packet Sender"));
     TCHAR exePath[MAX_PATH];
     
-    // ������ñ��Ĺ�ѡ�б������С��ޱ�ͷ��
+// Skip virtual/loopback adapters and overlong garbled friendly names.
     m_listPackets.SetExtendedStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
     m_listPackets.InsertColumn(0, _T(""), LVCFMT_LEFT, 280);
     LoadBuiltinPackets();
 
-    // �Ҳ��Ѽ��ر����б�
+// Hide or disable invalid NIC entries.
     CWnd* pListRight = GetDlgItem(IDC_LIST_RP_RIGHT);
     if (pListRight)
     {

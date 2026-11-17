@@ -84,7 +84,7 @@ build_verify.bat            :: 成功标志 BUILD_EXITCODE=0
   /p:Configuration=Release /p:Platform=x64 /m
 ```
 
-> 已知无害警告：`resource.h` / `RawPacketDlg.cpp` 的 C4819 编码警告。源码统一 **GBK（CP936）+ CRLF**，用 Python 改写必须先 `open(...,'wb')` 再 `encode('gbk')`。
+> 已知无害警告：`resource.h` / `RawPacketDlg.cpp` 的 C4819 编码警告。源码统一 **GBK（CP936）+ CRLF**，用 Python 改写必须先 `open(...,'wb')` 再 `encode('gbk')`。编译前会自动运行 `python tools/check_source_encoding.py` 拦截 `EF BF BD` / UTF-8 BOM 乱码回归（详见 [`PROJECT_STATUS.md`](PROJECT_STATUS.md) 第 6.1.1 节）。
 
 ---
 

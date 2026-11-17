@@ -45,7 +45,7 @@ public:
 	int ReadTotalClientCount_FromIni();
 	BOOL WriteTotalClientCount_ToIni(int iTotalCilentCount);
 
-    // === Phase 7: ï¿½æ±¾ï¿½Ð±ï¿½ INI ï¿½ï¿½Ð´ ===
+    // === Phase 7: °æ±¾ÁÐ±í INI ¶ÁÐ´ ===
     BOOL    WriteWindowsVersionList_ToIni(CString strList);
     CString ReadWindowsVersionList_FromIni();
 
