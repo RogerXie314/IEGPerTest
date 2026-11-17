@@ -1,6 +1,6 @@
 # WLServerTest 项目状态文档
 
-> 本文档用于帮助新协作者快速进入开发状态。最后更新：2026-11-16（分支 `refactor/scale-2000-per-host`，V6.9.0 规模化改造；`main` 仍为 V6.8.1）。
+> 本文档用于帮助新协作者快速进入开发状态。最后更新：2026-11-17（分支 `refactor/scale-2000-per-host`，V6.9.1 编码乱码修复；`main` 仍为 V6.8.1）。
 
 ---
 
@@ -10,7 +10,7 @@ WLServerTest 是一款 C++ MFC 桌面工具，用于模拟 IEG 终端安全管�
 
 - **仓库**：`https://github.com/RogerXie314/IEGPerTest.git`
 - **当前分支**：`refactor/scale-2000-per-host`（基线 `origin/main` @ `96e89a1`；`main` 上的 V6.8.1 未改动）
-- **当前版本**：`V6.9.0`（仅本分支的规模化改造版本；`main` 仍为 V6.8.1）
+- **当前版本**：`V6.9.1`（仅本分支；V6.9.0 规模化改造 + GBK 中文乱码修复与编码守卫；`main` 仍为 V6.8.1）
 - **最新 Tag**：`v6.8.1`（本分支尚未打 tag）
 - **本分支专项文档**：[`docs/改造-单机2000台规模化实施说明.md`](docs/改造-单机2000台规模化实施说明.md)
 
@@ -240,3 +240,4 @@ python pack_fix5.py
 - `2026-11-10` | 账号: 当前会话 | 仓库整理收尾（**未改动任何源码、未变更版本号**）：① 源码目录一次性修复脚本 `inspect_dlg.py`/`package_fix3.py`/`patch_dlg2.py`/`patch_dlg_policy.py`/`patch_policy_upload.py` 与 VS 缓存目录 `.vs/` 已清理，脚本先归档到 `.local-archive/WLServerTest_oneshot_scripts_2026-11-10.zip`（5 文件，md5 校验通过）；② `.gitignore` 增加 `.workbuddy/`（工作区记忆目录不入库）；③ 源码目录现仅保留可编译的 26 个 `.cpp/.h`、资源文件、`policies/`（28 个 JSON）与 `x64/Release` 产物。影响文件：`.gitignore`、`PROJECT_STATUS.md`。
 - `2026-11-16` | 账号: 当前会话 | **新分支 `refactor/scale-2000-per-host`**（基线 `origin/main` @ `96e89a1`），依据 `docs/评估-单机2000台终端重构理论可行性.html` 实施规模化改造，版本升到 V6.9.0（本分支专用，`main` 不变）。改动：R1 `g_sock[1000]`→`std::vector<SOCKET>` 动态表 + 按客户端索引写入 + 原子计数/越界保护；R2a 心跳由 1 终端 1 线程改为 20 终端/线程（ceil 线程数、末线程实际装载数、启动错峰 500→20ms，保留 `_New` 路径）；R3 日志与心跳统一 `THREAD_PRIORITY_ABOVE_NORMAL`；R4 POLICY 回包不再在 HB 线程同步 HTTPS，改为单工作线程 + 有界队列；R5 注册由每客户端 1 线程改为固定 32 工作线程；R6 重连后发布新 socket + 日志线程每轮刷新 + UI 下拉加 2000。新增 `docs/改造-单机2000台规模化实施说明.md` 与 `tools/verify_scale_build.py`（15 项静态检查全过）。验证：`build_verify.bat` → `BUILD_EXITCODE=0`；exe 文件/产品版本 `6,9,0,0`；`python pack_fix5.py` → `artifacts/WLServerTest_V6.9.0.zip`（32 文件）。**未做实机压测**；R2b 日志池化 / per-socket 发送锁 / R3 实测确认仍为待办，详见专项文档第 5 节。影响文件：`WLServerTestDlg.cpp/.h`、`WLServerTest.rc`、`pack_fix5.py`、`README.md`、`PROJECT_STATUS.md`、新增 2 个文档/脚本。
 - `2026-11-17` | 账号: 当前会话 | **修复界面/日志中文乱码（编码回归）**：定位到根因是 GBK 源码被 UTF-8 replace 模式重写，产生 `EF BF BD` 替换字符字节（`锟斤拷`）；首次污染在 Fix9 `903beac`（0→865 个），Fix13 后残留 759 个 + 5 个旧文件注释。按干净历史 blob 逐行还原 111 行、手工修复剩余 14 行，覆盖任务面板状态（`开始中`/`执行中`/`已停止`）、`[LOG] TCP 威胁通道任务已添加`、各 AfxMessageBox 提示与注释；6 个受影响源文件现均无 `EF BF BD`，运行时中文串与干净历史版本逐条比对一致。新增 `tools/check_source_encoding.py` 防复发守卫，接入两个编译脚本与 `verify_scale_build.py`；根因与规则写入第 6.1.1 节。影响文件：`WLServerTestDlg.cpp`、`ProfileConfig.cpp/.h`、`VersionManagementDlg.h`、`client.h`、`RawPacketDlg.cpp`、`build_verify.bat`、`PROJECT_STATUS.md`、新增 `tools/check_source_encoding.py`、`scripts/build_wlservertest.ps1`、`tools/verify_scale_build.py`。
+- `2026-11-17` | 账号: 当前会话 | **发布 V6.9.1**（本分支专用，`main` V6.8.1 不变；V6.9.0 产物保留不覆盖，规避运行中 exe 占用）：在 V6.9.0 规模化改造 + 编码乱码修复基础上，版本号整体前进一步——`WLServerTest.rc` 5 处（CAPTION / FILEVERSION / PRODUCTVERSION / StringFileInfo 的 FileVersion、ProductVersion）、`pack_fix5.py` 包名、`tools/verify_scale_build.py` 检查项同步到 `V6.9.1` / `6,9,1,0` / `6, 9, 1, 0`。README 当前 checkout 与版本历史、专项实施说明的版本/验证表同步更新。验证：`BUILD_EXITCODE=0`，exe 版本 `6,9,1,0`，`artifacts/WLServerTest_V6.9.1.zip` 32 文件，`check_source_encoding.py` 与 `verify_scale_build.py` 全通过。影响文件：`WLServerTest.rc`、`pack_fix5.py`、`tools/verify_scale_build.py`、`README.md`、`PROJECT_STATUS.md`、`docs/改造-单机2000台规模化实施说明.md`。
